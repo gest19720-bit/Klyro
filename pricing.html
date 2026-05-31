@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Klyro — Choose Your Plan</title>
+  <link rel="icon" type="image/png" href="exmo_logo.png">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="app.css">
+  <style>
+    /* ── Page shell ── */
+    .pricing-root {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 60px 20px 100px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── Logo ── */
+    .pricing-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 48px;
+    }
+    .pricing-logo img { height: 28px; }
+    .pricing-logo-text {
+      font-family: var(--font-display);
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    /* ── Header ── */
+    .pricing-header {
+      text-align: center;
+      max-width: 640px;
+      margin-bottom: 16px;
+    }
+    .pricing-eyebrow {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 14px;
+    }
+    .pricing-title {
+      font-family: var(--font-display);
+      font-size: clamp(2.2rem, 5vw, 3.4rem);
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1.08;
+      margin-bottom: 16px;
+    }
+    .pricing-title em { font-style: italic; color: var(--gold); }
+    .pricing-sub {
+      font-size: 0.95rem;
+      color: var(--text-dim);
+      line-height: 1.7;
+      margin-bottom: 36px;
+    }
+
+    /* ── Billing toggle ── */
+    .billing-wrap {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 52px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .billing-tabs {
+      display: flex;
+      background: var(--glass-dim);
+      border: 1px solid var(--glass-border);
+      padding: 4px;
+      border-radius: var(--radius-pill);
+    }
+    .billing-tab {
+      padding: 9px 22px;
+      border: none;
+      background: transparent;
+      color: var(--text-dim);
+      font-family: var(--font-body);
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      border-radius: var(--radius-pill);
+      transition: all 0.3s ease;
+    }
+    .billing-tab.active {
+      background: var(--gold);
+      color: #fff;
+      box-shadow: 0 2px 12px rgba(212,160,23,0.4);
+    }
+    .save-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--green-dim);
+      color: var(--green);
+      border: 1px solid rgba(39,174,96,0.3);
+      border-radius: var(--radius-pill);
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 4px 12px;
+    }
+
+    /* ── Plans grid ── */
+    .plans-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 20px;
+      width: 100%;
+      max-width: 1200px;
+      align-items: end;
+    }
+
+    /* ── Plan card ── */
+    .plan-card {
+      background: var(--glass);
+      backdrop-filter: var(--blur);
+      -webkit-backdrop-filter: var(--blur);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius);
+      padding: 32px 24px 28px;
+      position: relative;
+      overflow: visible;
+      transition: transform var(--transition), box-shadow var(--transition);
+      display: flex;
+      flex-direction: column;
+    }
+    .plan-card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    /* Featured (Individuals) */
+    .plan-card.featured {
+      border: 2px solid var(--gold);
+      background: linear-gradient(160deg, rgba(212,160,23,0.08), var(--glass));
+      transform: scale(1.05) translateY(-8px);
+      box-shadow: 0 0 60px rgba(212,160,23,0.18), var(--shadow-lg);
+      z-index: 2;
+    }
+    .plan-card.featured:hover { transform: scale(1.05) translateY(-13px); }
+
+    .plan-badge-top {
+      position: absolute;
+      top: 0; left: 50%;
+      transform: translate(-50%, -50%);
+      background: linear-gradient(135deg, var(--gold), var(--gold-light));
+      color: #03071e;
+      font-size: 0.64rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 6px 18px;
+      border-radius: var(--radius-pill);
+      white-space: nowrap;
+      box-shadow: 0 4px 16px rgba(212,160,23,0.4);
+    }
+
+    .plan-name {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 14px;
+    }
+
+    .plan-price-wrap { margin-bottom: 6px; }
+    .plan-price {
+      font-family: var(--font-display);
+      font-size: 2.6rem;
+      font-weight: 900;
+      color: var(--text);
+      line-height: 1;
+    }
+    .plan-price sup {
+      font-size: 1.1rem;
+      font-weight: 700;
+      vertical-align: super;
+      line-height: 0;
+    }
+    .plan-period {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+    .plan-yearly-note {
+      font-size: 0.72rem;
+      color: var(--green);
+      font-weight: 600;
+      margin-bottom: 20px;
+      min-height: 18px;
+    }
+
+    .plan-divider {
+      height: 1px;
+      background: var(--glass-border);
+      margin-bottom: 20px;
+    }
+
+    .plan-features {
+      list-style: none;
+      margin-bottom: 24px;
+      flex: 1;
+    }
+    .plan-features li {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 0.82rem;
+      color: var(--text-mid);
+      padding: 7px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      line-height: 1.4;
+    }
+    .plan-features li:last-child { border-bottom: none; }
+    .plan-features i.fa-check { color: var(--gold); font-size: 0.72rem; margin-top: 3px; flex-shrink: 0; }
+    .plan-features i.fa-times  { color: var(--text-dim); font-size: 0.72rem; margin-top: 3px; flex-shrink: 0; }
+
+    .plan-cta {
+      width: 100%;
+      justify-content: center;
+      margin-top: auto;
+    }
+
+    /* ── Payment processing overlay ── */
+    .payment-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .payment-overlay.open { display: flex; }
+
+    .payment-modal {
+      background: var(--surface, #1a1612);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius);
+      box-shadow: 0 32px 80px rgba(0,0,0,0.5);
+      padding: 40px;
+      width: 100%;
+      max-width: 440px;
+      text-align: center;
+      position: relative;
+      animation: modal-in 0.3s cubic-bezier(0.16,1,0.3,1);
+    }
+    @keyframes modal-in {
+      from { opacity:0; transform: translateY(20px) scale(0.96); }
+      to   { opacity:1; transform: translateY(0) scale(1); }
+    }
+
+    .payment-modal-close {
+      position: absolute;
+      top: 16px; right: 16px;
+      background: var(--glass-dim);
+      border: 1px solid var(--glass-border);
+      border-radius: 8px;
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      color: var(--text-dim);
+      font-size: 0.8rem;
+      transition: all var(--transition);
+    }
+    .payment-modal-close:hover { background: var(--glass); color: var(--text); }
+
+    .payment-plan-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--gold-dim);
+      border: 1px solid var(--gold-border);
+      border-radius: var(--radius-pill);
+      padding: 6px 16px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--gold);
+      margin-bottom: 20px;
+    }
+    .payment-modal-title {
+      font-family: var(--font-display);
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .payment-modal-sub {
+      font-size: 0.88rem;
+      color: var(--text-dim);
+      margin-bottom: 28px;
+      line-height: 1.6;
+    }
+    .payment-amount-display {
+      background: var(--glass-dim);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .payment-amount {
+      font-family: var(--font-display);
+      font-size: 2.8rem;
+      font-weight: 900;
+      color: var(--text);
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .payment-amount-period {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+    }
+    .payment-loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 0;
+    }
+    .payment-spinner {
+      width: 36px; height: 36px;
+      border: 3px solid var(--glass-border);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .payment-loading-text { font-size: 0.85rem; color: var(--text-dim); }
+
+    .payment-btn-wrap { display: flex; flex-direction: column; gap: 10px; }
+    .payment-secure-note {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      margin-top: 8px;
+    }
+    .payment-secure-note i { color: var(--gold); }
+
+    /* ── Trust bar ── */
+    .trust-bar {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      margin-top: 48px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .trust-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+    }
+    .trust-item i { color: var(--gold); font-size: 0.85rem; }
+
+    .skip-link {
+      margin-top: 20px;
+      font-size: 0.84rem;
+      color: var(--text-dim);
+      cursor: pointer;
+      text-decoration: underline;
+      background: none;
+      border: none;
+      font-family: var(--font-body);
+    }
+    .skip-link:hover { color: var(--text); }
+
+    /* ── Responsive ── */
+    @media (max-width: 1100px) {
+      .plans-grid { grid-template-columns: repeat(3, 1fr); }
+      .plan-card.featured { transform: none; }
+      .plan-card.featured:hover { transform: translateY(-5px); }
+    }
+    @media (max-width: 740px) {
+      .plans-grid { grid-template-columns: 1fr; max-width: 400px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="pricing-root">
+
+  <div class="pricing-logo">
+    <img src="exmo_logo.png" alt="Klyro" onerror="this.style.display='none'">
+    <span class="pricing-logo-text">Klyro</span>
+  </div>
+
+  <div class="pricing-header">
+    <div class="pricing-eyebrow">Simple, transparent pricing</div>
+    <div class="pricing-title">
+      Invest in your<br><em>financial future</em>
+    </div>
+    <p class="pricing-sub">
+      Start free. Upgrade as you grow. Every plan includes Klyro AI, smart analysis, and real-time insights. No hidden fees. Cancel any time.
+    </p>
+  </div>
+
+  <!-- Billing toggle -->
+  <div class="billing-wrap">
+    <div class="billing-tabs">
+      <button class="billing-tab active" data-billing="monthly" onclick="setBilling('monthly')">Monthly</button>
+      <button class="billing-tab" data-billing="yearly" onclick="setBilling('yearly')">Yearly</button>
+    </div>
+    <span class="save-badge"><i class="fas fa-tag"></i> Save 20% yearly</span>
+  </div>
+
+  <!-- Plans -->
+  <div class="plans-grid">
+
+    <!-- FREE -->
+    <div class="plan-card">
+      <div class="plan-name">Free</div>
+      <div class="plan-price-wrap">
+        <div class="plan-price"><sup>$</sup>0</div>
+      </div>
+      <div class="plan-period">forever</div>
+      <div class="plan-yearly-note"></div>
+      <div class="plan-divider"></div>
+      <ul class="plan-features">
+        <li><i class="fas fa-check"></i> Up to 20 transactions/month</li>
+        <li><i class="fas fa-check"></i> Basic dashboard & stats</li>
+        <li><i class="fas fa-check"></i> 3 spending categories</li>
+        <li><i class="fas fa-check"></i> Manual CSV export</li>
+        <li><i class="fas fa-times"></i> Klyro AI chat</li>
+        <li><i class="fas fa-times"></i> Analysis & charts</li>
+        <li><i class="fas fa-times"></i> Savings goals</li>
+        <li><i class="fas fa-times"></i> Currency conversion</li>
+        <li><i class="fas fa-times"></i> Team features</li>
+        <li><i class="fas fa-times"></i> Invoices & receipts</li>
+      </ul>
+      <button class="btn btn-glass plan-cta" onclick="selectPlan('free', 0)">
+        Get Started Free
+      </button>
+    </div>
+
+    <!-- STUDENTS -->
+    <div class="plan-card">
+      <div class="plan-name">Students</div>
+      <div class="plan-price-wrap">
+        <div class="plan-price" id="price-students"><sup>$</sup>8</div>
+      </div>
+      <div class="plan-period" id="period-students">per month</div>
+      <div class="plan-yearly-note" id="note-students"></div>
+      <div class="plan-divider"></div>
+      <ul class="plan-features">
+        <li><i class="fas fa-check"></i> Unlimited transactions</li>
+        <li><i class="fas fa-check"></i> Full dashboard & stats</li>
+        <li><i class="fas fa-check"></i> All spending categories</li>
+        <li><i class="fas fa-check"></i> Klyro AI chat</li>
+        <li><i class="fas fa-check"></i> Analysis & charts</li>
+        <li><i class="fas fa-check"></i> Savings goals</li>
+        <li><i class="fas fa-check"></i> CSV & PDF export</li>
+        <li><i class="fas fa-times"></i> Currency conversion</li>
+        <li><i class="fas fa-times"></i> Team features</li>
+        <li><i class="fas fa-times"></i> Invoices & receipts</li>
+      </ul>
+      <button class="btn btn-glass plan-cta" onclick="selectPlan('students', 8)">
+        Get Students
+      </button>
+    </div>
+
+    <!-- INDIVIDUALS (featured) -->
+    <div class="plan-card featured">
+      <div class="plan-badge-top">Most Popular</div>
+      <div class="plan-name">Individuals</div>
+      <div class="plan-price-wrap">
+        <div class="plan-price" id="price-individuals"><sup>$</sup>10</div>
+      </div>
+      <div class="plan-period" id="period-individuals">per month</div>
+      <div class="plan-yearly-note" id="note-individuals"></div>
+      <div class="plan-divider"></div>
+      <ul class="plan-features">
+        <li><i class="fas fa-check"></i> Everything in Students</li>
+        <li><i class="fas fa-check"></i> Currency conversion (50+)</li>
+        <li><i class="fas fa-check"></i> Weekly & monthly reports</li>
+        <li><i class="fas fa-check"></i> Klyro AI (web search)</li>
+        <li><i class="fas fa-check"></i> Advanced analysis</li>
+        <li><i class="fas fa-check"></i> Priority email support</li>
+        <li><i class="fas fa-times"></i> Team features</li>
+        <li><i class="fas fa-times"></i> Invoices & receipts</li>
+        <li><i class="fas fa-times"></i> Automated invoicing</li>
+        <li><i class="fas fa-times"></i> Dedicated manager</li>
+      </ul>
+      <button class="btn btn-gold plan-cta" onclick="selectPlan('individuals', 10)">
+        <i class="fas fa-rocket"></i> Get Individuals
+      </button>
+    </div>
+
+    <!-- BUSINESSES -->
+    <div class="plan-card">
+      <div class="plan-name">Businesses</div>
+      <div class="plan-price-wrap">
+        <div class="plan-price" id="price-businesses"><sup>$</sup>20</div>
+      </div>
+      <div class="plan-period" id="period-businesses">per month</div>
+      <div class="plan-yearly-note" id="note-businesses"></div>
+      <div class="plan-divider"></div>
+      <ul class="plan-features">
+        <li><i class="fas fa-check"></i> Everything in Individuals</li>
+        <li><i class="fas fa-check"></i> Team features (up to 10)</li>
+        <li><i class="fas fa-check"></i> Invoices & receipts</li>
+        <li><i class="fas fa-check"></i> Expense approvals</li>
+        <li><i class="fas fa-check"></i> Shared dashboards</li>
+        <li><i class="fas fa-check"></i> Role-based access</li>
+        <li><i class="fas fa-times"></i> Automated invoicing</li>
+        <li><i class="fas fa-times"></i> API access</li>
+        <li><i class="fas fa-times"></i> Dedicated manager</li>
+        <li><i class="fas fa-times"></i> Custom integrations</li>
+      </ul>
+      <button class="btn btn-glass plan-cta" onclick="selectPlan('businesses', 20)">
+        Get Businesses
+      </button>
+    </div>
+
+    <!-- COMPANIES & ENTERPRISES -->
+    <div class="plan-card">
+      <div class="plan-name">Companies &amp; Enterprises</div>
+      <div class="plan-price-wrap">
+        <div class="plan-price" id="price-enterprise"><sup>$</sup>40</div>
+      </div>
+      <div class="plan-period" id="period-enterprise">per month</div>
+      <div class="plan-yearly-note" id="note-enterprise"></div>
+      <div class="plan-divider"></div>
+      <ul class="plan-features">
+        <li><i class="fas fa-check"></i> Everything in Businesses</li>
+        <li><i class="fas fa-check"></i> Unlimited team members</li>
+        <li><i class="fas fa-check"></i> Automated invoicing</li>
+        <li><i class="fas fa-check"></i> API access</li>
+        <li><i class="fas fa-check"></i> Custom integrations</li>
+        <li><i class="fas fa-check"></i> Dedicated account manager</li>
+        <li><i class="fas fa-check"></i> Priority 24/7 support</li>
+        <li><i class="fas fa-check"></i> SLA guarantee</li>
+        <li><i class="fas fa-check"></i> Onboarding & training</li>
+        <li><i class="fas fa-check"></i> Early beta access</li>
+      </ul>
+      <button class="btn btn-glass plan-cta" onclick="selectPlan('enterprise', 40)">
+        Get Enterprise
+      </button>
+    </div>
+
+  </div>
+
+  <!-- Trust bar -->
+  <div class="trust-bar">
+    <div class="trust-item"><i class="fas fa-lock"></i> Secure payments via Paystack</div>
+    <div class="trust-item"><i class="fas fa-rotate-left"></i> Cancel any time</div>
+    <div class="trust-item"><i class="fas fa-shield-halved"></i> 30-day money-back guarantee</div>
+    <div class="trust-item"><i class="fas fa-headset"></i> Support included on all plans</div>
+  </div>
+
+  <button class="skip-link" onclick="selectPlan('free', 0)">
+    Skip for now — continue with Free plan
+  </button>
+
+</div>
+
+<!-- Payment modal -->
+<div class="payment-overlay" id="payment-overlay">
+  <div class="payment-modal">
+    <button class="payment-modal-close" onclick="closePaymentModal()"><i class="fas fa-times"></i></button>
+
+    <div class="payment-plan-badge" id="modal-plan-badge">
+      <i class="fas fa-star"></i> <span id="modal-plan-name">Individuals</span>
+    </div>
+
+    <div class="payment-modal-title">Complete your upgrade</div>
+    <div class="payment-modal-sub" id="modal-sub">
+      You're one step away from unlocking all Klyro features.
+    </div>
+
+    <div class="payment-amount-display">
+      <div class="payment-amount" id="modal-amount">$10</div>
+      <div class="payment-amount-period" id="modal-period">per month · cancel any time</div>
+    </div>
+
+    <!-- Paystack pays here -->
+    <div class="payment-btn-wrap" id="payment-btn-wrap">
+      <button class="btn btn-gold" style="width:100%;justify-content:center;font-size:1rem;padding:16px;" id="paystack-btn" onclick="launchPaystack()">
+        <i class="fas fa-credit-card"></i> Pay with Paystack
+      </button>
+      <button class="btn btn-glass" style="width:100%;justify-content:center;" onclick="closePaymentModal()">
+        Maybe later
+      </button>
+    </div>
+
+    <div class="payment-loading" id="payment-loading" style="display:none;">
+      <div class="payment-spinner"></div>
+      <div class="payment-loading-text">Connecting to Paystack…</div>
+    </div>
+
+    <div class="payment-secure-note">
+      <i class="fas fa-lock"></i> Secured by Paystack · 256-bit SSL encryption
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<!-- Paystack JS -->
+<script src="https://js.paystack.co/v1/inline.js"></script>
+<script src="app.js"></script>
+<script>
+  Auth.require();
+
+  // ── CONFIG ────────────────────────────────────────────────────────────────
+  // Replace with your actual Paystack public key from dashboard.paystack.com
+  const PAYSTACK_PUBLIC_KEY = 'YOUR_PAYSTACK_PUBLIC_KEY_HERE';
+
+  const PRICES = {
+    monthly: {
+      free:        0,
+      students:    8,
+      individuals: 10,
+      businesses:  20,
+      enterprise:  40,
+    },
+    yearly: {
+      free:        0,
+      students:    parseFloat((8  * 12 * 0.8).toFixed(2)),   // $76.80
+      individuals: parseFloat((10 * 12 * 0.8).toFixed(2)),   // $96.00
+      businesses:  parseFloat((20 * 12 * 0.8).toFixed(2)),   // $192.00
+      enterprise:  parseFloat((40 * 12 * 0.8).toFixed(2)),   // $384.00
+    }
+  };
+
+  const PLAN_LABELS = {
+    free: 'Free', students: 'Students',
+    individuals: 'Individuals', businesses: 'Businesses', enterprise: 'Companies & Enterprises'
+  };
+
+  let currentBilling = 'monthly';
+  let pendingPlan    = null;
+  let pendingPrice   = 0;
+
+  // ── BILLING TOGGLE ────────────────────────────────────────────────────────
+  function setBilling(type) {
+    currentBilling = type;
+    document.querySelectorAll('.billing-tab').forEach(b => b.classList.toggle('active', b.dataset.billing === type));
+
+    const p = PRICES[type];
+
+    // Update each paid plan
+    ['students','individuals','businesses','enterprise'].forEach(plan => {
+      const monthly = PRICES.monthly[plan];
+      const price   = p[plan];
+      const isYearly = type === 'yearly';
+
+      const priceEl  = document.getElementById('price-' + plan);
+      const periodEl = document.getElementById('period-' + plan);
+      const noteEl   = document.getElementById('note-' + plan);
+
+      if (priceEl)  priceEl.innerHTML  = `<sup>$</sup>${price}`;
+      if (periodEl) periodEl.textContent = isYearly ? 'per year' : 'per month';
+      if (noteEl)   noteEl.textContent   = isYearly
+        ? `Save $${((monthly * 12) - price).toFixed(2)} vs monthly`
+        : '';
+    });
+  }
+
+  // ── PLAN SELECTION ────────────────────────────────────────────────────────
+  function selectPlan(planKey, baseMonthlyPrice) {
+    if (planKey === 'free') {
+      const s = Store.getSettings();
+      s.plan = 'free'; s.billingCycle = currentBilling;
+      Store.saveSettings(s);
+      showToast('Welcome to Klyro Free! Upgrade any time. 🎉');
+      setTimeout(() => window.location.href = 'dashboard.html', 900);
+      return;
+    }
+
+    // Work out the actual price for the chosen billing cycle
+    const price = PRICES[currentBilling][planKey] || baseMonthlyPrice;
+    pendingPlan  = planKey;
+    pendingPrice = price;
+    openPaymentModal(planKey, price);
+  }
+
+  // ── PAYMENT MODAL ─────────────────────────────────────────────────────────
+  function openPaymentModal(planKey, price) {
+    const label  = PLAN_LABELS[planKey] || planKey;
+    const period = currentBilling === 'yearly' ? 'per year' : 'per month';
+
+    document.getElementById('modal-plan-name').textContent  = label;
+    document.getElementById('modal-plan-badge').querySelector('span').textContent = label;
+    document.getElementById('modal-amount').textContent     = `$${price}`;
+    document.getElementById('modal-period').textContent     = `${period} · cancel any time`;
+    document.getElementById('modal-sub').textContent        = `You're upgrading to the ${label} plan. Secure payment powered by Paystack.`;
+
+    document.getElementById('payment-btn-wrap').style.display = 'flex';
+    document.getElementById('payment-loading').style.display  = 'none';
+
+    document.getElementById('payment-overlay').classList.add('open');
+  }
+
+  function closePaymentModal() {
+    document.getElementById('payment-overlay').classList.remove('open');
+    pendingPlan  = null;
+    pendingPrice = 0;
+  }
+
+  // Close on backdrop click
+  document.getElementById('payment-overlay').addEventListener('click', function(e) {
+    if (e.target === this) closePaymentModal();
+  });
+
+  // ── PAYSTACK CHECKOUT ─────────────────────────────────────────────────────
+  function launchPaystack() {
+    const user = Auth.getUser();
+    if (!user) { showToast('Please sign in first.', 'error'); return; }
+
+    if (!PAYSTACK_PUBLIC_KEY || PAYSTACK_PUBLIC_KEY === 'YOUR_PAYSTACK_PUBLIC_KEY_HERE') {
+      // Demo mode — no real key yet
+      simulateSuccessfulPayment();
+      return;
+    }
+
+    // Show loading
+    document.getElementById('payment-btn-wrap').style.display = 'none';
+    document.getElementById('payment-loading').style.display  = 'flex';
+
+    const amountKobo = Math.round(pendingPrice * 100); // Paystack uses smallest currency unit
+
+    const handler = PaystackPop.setup({
+      key:       PAYSTACK_PUBLIC_KEY,
+      email:     user.email,
+      amount:    amountKobo,
+      currency:  'USD',
+      ref:       'klyro_' + pendingPlan + '_' + Date.now(),
+      metadata: {
+        custom_fields: [
+          { display_name: 'Plan',         variable_name: 'plan',          value: pendingPlan },
+          { display_name: 'Billing',      variable_name: 'billing_cycle', value: currentBilling },
+          { display_name: 'Customer Name',variable_name: 'name',          value: user.name || '' },
+        ]
+      },
+      callback: function(response) {
+        // Payment successful
+        onPaymentSuccess(response);
+      },
+      onClose: function() {
+        // User closed the Paystack popup
+        document.getElementById('payment-btn-wrap').style.display = 'flex';
+        document.getElementById('payment-loading').style.display  = 'none';
+        showToast('Payment cancelled.', 'error');
+      }
+    });
+
+    handler.openIframe();
+  }
+
+  function onPaymentSuccess(response) {
+    // Save plan to settings
+    const s = Store.getSettings();
+    s.plan           = pendingPlan;
+    s.billingCycle   = currentBilling;
+    s.paystackRef    = response.reference;
+    s.planActivated  = new Date().toISOString();
+    Store.saveSettings(s);
+
+    // Fire webhook to Make.com
+    MakeWebhook.send('plan.upgraded', {
+      plan:      PLAN_LABELS[pendingPlan],
+      billing:   currentBilling,
+      amount:    pendingPrice,
+      currency:  'USD',
+      reference: response.reference,
+      email:     Auth.getUser()?.email,
+      name:      Auth.getUser()?.name,
+    });
+
+    closePaymentModal();
+    showToast(`🎉 Welcome to ${PLAN_LABELS[pendingPlan]}! Your plan is now active.`);
+    setTimeout(() => window.location.href = 'dashboard.html', 1200);
+  }
+
+  function simulateSuccessfulPayment() {
+    // Demo mode when no Paystack key is set
+    document.getElementById('payment-btn-wrap').style.display = 'none';
+    document.getElementById('payment-loading').style.display  = 'flex';
+    document.querySelector('.payment-loading-text').textContent = 'Demo mode — simulating payment…';
+
+    setTimeout(() => {
+      onPaymentSuccess({ reference: 'demo_' + Date.now() });
+    }, 1800);
+  }
+
+  // ── INIT ──────────────────────────────────────────────────────────────────
+  // Pre-fill currency symbol from user's settings
+  (function() {
+    const cur = getCurrency();
+    if (cur && cur.symbol !== '$') {
+      // If user's currency isn't USD, note it but keep pricing in USD
+    }
+  })();
+</script>
+</body>
+</html>

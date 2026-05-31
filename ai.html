@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Klyro — AI Coach</title>
+  <link rel="icon" type="image/png" href="exmo_logo.png">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="app.css">
+  <style>
+    /* ── AI Hero ── */
+    .ai-hero {
+      background: linear-gradient(135deg, var(--gold-dim), rgba(212,160,23,0.03));
+      border: 1px solid var(--gold-border);
+      border-radius: var(--radius);
+      padding: 32px 36px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 22px;
+    }
+    .ai-avatar {
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--gold), var(--gold-light));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.8rem;
+      flex-shrink: 0;
+      box-shadow: 0 0 24px rgba(212,160,23,0.35);
+    }
+    .ai-hero h2 {
+      font-family: var(--font-display);
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .ai-hero p { color: var(--text-mid); font-size: 0.875rem; margin: 0; line-height: 1.6; }
+
+    /* ── Status bar ── */
+    .ai-status-bar {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 16px;
+      margin: 8px 0 6px;
+      background: var(--gold-dim);
+      border: 1px solid var(--gold-border);
+      border-radius: var(--radius-pill);
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--gold);
+    }
+    .ai-status-bar.visible { display: flex; }
+    .status-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--gold); flex-shrink: 0;
+      animation: status-pulse 1s ease-in-out infinite;
+    }
+    @keyframes status-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
+
+    /* ── Chips ── */
+    .chips-wrap { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .chip {
+      padding: 7px 14px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--glass-border);
+      background: var(--glass-dim);
+      color: var(--text-mid);
+      font-size: 0.78rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition);
+      font-family: var(--font-body);
+      white-space: nowrap;
+    }
+    .chip:hover { background: var(--gold-dim); border-color: var(--gold-border); color: var(--text); }
+
+    /* ── Streaming cursor ── */
+    .cursor {
+      display: inline-block;
+      width: 2px; height: 0.9em;
+      background: currentColor;
+      margin-left: 2px;
+      vertical-align: text-bottom;
+      animation: blink 0.8s step-end infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    /* ── Web badge ── */
+    .web-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.68rem;
+      color: var(--gold);
+      font-weight: 600;
+      background: var(--gold-dim);
+      border: 1px solid var(--gold-border);
+      border-radius: var(--radius-pill);
+      padding: 2px 9px;
+      margin-top: 6px;
+    }
+
+    /* ── Negative balance alert card ── */
+    .deficit-banner {
+      display: none;
+      background: linear-gradient(135deg, rgba(192,57,43,0.1), rgba(192,57,43,0.04));
+      border: 1px solid rgba(192,57,43,0.35);
+      border-left: 3px solid var(--red);
+      border-radius: var(--radius-sm);
+      padding: 14px 18px;
+      margin-bottom: 20px;
+      font-size: 0.875rem;
+      color: var(--text);
+      display: none;
+      align-items: center;
+      gap: 12px;
+    }
+    .deficit-banner.show { display: flex; }
+    .deficit-banner i { color: var(--red); font-size: 1.1rem; flex-shrink: 0; }
+
+    @media (max-width: 640px) {
+      .ai-hero { padding: 20px; gap: 14px; }
+      .ai-hero h2 { font-size: 1.3rem; }
+      .chips-wrap { display: none; } /* hide chips on tiny screens to save space */
+    }
+  </style>
+</head>
+<body>
+
+<div id="sidebar-mount"></div>
+
+<div class="app-shell">
+  <main class="main-content">
+
+    <div class="page-header">
+      <h1>Klyro AI</h1>
+      <p>Powered by Claude Sonnet 4.6 — your personal finance coach.</p>
+    </div>
+
+    <!-- Deficit banner (shown when user is overspending) -->
+    <div class="deficit-banner" id="deficit-banner">
+      <i class="fas fa-triangle-exclamation"></i>
+      <span id="deficit-text">You're currently spending more than you earn. Ask me how to fix this.</span>
+    </div>
+
+    <!-- Hero -->
+    <div class="ai-hero">
+      <div class="ai-avatar">🧠</div>
+      <div>
+        <h2>Hey, I'm Klyro AI</h2>
+        <p>I know your finances inside out. I can also search the web live for the latest rates, strategies and deals — so my information is always grounded in what's actually available to you right now.</p>
+      </div>
+    </div>
+
+    <!-- Auto Insights -->
+    <div class="glass-card" style="padding:28px;margin-bottom:20px;">
+      <div class="section-title" style="margin-bottom:16px;"><i class="fas fa-bolt"></i> Instant Insights</div>
+      <div id="auto-insights"></div>
+    </div>
+
+    <!-- Chat -->
+    <div class="glass-card" style="padding:28px;">
+      <div class="section-title" style="margin-bottom:14px;"><i class="fas fa-comments"></i> Ask Klyro AI</div>
+      <div class="chips-wrap" id="chips"></div>
+      <div class="ai-chat-window" id="chat-window"></div>
+      <div class="ai-status-bar" id="status-bar">
+        <div class="status-dot"></div>
+        <span id="status-text">Thinking…</span>
+      </div>
+      <div class="chat-input-row">
+        <input type="text" class="form-input" id="chat-input"
+          placeholder="Ask anything about your finances…" autocomplete="off">
+        <button class="btn btn-gold" id="send-btn" onclick="sendMessage()">
+          <i class="fas fa-paper-plane"></i>
+        </button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Bottom Nav -->
+<nav class="bottom-nav">
+  <a href="dashboard.html" class="bottom-nav-item" data-page="dashboard"><i class="fas fa-house"></i>Home</a>
+  <a href="transactions.html" class="bottom-nav-item" data-page="transactions"><i class="fas fa-right-left"></i>Transactions</a>
+  <a href="analysis.html" class="bottom-nav-item" data-page="analysis"><i class="fas fa-chart-pie"></i>Analysis</a>
+  <a href="ai.html" class="bottom-nav-item active" data-page="ai"><i class="fas fa-brain"></i>AI</a>
+  <a href="settings.html" class="bottom-nav-item" data-page="settings"><i class="fas fa-gear"></i>Settings</a>
+</nav>
+
+<script src="app.js"></script>
+<script>Auth.require();
+  // Gate entire AI page — requires Students plan or higher
+  if (!PlanGate.can('ai_chat')) {
+    window.__aiGated = true;
+    document.addEventListener('DOMContentLoaded', function() {
+      const mount = document.getElementById('sidebar-mount');
+      if (mount) { mount.innerHTML = renderSidebar(); initSidebar(); }
+      const shell = document.querySelector('.app-shell');
+      if (shell) {
+        shell.innerHTML = '<main class="main-content"><div class="page-header"><h1>Klyro AI</h1><p>Your personal AI finance coach.</p></div><div class="glass-card" style="padding:28px;" id="ai-locked-banner"></div></main>';
+        PlanGate.renderLockedBanner('ai_chat', 'ai-locked-banner');
+      }
+    });
+  }
+</script>
+<script>
+'use strict';
+
+/* ═══════════════════════════════════════════════════
+   KLYRO AI  —  Extended Thinking + Live Web Search
+   Model  : claude-sonnet-4-6
+   Thinking budget: 10,000 tokens  (~15-30 seconds)
+   Min display    : 15 seconds enforced by JS clock
+═══════════════════════════════════════════════════ */
+const MODEL        = 'claude-sonnet-4-6';
+const API_URL      = 'https://api.anthropic.com/v1/messages';
+const MIN_THINK_MS = 15000;   // enforce ≥ 15 s of "thinking" UI
+const THINK_BUDGET = 10000;   // token budget for Claude's reasoning
+
+const WEB_SEARCH_TOOL = [{ type: 'web_search_20250305', name: 'web_search' }];
+
+const WEB_TRIGGERS = [
+  'best','current','rate','today','latest','right now','2025','2026',
+  'interest','inflation','isa','savings account','bank','currency market','investment',
+  'stock','crypto','mortgage','tax','hmrc','pension','budget',
+  'government','news','compare','cheapest','deals','offer','product',
+  'price','cost','cheap','afford','economy','recession','fund','etf',
+  'index','dividend','gdp','inflation rate','central bank'
+];
+
+const CHIPS = [
+  'How can I save more?',
+  'Where am I overspending?',
+  'Best savings accounts right now?',
+  'Build a 3-month emergency fund',
+  "What's my savings rate?",
+  'Give me a weekly budget plan',
+  'How does the 50/30/20 rule work?',
+  'Tips to cut my grocery bill',
+  'Should I invest my surplus?',
+  'How do I pay off debt faster?',
+  'Analyze my spending categories and give me a report',
+  ''
+
+];
+
+let chatHistory = [];
+let isStreaming  = false;
+
+/* ─── Think Clock ──────────────────────────────── */
+let _thinkStart    = null;
+let _thinkInterval = null;
+
+function startThinkClock() {
+  _thinkStart = Date.now();
+  let secs = 0;
+  _setStatusText(`🧠 Thinking deeply… ${secs}s`);
+  _thinkInterval = setInterval(() => {
+    secs++;
+    _setStatusText(`🧠 Thinking deeply… ${secs}s`);
+  }, 1000);
+  document.getElementById('status-bar').classList.add('visible');
+}
+
+function stopThinkClock() {
+  if (_thinkInterval) { clearInterval(_thinkInterval); _thinkInterval = null; }
+}
+
+async function enforceMinThinkTime() {
+  if (!_thinkStart) return;
+  const elapsed = Date.now() - _thinkStart;
+  if (elapsed < MIN_THINK_MS) {
+    await new Promise(r => setTimeout(r, MIN_THINK_MS - elapsed));
+  }
+}
+
+function _setStatusText(txt) {
+  const el = document.getElementById('status-text');
+  if (el) el.textContent = txt;
+}
+
+/* ─── Status bar ───────────────────────────────── */
+function setStatus(key) {
+  const bar = document.getElementById('status-bar');
+  if (!key) { stopThinkClock(); bar.classList.remove('visible'); return; }
+  const labels = {
+    searching : '🔍  Searching the web for current data…',
+    reading   : '📖  Reading search results…',
+    writing   : '✍️   Writing your answer…',
+  };
+  if (labels[key]) { stopThinkClock(); _setStatusText(labels[key]); bar.classList.add('visible'); }
+}
+
+/* ─── Financial context ────────────────────────── */
+function buildContext() {
+  const ctx  = Utils.buildAIContext('month');
+  const user = Auth.getUser();
+  const s    = Store.getSettings();
+  const goalLabel = {
+    save_more:'save more each month', track_spending:'understand spending patterns',
+    pay_debt:'pay off debt faster', build_wealth:'build long-term wealth',
+    big_purchase:'save for a big purchase', emergency_fund:'build an emergency fund'
+  };
+  return `
+USER FINANCIAL SNAPSHOT (this month):
+• Currency: ${ctx.currency} (${ctx.symbol})
+• Income:       ${ctx.symbol}${ctx.income.toFixed(2)}
+• Expenses:     ${ctx.symbol}${ctx.expense.toFixed(2)}
+• Net Balance:  ${ctx.balance >= 0 ? '+' : '-'}${ctx.symbol}${Math.abs(ctx.balance).toFixed(2)} ${ctx.balance < 0 ? '⚠️ DEFICIT — treat as critical' : '✓ Positive'}
+• Savings Rate: ${ctx.savingsRate}% ${parseFloat(ctx.savingsRate) >= 20 ? '(✓ above 20% target)' : '(↓ below 20% target)'}
+• Financial Health Score: ${ctx.healthScore}/100
+• Top Expense Categories: ${ctx.topCategories}
+• Savings Goals: ${ctx.goals}
+• Transactions this month: ${ctx.periodTransactions} (${ctx.totalTransactions} all-time)
+${ctx.expenseChange ? `• Expense vs last month: ${ctx.expenseChange > 0 ? '+' : ''}${ctx.expenseChange}%` : ''}
+• Primary goal (from onboarding): ${goalLabel[s.primaryGoal] || 'not set'}
+• Monthly income target: ${s.incomeTarget ? ctx.symbol + parseFloat(s.incomeTarget).toFixed(0) : 'not set'}`;
+}
+
+function buildSystemPrompt() {
+  return `You are Klyro AI — a warm, sharp, deeply knowledgeable personal finance coach embedded in the Klyro app. You are powered by Claude Sonnet 4.6 with extended thinking enabled, which means you reason carefully before responding.
+
+PERSONALITY & STYLE:
+- Warm, encouraging, never judgmental — money is emotional, treat it that way
+- Jargon-free — define any financial term the first time you use it
+- Always end with ONE clear, specific next step the user can take TODAY
+- Honest — if finances look bad, say so kindly but clearly with a concrete fix
+- Use the user's currency symbol (${Utils.buildAIContext('month').symbol}) for every amount
+- Aim for 150–220 words. Use **bold** for key numbers and action steps
+- When you have live web data, weave it in naturally — don't announce "I searched the web"
+
+CRITICAL RULES:
+1. If Net Balance is a DEFICIT, lead with that — it's always the top priority
+2. Always give at least one data-backed, specific recommendation (not generic advice)
+3. If asked about current rates, accounts, or market data — use your web search results
+4. Think deeply before responding. Consider: the user's full financial picture, their primary goal, their health score, and what would genuinely move the needle for them
+
+${buildContext()}`;
+}
+
+/* ─── Chat UI helpers ──────────────────────────── */
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function mdToHtml(text) {
+  return esc(text)
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,     '<em>$1</em>')
+    .replace(/`(.+?)`/g,       '<code>$1</code>')
+    .replace(/^[\-•] /gm,      '&bull; ')
+    .replace(/
+
+/g,          '<br><br>')
+    .replace(/
+/g,            '<br>');
+}
+
+function appendMessage(role, html) {
+  const win = document.getElementById('chat-window');
+  const div = document.createElement('div');
+  div.className = `chat-msg ${role}`;
+  div.innerHTML  = html;
+  win.appendChild(div);
+  win.scrollTop  = win.scrollHeight;
+  return div;
+}
+
+function createStreamBubble() {
+  const win = document.getElementById('chat-window');
+  const div = document.createElement('div');
+  div.className = 'chat-msg ai';
+  div.innerHTML  = '<span class="cursor"></span>';
+  win.appendChild(div);
+  win.scrollTop  = win.scrollHeight;
+  return div;
+}
+
+function finalise(div, text, usedWeb, thinkSecs) {
+  let html = mdToHtml(text);
+  const badges = [];
+  if (usedWeb) badges.push(`<span class="web-badge"><i class="fas fa-globe"></i> Live web data</span>`);
+  if (thinkSecs) badges.push(`<span class="web-badge" style="background:rgba(139,92,246,0.1);border-color:rgba(139,92,246,0.3);color:#8b5cf6;"><i class="fas fa-brain"></i> Thought for ${thinkSecs}s</span>`);
+  if (badges.length) html += '<br>' + badges.join(' ');
+  div.innerHTML = html;
+  document.getElementById('chat-window').scrollTop = 9999;
+}
+
+/* ═══════════════════════════════════════════════
+   STREAMING AGENT LOOP
+   — Extended thinking on every turn
+   — Web search for current-data queries
+   — Minimum 15 s thinking display enforced
+═══════════════════════════════════════════════ */
+async function runAgent(messages) {
+  let usedWeb      = false;
+  let allMessages  = [...messages];
+  let streamDiv    = null;
+  let fullText     = '';
+  let thinkSecs    = 0;
+
+  const userMsg    = messages[messages.length - 1]?.content || '';
+  const needsSearch = WEB_TRIGGERS.some(t => userMsg.toLowerCase().includes(t));
+
+  // Start the 15 s+ thinking clock
+  startThinkClock();
+
+  try {
+    for (let turn = 0; turn < 6; turn++) {
+
+      const headers = { 'Content-Type': 'application/json' };
+      // Use interleaved-thinking beta when combining thinking + tools
+      if (needsSearch || usedWeb) {
+        headers['anthropic-beta'] = 'interleaved-thinking-2025-05-14';
+      }
+
+      const body = {
+        model:      MODEL,
+        max_tokens: 16000,          // must cover thinking tokens + response
+        thinking:   { type: 'enabled', budget_tokens: THINK_BUDGET },
+        system:     buildSystemPrompt(),
+        messages:   allMessages,
+        stream:     true,
+      };
+
+      if (needsSearch || usedWeb) body.tools = WEB_SEARCH_TOOL;
+
+      const resp = await fetch(API_URL, { method: 'POST', headers, body: JSON.stringify(body) });
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.error?.message || `HTTP ${resp.status}`);
+      }
+
+      const reader   = resp.body.getReader();
+      const decoder  = new TextDecoder();
+      let buf        = '';
+      let turnText   = '';
+      let toolUseId  = null;
+      let toolName   = null;
+      let toolInputBuf = '';
+      let stopReason   = null;
+      let assistantBlocks = [];
+      let currentBlock    = null;
+      let thinkBuf        = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop();
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const raw = line.slice(6).trim();
+          if (raw === '[DONE]') break;
+          let evt;
+          try { evt = JSON.parse(raw); } catch { continue; }
+
+          /* ── Block start ── */
+          if (evt.type === 'content_block_start') {
+            currentBlock = evt.content_block.type;
+
+            if (currentBlock === 'thinking') {
+              thinkBuf = '';
+            }
+
+            if (currentBlock === 'text' && !streamDiv) {
+              // Hold back response until 15 s minimum has been shown
+              await enforceMinThinkTime();
+              thinkSecs = Math.round((Date.now() - _thinkStart) / 1000);
+              stopThinkClock();
+              setStatus('writing');
+              streamDiv = createStreamBubble();
+            }
+
+            if (currentBlock === 'tool_use') {
+              toolUseId    = evt.content_block.id;
+              toolName     = evt.content_block.name;
+              toolInputBuf = '';
+              if (toolName === 'web_search') {
+                usedWeb = true;
+                thinkSecs = Math.round((Date.now() - _thinkStart) / 1000);
+                stopThinkClock();
+                setStatus('searching');
+              }
+            }
+          }
+
+          /* ── Block delta ── */
+          if (evt.type === 'content_block_delta') {
+            if (evt.delta.type === 'thinking_delta') {
+              thinkBuf += evt.delta.thinking;
+              // clock keeps ticking — nothing else to do
+            }
+            if (evt.delta.type === 'text_delta') {
+              turnText += evt.delta.text;
+              fullText += evt.delta.text;
+              if (streamDiv) {
+                streamDiv.innerHTML = mdToHtml(fullText) + '<span class="cursor"></span>';
+                document.getElementById('chat-window').scrollTop = 9999;
+              }
+            }
+            if (evt.delta.type === 'input_json_delta') {
+              toolInputBuf += evt.delta.partial_json;
+            }
+          }
+
+          /* ── Block stop ── */
+          if (evt.type === 'content_block_stop') {
+            if (currentBlock === 'thinking' && thinkBuf) {
+              assistantBlocks.push({ type: 'thinking', thinking: thinkBuf });
+              thinkBuf = '';
+            }
+            if (currentBlock === 'tool_use' && toolUseId) {
+              assistantBlocks.push({
+                type:  'tool_use',
+                id:    toolUseId,
+                name:  toolName,
+                input: (() => { try { return JSON.parse(toolInputBuf); } catch { return {}; } })()
+              });
+              toolUseId = toolName = null; toolInputBuf = '';
+            }
+            if (currentBlock === 'text' && turnText) {
+              assistantBlocks.push({ type: 'text', text: turnText });
+              turnText = '';
+            }
+            currentBlock = null;
+          }
+
+          if (evt.type === 'message_delta') stopReason = evt.delta?.stop_reason;
+        }
+      }
+
+      if (turnText) assistantBlocks.push({ type: 'text', text: turnText });
+      if (assistantBlocks.length) allMessages.push({ role: 'assistant', content: assistantBlocks });
+
+      if (stopReason === 'tool_use') {
+        // After web search, continue loop — Claude reads results on the next turn
+        const toolResults = assistantBlocks
+          .filter(b => b.type === 'tool_use')
+          .map(b => ({ type: 'tool_result', tool_use_id: b.id, content: '(results returned by API)' }));
+        allMessages.push({ role: 'user', content: toolResults });
+        setStatus('reading');
+        // Restart clock so reading time also counts toward the 15 s
+        if (!_thinkStart) startThinkClock();
+        continue;
+      }
+      break;
+    }
+
+  } catch (err) {
+    stopThinkClock();
+    throw err;
+  }
+
+  // If response came back faster than 15 s, hold the writing state
+  await enforceMinThinkTime();
+  stopThinkClock();
+
+  if (streamDiv) finalise(streamDiv, fullText, usedWeb, thinkSecs);
+  return { text: fullText, usedWeb, thinkSecs };
+}
+
+/* ═══════════════════════════════
+   SEND MESSAGE
+═══════════════════════════════ */
+async function sendMessage() {
+  if (isStreaming) return;
+  const input = document.getElementById('chat-input');
+  const msg   = input.value.trim();
+  if (!msg) return;
+
+  input.value  = '';
+  isStreaming   = true;
+  document.getElementById('send-btn').disabled = true;
+
+  appendMessage('user', esc(msg));
+  chatHistory.push({ role: 'user', content: msg });
+
+  try {
+    const { text, usedWeb, thinkSecs } = await runAgent(chatHistory);
+    chatHistory.push({ role: 'assistant', content: text });
+  } catch (err) {
+    console.error(err);
+    setStatus(null);
+    const fallback = localReply(msg);
+    appendMessage('ai', mdToHtml(fallback));
+    chatHistory.push({ role: 'assistant', content: fallback });
+  }
+
+  setStatus(null);
+  isStreaming  = false;
+  document.getElementById('send-btn').disabled = false;
+  input.focus();
+}
+
+/* ═══════════════════════════════
+   LOCAL FALLBACK (if API fails)
+═══════════════════════════════ */
+function localReply(msg) {
+  const ctx = Utils.buildAIContext('month');
+  const sym = ctx.symbol;
+  const sr  = parseFloat(ctx.savingsRate);
+  const q   = msg.toLowerCase();
+  const neg = ctx.balance < 0;
+  const deficitNote = neg
+    ? `⚠️ First: you're in a **${sym}${Math.abs(ctx.balance).toFixed(2)} deficit** this month — let's fix that first.\n\n`
+    : '';
+
+  if (q.includes('save') || q.includes('saving'))
+    return `${deficitNote}Your savings rate is **${sr}%** — target is 20%.\n\n${ctx.topCat ? `Biggest expense: **${ctx.topCat[0]}** at ${sym}${ctx.topCat[1].toFixed(2)}. A 10% cut there moves the needle.` : 'Log more transactions for specific advice.'}\n\n**Next step:** Set up an auto-transfer to savings on payday — even ${sym}50/month builds the habit. 💪`;
+
+  if (q.includes('overspend') || q.includes('budget') || q.includes('deficit'))
+    return neg
+      ? `You're overspending by **${sym}${Math.abs(ctx.balance).toFixed(2)}** this month.\n\nFocus: cut **${ctx.topCat?.[0] || 'discretionary'}** spending first.\n\n**Next step:** Pause all non-essential spending for the rest of this month. 🚀`
+      : `You're within budget! Net: **${sym}${ctx.balance.toFixed(2)}** 🎉\n\n**Next step:** Move that surplus into a savings goal before it gets spent.`;
+
+  if (q.includes('rate') || q.includes('%'))
+    return `${deficitNote}Savings rate: **${sr}%**.\n\n${sr >= 20 ? `Outstanding — above the 20% benchmark! 🚀` : `You're ${(20 - sr).toFixed(1)}% short of 20%.\n\n**Next step:** Find one expense to reduce this week.`}`;
+
+  if (q.includes('emergency') || q.includes('fund'))
+    return `${deficitNote}Aim for **3–6 months of expenses** in an easy-access account.\n\nBased on your spending: roughly **${sym}${(ctx.expense * 4.5).toFixed(0)}**.\n\n**Next step:** Open a dedicated savings account today and automate ${sym}50/month to it. 🛡️`;
+
+  return `${deficitNote}This month:\n• **Income:** ${sym}${ctx.income.toFixed(2)}\n• **Expenses:** ${sym}${ctx.expense.toFixed(2)}\n• **Net:** ${ctx.balance < 0 ? '-' : '+'}${sym}${Math.abs(ctx.balance).toFixed(2)}\n• **Savings rate:** ${sr}%\n\n**Next step:** Head to the Analysis page for your full category breakdown. 📊`;
+}
+
+/* ═══════════════════════════════
+   AUTO INSIGHTS
+═══════════════════════════════ */
+function renderAutoInsights() {
+  const ctx = Utils.buildAIContext('month');
+  const sym = ctx.symbol;
+  const sr  = parseFloat(ctx.savingsRate);
+  const insights = [];
+
+  if (ctx.totalTransactions === 0) {
+    insights.push({ t:'👋 Welcome!', m:"Start logging income and expenses — I'll generate personalised insights as soon as you do.", type:'' });
+  } else {
+    if (ctx.isOverspending) {
+      insights.push({ t:'🚨 You Are in Deficit', m:`You're spending **${sym}${Math.abs(ctx.balance).toFixed(2)} more than you earn** this month. Pause non-essential spending and review your top categories immediately.`, type:'warning' });
+    }
+    if (ctx.topCat) {
+      const pct = ctx.income > 0 ? ((ctx.topCat[1]/ctx.income)*100).toFixed(0) : 0;
+      insights.push({
+        t:`💸 Top Spend: ${ctx.topCat[0][0].toUpperCase()+ctx.topCat[0].slice(1)}`,
+        m:`${sym}${ctx.topCat[1].toFixed(2)} — ${pct}% of income. ${pct > 25 ? 'That\'s high. A 15% cut saves you ' + sym + (ctx.topCat[1] * 0.15).toFixed(0) + '.' : 'Looking manageable — keep monitoring.'}`,
+        type: pct > 25 ? 'warning' : ''
+      });
+    }
+    insights.push({
+      t: `📊 Savings Rate: ${ctx.savingsRate}%`,
+      m: sr >= 20
+        ? `Excellent — ${ctx.savingsRate}% puts you above the 20% benchmark. You're building real wealth!`
+        : `Target is 20%. You're ${(20-sr).toFixed(1)}% away — consistent small cuts get you there.`,
+      type: sr >= 20 ? 'positive' : sr < 0 ? 'warning' : ''
+    });
+    if (!ctx.isOverspending && ctx.balance > 0) {
+      insights.push({ t:'✨ Surplus Available', m:`You have **${sym}${ctx.balance.toFixed(2)}** surplus. Move it into a savings goal before it gets spent!`, type:'positive' });
+    }
+    insights.push({
+      t:`🏥 Financial Health: ${ctx.healthScore}/100`,
+      m: ctx.healthScore >= 75 ? '💪 Strong finances — maintain consistency.' : ctx.healthScore >= 50 ? '📈 Good foundation — keep building.' : '⚠️ Needs attention — focus on reducing expenses first.',
+      type: ctx.healthScore < 40 ? 'warning' : ctx.healthScore >= 75 ? 'positive' : ''
+    });
+  }
+
+  document.getElementById('auto-insights').innerHTML = insights.map(i => `
+    <div class="ai-bubble ${i.type}" style="margin-bottom:12px;">
+      <div class="ai-bubble-header"><i class="fas fa-brain"></i> ${i.t}</div>
+      <div class="ai-bubble-text">${mdToHtml(i.m)}</div>
+    </div>`).join('');
+}
+
+/* ─── Deficit banner ─── */
+function renderDeficitBanner() {
+  const ctx    = Utils.buildAIContext('month');
+  const banner = document.getElementById('deficit-banner');
+  if (ctx.isOverspending && ctx.totalTransactions > 0) {
+    document.getElementById('deficit-text').textContent =
+      `⚠️ You're ${ctx.symbol}${Math.abs(ctx.balance).toFixed(2)} over budget this month. Ask me how to fix this fast.`;
+    banner.classList.add('show');
+  } else {
+    banner.classList.remove('show');
+  }
+}
+
+/* ─── Chips ─── */
+function renderChips() {
+  document.getElementById('chips').innerHTML = CHIPS.map(c =>
+    `<button class="chip" onclick="useChip(this)">${c}</button>`).join('');
+}
+function useChip(btn) {
+  document.getElementById('chat-input').value = btn.textContent;
+  sendMessage();
+}
+
+/* ─── Enter key ─── */
+document.getElementById('chat-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+
+/* ─── Boot ─── */
+if (window.__aiGated) throw new Error('AI plan-gated');
+document.getElementById('sidebar-mount').innerHTML = renderSidebar();
+initSidebar();
+renderDeficitBanner();
+renderAutoInsights();
+renderChips();
+
+setTimeout(() => {
+  const user = Auth.getUser();
+  const name = user?.name?.split(' ')[0] || '';
+  const ctx  = Utils.buildAIContext('month');
+  const deficitNote = ctx.isOverspending && ctx.totalTransactions > 0
+    ? ` I can see you're currently in a <strong>${ctx.symbol}${Math.abs(ctx.balance).toFixed(2)} deficit</strong> this month — that's the first thing I'd like to help you tackle.`
+    : '';
+
+  appendMessage('ai',
+    `Hello${name ? ', <strong>' + name + '</strong>' : ''}! I'm <strong>Klyro AI</strong>, powered by Claude Sonnet 4.6 with extended thinking. 🧠<br><br>
+     I take time to reason carefully before I respond — you'll see me thinking for at least 15 seconds to make sure my advice is accurate and personalised to <em>your</em> finances. I can also search the web live for current rates and strategies.${deficitNote}<br><br>
+     What's on your mind? 💛`
+  );
+}, 350);
+</script>
+</html>

@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Klyro — Sign In</title>
+  <link rel="icon" type="image/png" href="exmo_logo.png">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="app.css">
+  <style>
+    .auth-root {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      position: relative;
+      z-index: 1;
+    }
+    .auth-panel {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 60px 56px;
+    }
+    .auth-form-wrap { width: 100%; max-width: 400px; }
+    .auth-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 48px; }
+    .auth-logo img { height: 30px; width: auto; }
+    .auth-logo-text {
+      font-family: var(--font-display);
+      font-size: 1.75rem; font-weight: 700;
+      color: var(--text); letter-spacing: 0.02em;
+    }
+    .auth-heading {
+      font-family: var(--font-display);
+      font-size: 2.4rem; font-weight: 700;
+      color: var(--text); line-height: 1.1; margin-bottom: 8px;
+    }
+    .auth-sub { color: var(--text-dim); font-size: 0.9rem; margin-bottom: 36px; }
+
+    .auth-card {
+      background: var(--glass);
+      backdrop-filter: var(--blur);
+      -webkit-backdrop-filter: var(--blur);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      padding: 36px;
+    }
+
+    .btn-social {
+      width: 100%;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      padding: 13px;
+      background: var(--glass-dim);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: var(--font-body); font-size: 0.875rem; font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition);
+      margin-bottom: 10px;
+    }
+    .btn-social:hover { background: var(--glass); border-color: var(--gold-border); transform: translateY(-1px); }
+    .btn-social:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .btn-social .fa-google { color: #ea4335; }
+    .btn-social .fa-apple  { color: var(--text); }
+
+    .auth-divider {
+      display: flex; align-items: center; gap: 14px; margin: 22px 0;
+    }
+    .auth-divider-line { flex: 1; height: 1px; background: var(--glass-border); }
+    .auth-divider span {
+      font-size: 0.75rem; color: var(--text-dim);
+      font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em;
+    }
+
+    .input-wrap { position: relative; }
+    .input-wrap .form-input { padding-right: 44px; }
+    .input-eye {
+      position: absolute; right: 14px; top: 50%;
+      transform: translateY(-50%);
+      background: none; border: none; color: var(--text-dim);
+      cursor: pointer; font-size: 0.9rem; padding: 4px;
+      transition: color var(--transition);
+    }
+    .input-eye:hover { color: var(--text); }
+
+    /* Remember me */
+    .remember-row {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      margin: -6px 0 20px;
+    }
+    .remember-check {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.82rem; color: var(--text-dim); cursor: pointer;
+    }
+    .remember-check input[type="checkbox"] {
+      width: 15px; height: 15px;
+      accent-color: var(--gold); cursor: pointer;
+    }
+    .forgot-link {
+      font-size: 0.78rem; color: var(--gold);
+      font-weight: 600; text-decoration: none;
+    }
+    .forgot-link:hover { text-decoration: underline; }
+
+    .error-msg {
+      display: none;
+      background: var(--red-dim);
+      border: 1px solid rgba(192,57,43,0.3);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px; font-size: 0.84rem; color: var(--red);
+      margin-bottom: 18px; align-items: center; gap: 8px;
+    }
+    .error-msg.show { display: flex; }
+
+    /* Lockout countdown */
+    .lockout-msg {
+      display: none;
+      background: var(--red-dim);
+      border: 1px solid rgba(192,57,43,0.3);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px; font-size: 0.84rem; color: var(--red);
+      margin-bottom: 18px; text-align: center;
+    }
+    .lockout-msg.show { display: block; }
+    .lockout-timer { font-size: 1.3rem; font-weight: 700; font-family: var(--font-display); display: block; margin-top: 4px; }
+
+    .btn-full { width: 100%; justify-content: center; margin-top: 4px; }
+
+    .auth-footer {
+      text-align: center; margin-top: 24px;
+      font-size: 0.85rem; color: var(--text-dim);
+    }
+    .auth-footer a { color: var(--gold); font-weight: 600; text-decoration: none; }
+    .auth-footer a:hover { text-decoration: underline; }
+
+    /* Clerk OAuth modal */
+    .clerk-modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      z-index: 1000; align-items: center; justify-content: center; padding: 20px;
+    }
+    .clerk-modal-overlay.open { display: flex; }
+    .clerk-modal {
+      background: var(--surface, #1a1612);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius);
+      box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+      padding: 32px; width: 100%; max-width: 420px; position: relative;
+      animation: modal-in 0.25s cubic-bezier(0.16,1,0.3,1);
+    }
+    @keyframes modal-in {
+      from { opacity:0; transform: translateY(16px) scale(0.97); }
+      to   { opacity:1; transform: translateY(0) scale(1); }
+    }
+    .clerk-modal-close {
+      position: absolute; top: 16px; right: 16px;
+      background: var(--glass-dim); border: 1px solid var(--glass-border);
+      border-radius: 8px; width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: var(--text-dim); font-size: 0.8rem;
+      transition: all var(--transition);
+    }
+    .clerk-modal-close:hover { background: var(--glass); color: var(--text); }
+    .clerk-modal-title { font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .clerk-modal-sub { font-size: 0.82rem; color: var(--text-dim); margin-bottom: 24px; }
+    .clerk-loading { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 24px 0; }
+    .clerk-spinner {
+      width: 32px; height: 32px;
+      border: 3px solid var(--glass-border); border-top-color: var(--gold);
+      border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .clerk-loading-text { font-size: 0.84rem; color: var(--text-dim); }
+
+    /* Hero */
+    .auth-hero {
+      background: linear-gradient(135deg, rgba(212,160,23,0.14) 0%, rgba(212,160,23,0.04) 60%, transparent 100%);
+      border-left: 1px solid var(--glass-border);
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      padding: 60px 56px; position: relative; overflow: hidden;
+    }
+    .auth-hero::before {
+      content: ''; position: absolute; width: 520px; height: 520px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(212,160,23,0.18) 0%, transparent 70%);
+      top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;
+    }
+    .hero-content { position: relative; z-index: 1; max-width: 380px; }
+    .hero-tagline { font-family: var(--font-display); font-size: clamp(2rem, 3.2vw, 3rem); font-weight: 700; line-height: 1.15; color: var(--text); margin-bottom: 20px; }
+    .hero-tagline em { font-style: italic; color: var(--gold); }
+    .hero-tagline-sub { font-size: 0.92rem; color: var(--text-dim); line-height: 1.7; margin-bottom: 40px; }
+    .hero-features { display: flex; flex-direction: column; gap: 16px; }
+    .hero-feat { display: flex; align-items: center; gap: 14px; padding: 16px 20px; background: var(--glass); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); backdrop-filter: var(--blur); }
+    .hero-feat-icon { width: 38px; height: 38px; border-radius: 10px; background: var(--gold-dim); color: var(--gold); display: flex; align-items: center; justify-content: center; font-size: 0.95rem; flex-shrink: 0; }
+    .hero-feat-label { font-weight: 600; font-size: 0.88rem; color: var(--text); margin-bottom: 2px; }
+    .hero-feat-desc { font-size: 0.76rem; color: var(--text-dim); }
+
+    @media (max-width: 820px) {
+      .auth-root { grid-template-columns: 1fr; }
+      .auth-hero { display: none; }
+      .auth-panel { padding: 40px 28px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="auth-root">
+  <div class="auth-panel">
+    <div class="auth-form-wrap">
+
+      <div class="auth-logo">
+        <img src="exmo_logo.png" alt="Klyro" onerror="this.style.display='none'">
+        <span class="auth-logo-text">Klyro</span>
+      </div>
+
+      <div class="auth-heading">Welcome back</div>
+      <div class="auth-sub">Sign in to your Klyro account to continue</div>
+
+      <div class="auth-card">
+
+        <!-- Lockout notice with countdown -->
+        <div class="lockout-msg" id="lockout-msg">
+          <i class="fas fa-shield-halved"></i> Account temporarily locked after too many failed attempts.
+          <span class="lockout-timer" id="lockout-timer">15:00</span>
+        </div>
+
+        <!-- Error -->
+        <div class="error-msg" id="error-msg">
+          <i class="fas fa-circle-exclamation"></i>
+          <span id="error-text">Invalid email or password.</span>
+        </div>
+
+        <!-- Social — Clerk OAuth -->
+        <button class="btn-social" id="btn-google" onclick="socialLogin('google')">
+          <i class="fab fa-google"></i> Continue with Google
+        </button>
+        <button class="btn-social" id="btn-apple" onclick="socialLogin('apple')">
+          <i class="fab fa-apple"></i> Continue with Apple
+        </button>
+
+        <div class="auth-divider">
+          <div class="auth-divider-line"></div>
+          <span>or</span>
+          <div class="auth-divider-line"></div>
+        </div>
+
+        <!-- Email/password — Clerk API under the hood -->
+        <div class="form-group">
+          <label class="form-label">Email address</label>
+          <input type="email" class="form-input" id="login-email" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <div class="input-wrap">
+            <input type="password" class="form-input" id="login-password" placeholder="Your password" autocomplete="current-password">
+            <button class="input-eye" type="button" onclick="togglePwd('login-password', this)"><i class="fas fa-eye"></i></button>
+          </div>
+        </div>
+
+        <!-- Remember me + Forgot password -->
+        <div class="remember-row">
+          <label class="remember-check">
+            <input type="checkbox" id="remember-me"> Remember me
+          </label>
+          <a href="#" class="forgot-link" onclick="forgotPassword(event)">Forgot password?</a>
+        </div>
+
+        <button class="btn btn-gold btn-full" id="login-btn" onclick="handleLogin()">
+          <i class="fas fa-arrow-right-to-bracket"></i> Sign In
+        </button>
+
+      </div>
+
+      <div class="auth-footer">
+        Don't have an account? <a href="signup.html">Create one free</a>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Right: Hero -->
+  <div class="auth-hero">
+    <div class="hero-content">
+      <div class="hero-tagline">Your money,<br><em>finally</em> under control.</div>
+      <div class="hero-tagline-sub">Klyro tracks every penny, surfaces insights instantly, and coaches you towards real wealth — all in one beautiful app.</div>
+      <div class="hero-features">
+        <div class="hero-feat">
+          <div class="hero-feat-icon"><i class="fas fa-chart-pie"></i></div>
+          <div><div class="hero-feat-label">Smart Analysis</div><div class="hero-feat-desc">Understand your spending patterns at a glance</div></div>
+        </div>
+        <div class="hero-feat">
+          <div class="hero-feat-icon"><i class="fas fa-brain"></i></div>
+          <div><div class="hero-feat-label">AI Finance Coach</div><div class="hero-feat-desc">Personalised advice based on your real data</div></div>
+        </div>
+        <div class="hero-feat">
+          <div class="hero-feat-icon"><i class="fas fa-bullseye"></i></div>
+          <div><div class="hero-feat-label">Savings Goals</div><div class="hero-feat-desc">Track and celebrate every milestone</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Clerk OAuth modal -->
+<div class="clerk-modal-overlay" id="clerk-overlay">
+  <div class="clerk-modal">
+    <button class="clerk-modal-close" onclick="closeClerkModal()"><i class="fas fa-times"></i></button>
+    <div class="clerk-modal-title" id="clerk-modal-title">Continue with Google</div>
+    <div class="clerk-modal-sub" id="clerk-modal-sub">Connecting…</div>
+    <div class="clerk-loading">
+      <div class="clerk-spinner"></div>
+      <div class="clerk-loading-text">Loading secure sign-in…</div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+<script src="app.js"></script>
+<script>
+  const CLERK_PUBLISHABLE_KEY = 'pk_test_ZGFzaGluZy1iZWUtNTkuY2xlcmsuYWNjb3VudHMuZGV2JA';
+  let clerkInstance = null;
+  let lockoutInterval = null;
+
+  // Already logged in?
+  (function() { if (Auth.getUser()) window.location.replace('dashboard.html'); })();
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function showError(msg) {
+    document.getElementById('error-text').textContent = msg;
+    document.getElementById('error-msg').classList.add('show');
+  }
+  function hideError() { document.getElementById('error-msg').classList.remove('show'); }
+
+  function togglePwd(id, btn) {
+    const input = document.getElementById(id);
+    const icon  = btn.querySelector('i');
+    input.type  = input.type === 'password' ? 'text' : 'password';
+    icon.className = input.type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
+  }
+
+  // ── Lockout countdown timer ───────────────────────────────────────────────
+  function startLockoutTimer(ms) {
+    const lockoutEl = document.getElementById('lockout-msg');
+    const timerEl   = document.getElementById('lockout-timer');
+    const loginBtn  = document.getElementById('login-btn');
+    const emailInput = document.getElementById('login-email');
+    const pwdInput   = document.getElementById('login-password');
+
+    lockoutEl.classList.add('show');
+    hideError();
+    loginBtn.disabled   = true;
+    emailInput.disabled = true;
+    pwdInput.disabled   = true;
+
+    let remaining = Math.ceil(ms / 1000);
+    function tick() {
+      const m = Math.floor(remaining / 60).toString().padStart(2,'0');
+      const s = (remaining % 60).toString().padStart(2,'0');
+      timerEl.textContent = m + ':' + s;
+      if (remaining <= 0) {
+        clearInterval(lockoutInterval);
+        lockoutEl.classList.remove('show');
+        loginBtn.disabled   = false;
+        emailInput.disabled = false;
+        pwdInput.disabled   = false;
+      }
+      remaining--;
+    }
+    tick();
+    lockoutInterval = setInterval(tick, 1000);
+  }
+
+  // Check if already locked on page load
+  (function checkExistingLockout() {
+    const email = localStorage.getItem('klyro_last_email') || '';
+    if (!email) return;
+    const d = Auth._getRateData(email);
+    if (d.lockedUntil && Date.now() < d.lockedUntil) {
+      document.getElementById('login-email').value = email;
+      startLockoutTimer(d.lockedUntil - Date.now());
+    }
+  })();
+
+  // ── Email/password login via Clerk API ────────────────────────────────────
+  async function handleLogin() {
+    hideError();
+    const email    = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+    const remember = document.getElementById('remember-me').checked;
+
+    if (!email)    { showError('Please enter your email address.'); return; }
+    if (!password) { showError('Please enter your password.'); return; }
+
+    const btn = document.getElementById('login-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Signing in…';
+
+    // Store email for lockout persistence across refreshes
+    localStorage.setItem('klyro_last_email', email);
+
+    try {
+      // Try Clerk email/password first (if Clerk is loaded)
+      if (clerkInstance) {
+        await loginWithClerkEmail(email, password, remember);
+      } else {
+        // Fallback: load Clerk silently then sign in
+        await loadClerkSilent();
+        if (clerkInstance) {
+          await loginWithClerkEmail(email, password, remember);
+        } else {
+          // Final fallback: local Auth
+          await loginLocal(email, password, remember);
+        }
+      }
+    } catch (err) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-arrow-right-to-bracket"></i> Sign In';
+      showError(err.message || 'Sign in failed. Please try again.');
+    }
+  }
+
+  async function loginWithClerkEmail(email, password, remember) {
+    const btn = document.getElementById('login-btn');
+    try {
+      const result = await clerkInstance.client.signIn.create({
+        identifier: email,
+        password:   password,
+      });
+
+      if (result.status === 'complete') {
+        await clerkInstance.setActive({ session: result.createdSessionId });
+        Auth.loginClerk(clerkInstance.user, remember);
+        window.location.replace('dashboard.html');
+      } else {
+        throw new Error('Sign in could not be completed. Please try again.');
+      }
+    } catch (clerkErr) {
+      // Clerk error codes
+      const code = clerkErr.errors && clerkErr.errors[0] && clerkErr.errors[0].code;
+      if (code === 'form_password_incorrect' || code === 'form_identifier_not_found') {
+        // Record failure in local rate limiter
+        Auth._recordFailure(email);
+        const lockMsg = Auth._isLocked(email);
+        if (lockMsg) {
+          const d = Auth._getRateData(email);
+          startLockoutTimer(d.lockedUntil - Date.now());
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-arrow-right-to-bracket"></i> Sign In';
+          return;
+        }
+        const d    = Auth._getRateData(email);
+        const left = 5 - (d.attempts || 0);
+        throw new Error('Incorrect email or password.' + (left > 0 ? ' ' + left + ' attempt' + (left !== 1 ? 's' : '') + ' remaining.' : ''));
+      }
+      // Not a credential error — try local fallback
+      await loginLocal(email, password, remember);
+    }
+  }
+
+  async function loginLocal(email, password, remember) {
+    const btn = document.getElementById('login-btn');
+    const result = await Auth.login(email, password, remember);
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-arrow-right-to-bracket"></i> Sign In';
+    if (result.success) {
+      window.location.replace('dashboard.html');
+    } else {
+      if (result.message && result.message.includes('locked')) {
+        const d = Auth._getRateData(email);
+        startLockoutTimer(d.lockedUntil - Date.now());
+      } else {
+        showError(result.message || 'Incorrect email or password.');
+      }
+    }
+  }
+
+  function forgotPassword(e) {
+    e.preventDefault();
+    const email = document.getElementById('login-email').value.trim();
+    if (!email) { showError('Enter your email address first, then click "Forgot password?"'); return; }
+    showToast('Password reset link sent to ' + email);
+  }
+
+  document.addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
+
+  // ── Clerk OAuth (Google / Apple) ──────────────────────────────────────────
+  async function socialLogin(provider) {
+    const btn = document.getElementById('btn-' + provider);
+    btn.disabled = true;
+    document.getElementById('clerk-modal-title').textContent = 'Continue with ' + (provider === 'google' ? 'Google' : 'Apple');
+    document.getElementById('clerk-modal-sub').textContent   = 'Connecting to ' + (provider === 'google' ? 'Google' : 'Apple') + '…';
+    document.getElementById('clerk-overlay').classList.add('open');
+
+    try {
+      if (!clerkInstance) await loadClerkSilent();
+      await clerkInstance.authenticateWithRedirect({
+        strategy:            provider === 'google' ? 'oauth_google' : 'oauth_apple',
+        redirectUrl:         window.location.origin + '/login.html?clerk_callback=1',
+        redirectUrlComplete: window.location.origin + '/dashboard.html',
+      });
+    } catch (err) {
+      closeClerkModal();
+      btn.disabled = false;
+      showError('Could not connect to ' + (provider === 'google' ? 'Google' : 'Apple') + '. Please try again.');
+    }
+  }
+
+  function closeClerkModal() {
+    document.getElementById('clerk-overlay').classList.remove('open');
+    document.getElementById('btn-google').disabled = false;
+    document.getElementById('btn-apple').disabled  = false;
+  }
+  document.getElementById('clerk-overlay').addEventListener('click', function(e) {
+    if (e.target === this) closeClerkModal();
+  });
+
+  // ── Clerk loader ──────────────────────────────────────────────────────────
+  async function loadClerkSilent() {
+    if (clerkInstance) return;
+    const clerkDomain = atob(CLERK_PUBLISHABLE_KEY.split('_')[2]).slice(0, -1);
+    await new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://' + clerkDomain + '/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
+      s.async = true; s.crossOrigin = 'anonymous';
+      s.onload = resolve; s.onerror = reject;
+      document.head.appendChild(s);
+    });
+    clerkInstance = new window.Clerk(CLERK_PUBLISHABLE_KEY);
+    await clerkInstance.load();
+    if (clerkInstance.user) {
+      Auth.loginClerk(clerkInstance.user, true);
+      window.location.replace('dashboard.html');
+    }
+  }
+
+  // Handle OAuth callback redirect
+  (async function() {
+    if (window.location.search.includes('clerk_callback')) {
+      try { await loadClerkSilent(); } catch(e) {}
+    }
+  })();
+</script>
+</body>
+</html>

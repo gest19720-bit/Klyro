@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Klyro — Dashboard</title>
+  <link rel="icon" type="image/png" href="exmo_logo.png">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<div id="sidebar-mount"></div>
+
+<div class="app-shell">
+  <main class="main-content">
+    <div class="page-header">
+      <h1 id="greeting-text">Good morning 👋</h1>
+      <p class="page-date" id="today-date"></p>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid" id="stats-grid"></div>
+
+    <!-- Two columns -->
+    <div id="dash-grid">
+
+      <!-- Recent Transactions -->
+      <div class="glass-card" style="padding:28px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+          <div class="section-title"><i class="fas fa-clock-rotate-left"></i> Recent Transactions</div>
+          <a href="transactions.html" class="btn btn-glass btn-sm">View All</a>
+        </div>
+        <div class="txn-list" id="recent-txn-list"></div>
+      </div>
+
+      <!-- Right column -->
+      <div id="dash-side-column">
+
+        <!-- Transaction limit warning (free plan) -->
+        <div id="txn-limit-warning" style="display:none;"></div>
+
+        <!-- Quick Add -->
+        <div class="glass-card" style="padding:24px;">
+          <div class="section-title" style="margin-bottom:16px;"><i class="fas fa-plus-circle"></i> Quick Add</div>
+          <div class="type-toggle">
+            <button class="type-btn income active" id="quick-income" onclick="setQuickType('income')">
+              <i class="fas fa-plus"></i> Income
+            </button>
+            <button class="type-btn expense" id="quick-expense" onclick="setQuickType('expense')">
+              <i class="fas fa-minus"></i> Expense
+            </button>
+          </div>
+          <div class="form-group">
+            <input type="number" class="form-input" id="q-amount" placeholder="Amount (£)" min="0" step="0.01">
+          </div>
+          <div class="form-group">
+            <input type="text" class="form-input" id="q-desc" placeholder="Description">
+          </div>
+          <div class="form-group">
+            <select class="form-input" id="q-cat"></select>
+          </div>
+          <button class="btn btn-gold" style="width:100%;" onclick="quickAdd()">
+            <i class="fas fa-plus"></i> Add Transaction
+          </button>
+        </div>
+
+        <!-- Klyro AI Tip -->
+        <div class="glass-card" style="padding:24px;">
+          <div class="section-title" style="margin-bottom:16px;"><i class="fas fa-brain"></i> Klyro AI</div>
+          <div id="dash-ai-tip"></div>
+          <a href="ai.html" class="btn btn-glass btn-sm" style="width:100%;justify-content:center;margin-top:4px;">
+            Ask Klyro AI <i class="fas fa-arrow-right"></i>
+          </a>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="app.js"></script>
+<script>Auth.require();</script>
+
+<script>
+  const CATEGORIES_INCOME  = ['salary','Gift','freelance','investment','other'];
+  const CATEGORIES_EXPENSE = ['groceries','dining','transport','internet','bills','rent','entertainment','health','clothing','shopping','education','travel','other'];
+
+  let quickType = 'income';
+
+  function setQuickType(type) {
+    quickType = type;
+    document.getElementById('quick-income').classList.toggle('active', type === 'income');
+    document.getElementById('quick-expense').classList.toggle('active', type === 'expense');
+    populateCatSelect();
+  }
+
+  function populateCatSelect() {
+    const sel = document.getElementById('q-cat');
+    const cats = quickType === 'income' ? CATEGORIES_INCOME : CATEGORIES_EXPENSE;
+    sel.innerHTML = cats.map(c => `<option value="${c}">${c.charAt(0).toUpperCase()+c.slice(1)}</option>`).join('');
+  }
+
+  function quickAdd() {
+    const amount = parseFloat(document.getElementById('q-amount').value);
+    const desc   = document.getElementById('q-desc').value.trim();
+    const cat    = document.getElementById('q-cat').value;
+    if (!amount || amount <= 0) { showToast('Enter a valid amount', 'error'); return; }
+    if (!desc) { showToast('Add a description', 'error'); return; }
+    Store.addTransaction({ type: quickType, amount, description: desc, category: cat });
+    showToast(`${quickType === 'income' ? 'Income' : 'Expense'} added!`);
+    document.getElementById('q-amount').value = '';
+    document.getElementById('q-desc').value = '';
+    renderPage();
+  }
+
+  function renderStats() {
+    const txns   = Store.getTransactions();
+    const month  = Utils.filterByPeriod(txns, 'month');
+    const totals = Utils.calcTotals(month);
+    const allTotals = Utils.calcTotals(txns);
+
+    const now = new Date();
+    const monthLabel = now.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    document.getElementById('stats-grid').innerHTML = `
+      <div class="glass-card stat-card pressable">
+        <div class="stat-label"><i class="fas fa-wallet"></i> Total Balance</div>
+        <div class="stat-value ${allTotals.balance >= 0 ? 'balance' : 'expense'}">${Utils.formatCurrency(allTotals.balance)}</div>
+        <div class="stat-change">All time net</div>
+      </div>
+      <div class="glass-card stat-card pressable">
+        <div class="stat-label"><i class="fas fa-arrow-down"></i> Income This Month</div>
+        <div class="stat-value income">${Utils.formatCurrency(totals.income, true)}</div>
+        <div class="stat-change">${monthLabel}</div>
+      </div>
+      <div class="glass-card stat-card pressable">
+        <div class="stat-label"><i class="fas fa-arrow-up"></i> Expenses This Month</div>
+        <div class="stat-value expense">${Utils.formatCurrency(totals.expense, true)}</div>
+        <div class="stat-change">${monthLabel}</div>
+      </div>
+      <div class="glass-card stat-card pressable">
+        <div class="stat-label"><i class="fas fa-chart-line"></i> Net This Month</div>
+        <div class="stat-value ${totals.balance >= 0 ? 'income' : 'expense'}">${Utils.formatCurrency(totals.balance)}</div>
+        <div class="stat-change">${totals.balance >= 0 ? '▲ Positive' : '▼ Deficit'}</div>
+      </div>`;
+  }
+
+  function renderRecentTxns() {
+    const txns = Store.getTransactions().slice(0, 6);
+    const el   = document.getElementById('recent-txn-list');
+    if (!txns.length) {
+      el.innerHTML = `<div class="empty-state"><i class="fas fa-receipt"></i><p>No transactions yet.<br>Add your first one!</p></div>`;
+      return;
+    }
+    el.innerHTML = txns.map(t => `
+      <div class="txn-item">
+        <div class="txn-icon ${t.type}"><i class="fas ${Utils.getCategoryIcon(t.category)}"></i></div>
+        <div class="txn-info">
+          <div class="txn-name">${t.description}</div>
+          <div class="txn-meta">
+            <span class="txn-cat-badge">${t.category}</span>
+            ${Utils.formatDate(t.date)}
+          </div>
+        </div>
+        <div class="txn-amount ${t.type}">${t.type === 'income' ? '+' : '-'}${Utils.formatCurrency(t.amount)}</div>
+      </div>`).join('');
+  }
+
+  function renderAITip() {
+    const txns   = Store.getTransactions();
+    const month  = Utils.filterByPeriod(txns, 'month');
+    const totals = Utils.calcTotals(month);
+    const cats   = Utils.groupByCategory(month);
+    const topCat = Object.entries(cats).sort((a,b) => b[1]-a[1])[0];
+    const savingsRate = totals.income > 0 ? ((totals.income - totals.expense) / totals.income * 100).toFixed(0) : 0;
+
+    let tip = '', type = '';
+    if (!txns.length) {
+      tip = "Welcome to Klyro! Start by logging your first income or expense — I'll begin building personalised insights for you right away.";
+      type = '';
+    } else if (totals.expense > totals.income) {
+      tip = `⚠️ You're spending more than you earn this month (${Utils.formatCurrency(totals.expense - totals.income)} over). Let's review your budget — try cutting discretionary spending first.`;
+      type = 'warning';
+    } else if (topCat && topCat[1] > totals.income * 0.3) {
+      tip = `Your top spend category is <strong>${topCat[0]}</strong> at ${Utils.formatCurrency(topCat[1])} — that's ${((topCat[1]/totals.income)*100).toFixed(0)}% of income. Consider setting a category limit.`;
+      type = 'warning';
+    } else if (savingsRate >= 20) {
+      tip = `🎉 Great work! You're saving ${savingsRate}% of your income this month. Keep it up — consistency is the secret to building real wealth.`;
+      type = 'positive';
+    } else {
+      tip = `You've saved ${savingsRate}% of income this month. Aiming for 20% is a strong financial target — small daily cuts compound fast.`;
+      type = '';
+    }
+
+    document.getElementById('dash-ai-tip').innerHTML = `
+      <div class="ai-bubble ${type}">
+        <div class="ai-bubble-header"><i class="fas fa-brain"></i> Klyro AI</div>
+        <div class="ai-bubble-text">${tip}</div>
+      </div>`;
+  }
+
+  function renderPage() {
+    renderStats();
+    renderRecentTxns();
+    renderAITip();
+    checkPlanLimits();
+  }
+
+  function checkPlanLimits() {
+    // Show limit warning on free plan
+    const check = PlanGate.canAddTransaction();
+    if (!check.allowed) {
+      document.getElementById('txn-limit-warning').style.display = 'block';
+      PlanGate.renderLimitWarning(0, 'txn-limit-warning');
+    } else if (check.remaining !== undefined) {
+      document.getElementById('txn-limit-warning').style.display = 'block';
+      PlanGate.renderLimitWarning(check.remaining, 'txn-limit-warning');
+    } else {
+      document.getElementById('txn-limit-warning').style.display = 'none';
+    }
+  }
+
+  // Boot
+  document.getElementById('sidebar-mount').innerHTML = renderSidebar();
+  initSidebar();
+  seedDemoData();
+  document.getElementById('today-date').textContent = new Date().toLocaleDateString('en-GB', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  // Personalised greeting
+  (function() {
+    const user = Auth.getUser();
+    const hour = new Date().getHours();
+    const tod  = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
+    const firstName = user?.name?.split(' ')[0] || '';
+    const el = document.getElementById('greeting-text');
+    if (el) el.textContent = firstName
+      ? `Good ${tod}, ${firstName} 👋`
+      : `Good ${tod} 👋`;
+  })();
+  populateCatSelect();
+  renderPage();
+
+</script>
+
+<!-- Bottom Nav (mobile only) -->
+<nav class="bottom-nav">
+  <a href="dashboard.html" class="bottom-nav-item" data-page="dashboard"><i class="fas fa-house"></i>Home</a>
+  <a href="transactions.html" class="bottom-nav-item" data-page="transactions"><i class="fas fa-right-left"></i>Transactions</a>
+  <a href="analysis.html" class="bottom-nav-item" data-page="analysis"><i class="fas fa-chart-pie"></i>Analysis</a>
+  <a href="ai.html" class="bottom-nav-item" data-page="ai"><i class="fas fa-brain"></i>AI</a>
+  <a href="settings.html" class="bottom-nav-item" data-page="settings"><i class="fas fa-gear"></i>Settings</a>
+</nav>
+<script>
+(function(){
+  var page = location.pathname.split('/').pop() || 'dashboard.html';
+  document.querySelectorAll('.bottom-nav-item[data-page]').forEach(function(el){
+    var p = el.dataset.page;
+    if(page.includes(p)||(p==='dashboard'&&['','index.html','dashboard.html'].includes(page)))
+      el.classList.add('active');
+  });
+})();
+</script>
+
+</body>
+</html>

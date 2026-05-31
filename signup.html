@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Klyro — Create Account</title>
+  <link rel="icon" type="image/png" href="exmo_logo.png">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="app.css">
+  <style>
+    .auth-root { min-height: 100vh; display: grid; grid-template-columns: 1fr 1fr; position: relative; z-index: 1; }
+    .auth-panel { display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 48px 56px; }
+    .auth-form-wrap { width: 100%; max-width: 400px; }
+    .auth-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 40px; }
+    .auth-logo img { height: 30px; width: auto; }
+    .auth-logo-text { font-family: var(--font-display); font-size: 1.75rem; font-weight: 700; color: var(--text); letter-spacing: 0.02em; }
+    .auth-heading { font-family: var(--font-display); font-size: 2.4rem; font-weight: 700; color: var(--text); line-height: 1.1; margin-bottom: 8px; }
+    .auth-sub { color: var(--text-dim); font-size: 0.9rem; margin-bottom: 32px; }
+    .auth-card { background: var(--glass); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur); border: 1px solid var(--glass-border); border-radius: var(--radius); box-shadow: var(--shadow-lg); padding: 32px; }
+    .btn-social { width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 13px; background: var(--glass-dim); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); color: var(--text); font-family: var(--font-body); font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: all var(--transition); margin-bottom: 10px; }
+    .btn-social:hover { background: var(--glass); border-color: var(--gold-border); transform: translateY(-1px); }
+    .btn-social:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .btn-social .fa-google { color: #ea4335; }
+    .btn-social .fa-apple  { color: var(--text); }
+    .auth-divider { display: flex; align-items: center; gap: 14px; margin: 20px 0; }
+    .auth-divider-line { flex: 1; height: 1px; background: var(--glass-border); }
+    .auth-divider span { font-size: 0.75rem; color: var(--text-dim); font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .input-wrap { position: relative; }
+    .input-wrap .form-input { padding-right: 44px; }
+    .input-eye { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 0.9rem; padding: 4px; transition: color var(--transition); }
+    .input-eye:hover { color: var(--text); }
+    .pwd-strength-wrap { margin-top: 8px; display: none; }
+    .pwd-strength-wrap.show { display: block; }
+    .pwd-strength-bar-wrap { display: flex; gap: 4px; margin-bottom: 4px; }
+    .pwd-seg { height: 3px; flex: 1; border-radius: 2px; background: var(--glass-dim); transition: background 0.3s ease; }
+    .pwd-seg.filled-weak { background: var(--red); }
+    .pwd-seg.filled-fair { background: #e67e22; }
+    .pwd-seg.filled-strong { background: var(--green); }
+    .pwd-strength-label { font-size: 0.72rem; color: var(--text-dim); }
+    .terms-check { display: flex; align-items: flex-start; gap: 10px; margin: 18px 0 20px; font-size: 0.8rem; color: var(--text-dim); }
+    .terms-check input[type="checkbox"] { width: 16px; height: 16px; margin-top: 1px; accent-color: var(--gold); flex-shrink: 0; cursor: pointer; }
+    .terms-check a { color: var(--gold); text-decoration: none; font-weight: 600; }
+    .terms-check a:hover { text-decoration: underline; }
+    .error-msg { display: none; background: var(--red-dim); border: 1px solid rgba(192,57,43,0.3); border-radius: var(--radius-sm); padding: 12px 16px; font-size: 0.84rem; color: var(--red); margin-bottom: 16px; align-items: center; gap: 8px; }
+    .error-msg.show { display: flex; }
+    .btn-full { width: 100%; justify-content: center; margin-top: 4px; }
+    .auth-footer { text-align: center; margin-top: 24px; font-size: 0.85rem; color: var(--text-dim); }
+    .auth-footer a { color: var(--gold); font-weight: 600; text-decoration: none; }
+    .auth-footer a:hover { text-decoration: underline; }
+    .clerk-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
+    .clerk-modal-overlay.open { display: flex; }
+    .clerk-modal { background: var(--surface, #1a1612); border: 1px solid var(--glass-border); border-radius: var(--radius); box-shadow: 0 24px 80px rgba(0,0,0,0.5); padding: 32px; width: 100%; max-width: 420px; position: relative; animation: modal-in 0.25s cubic-bezier(0.16,1,0.3,1); }
+    @keyframes modal-in { from { opacity:0; transform: translateY(16px) scale(0.97); } to { opacity:1; transform: translateY(0) scale(1); } }
+    .clerk-modal-close { position: absolute; top: 16px; right: 16px; background: var(--glass-dim); border: 1px solid var(--glass-border); border-radius: 8px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-dim); font-size: 0.8rem; transition: all var(--transition); }
+    .clerk-modal-close:hover { background: var(--glass); color: var(--text); }
+    .clerk-modal-title { font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .clerk-modal-sub { font-size: 0.82rem; color: var(--text-dim); margin-bottom: 24px; }
+    .clerk-loading { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 24px 0; }
+    .clerk-spinner { width: 32px; height: 32px; border: 3px solid var(--glass-border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .clerk-loading-text { font-size: 0.84rem; color: var(--text-dim); }
+    .auth-hero { background: linear-gradient(135deg, rgba(212,160,23,0.14) 0%, rgba(212,160,23,0.04) 60%, transparent 100%); border-left: 1px solid var(--glass-border); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 60px 56px; position: relative; overflow: hidden; }
+    .auth-hero::before { content: ''; position: absolute; width: 520px; height: 520px; border-radius: 50%; background: radial-gradient(circle, rgba(212,160,23,0.18) 0%, transparent 70%); top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; }
+    .hero-content { position: relative; z-index: 1; max-width: 380px; }
+    .hero-tagline { font-family: var(--font-display); font-size: clamp(2rem, 3.2vw, 3rem); font-weight: 700; line-height: 1.15; color: var(--text); margin-bottom: 20px; }
+    .hero-tagline em { font-style: italic; color: var(--gold); }
+    .hero-tagline-sub { font-size: 0.92rem; color: var(--text-dim); line-height: 1.7; margin-bottom: 36px; }
+    .testimonial { background: var(--glass); border: 1px solid var(--glass-border); border-radius: var(--radius); padding: 24px; backdrop-filter: var(--blur); }
+    .testimonial-quote { font-size: 0.88rem; color: var(--text-mid); line-height: 1.65; margin-bottom: 16px; font-style: italic; }
+    .testimonial-author { display: flex; align-items: center; gap: 10px; }
+    .testimonial-avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--gold), var(--gold-light)); display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; color: white; flex-shrink: 0; }
+    .testimonial-name { font-size: 0.85rem; font-weight: 600; color: var(--text); }
+    .testimonial-role { font-size: 0.75rem; color: var(--text-dim); }
+    .stars { color: var(--gold); font-size: 0.8rem; margin-bottom: 10px; }
+    @media (max-width: 820px) { .auth-root { grid-template-columns: 1fr; } .auth-hero { display: none; } .auth-panel { padding: 36px 24px; } .form-row { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<div class="auth-root">
+  <div class="auth-panel">
+    <div class="auth-form-wrap">
+      <div class="auth-logo">
+        <img src="exmo_logo.png" alt="Klyro" onerror="this.style.display='none'">
+        <span class="auth-logo-text">Klyro</span>
+      </div>
+      <div class="auth-heading">Create your account</div>
+      <div class="auth-sub">Free forever. No card required. Start in seconds.</div>
+      <div class="auth-card">
+        <div class="error-msg" id="error-msg">
+          <i class="fas fa-circle-exclamation"></i>
+          <span id="error-text">Something went wrong.</span>
+        </div>
+        <button class="btn-social" id="btn-google" onclick="socialSignup('google')">
+          <i class="fab fa-google"></i> Sign up with Google
+        </button>
+        <button class="btn-social" id="btn-apple" onclick="socialSignup('apple')">
+          <i class="fab fa-apple"></i> Sign up with Apple
+        </button>
+        <div class="auth-divider">
+          <div class="auth-divider-line"></div>
+          <span>or with email</span>
+          <div class="auth-divider-line"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">First name</label>
+            <input type="text" class="form-input" id="su-first" placeholder="Jane" autocomplete="given-name">
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">Last name</label>
+            <input type="text" class="form-input" id="su-last" placeholder="Smith" autocomplete="family-name">
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:18px;">
+          <label class="form-label">Email address</label>
+          <input type="email" class="form-input" id="su-email" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <div class="input-wrap">
+            <input type="password" class="form-input" id="su-password" placeholder="Min. 8 characters" autocomplete="new-password" oninput="checkStrength(this.value)">
+            <button class="input-eye" type="button" onclick="togglePwd('su-password', this)"><i class="fas fa-eye"></i></button>
+          </div>
+          <div class="pwd-strength-wrap" id="strength-wrap">
+            <div class="pwd-strength-bar-wrap">
+              <div class="pwd-seg" id="seg1"></div>
+              <div class="pwd-seg" id="seg2"></div>
+              <div class="pwd-seg" id="seg3"></div>
+              <div class="pwd-seg" id="seg4"></div>
+            </div>
+            <div class="pwd-strength-label" id="strength-label"></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirm password</label>
+          <div class="input-wrap">
+            <input type="password" class="form-input" id="su-confirm" placeholder="Repeat your password" autocomplete="new-password">
+            <button class="input-eye" type="button" onclick="togglePwd('su-confirm', this)"><i class="fas fa-eye"></i></button>
+          </div>
+        </div>
+        <div class="terms-check">
+          <input type="checkbox" id="terms-check">
+          <label for="terms-check">I agree to Klyro's <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>. Your data stays on your device.</label>
+        </div>
+        <button class="btn btn-gold btn-full" id="signup-btn" onclick="handleSignup()">
+          <i class="fas fa-user-plus"></i> Create Free Account
+        </button>
+      </div>
+      <div class="auth-footer">Already have an account? <a href="login.html">Sign in</a></div>
+    </div>
+  </div>
+
+  <div class="auth-hero">
+    <div class="hero-content">
+      <div class="hero-tagline">Start your<br><em>wealth journey</em><br>today.</div>
+      <div class="hero-tagline-sub">Join thousands of people who trust Klyro to track spending, hit savings goals, and build lasting financial habits — for free.</div>
+      <div class="testimonial">
+        <div class="stars">★★★★★</div>
+        <div class="testimonial-quote">I saved £1,200 in my first three months with Klyro. The AI coach spotted I was hemorrhaging money on subscriptions — things I'd completely forgotten about.</div>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar">KA</div>
+          <div><div class="testimonial-name">Kofi A.</div><div class="testimonial-role">Product Manager, London</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="clerk-modal-overlay" id="clerk-overlay">
+  <div class="clerk-modal">
+    <button class="clerk-modal-close" onclick="closeClerkModal()"><i class="fas fa-times"></i></button>
+    <div class="clerk-modal-title" id="clerk-modal-title">Sign up with Google</div>
+    <div class="clerk-modal-sub" id="clerk-modal-sub">Connecting…</div>
+    <div class="clerk-loading"><div class="clerk-spinner"></div><div class="clerk-loading-text">Loading secure sign-up…</div></div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+<script src="app.js"></script>
+<script>
+  const CLERK_PUBLISHABLE_KEY = 'pk_test_ZGFzaGluZy1iZWUtNTkuY2xlcmsuYWNjb3VudHMuZGV2JA';
+  let clerkInstance = null;
+
+  (function() { if (Auth.getUser()) window.location.replace('dashboard.html'); })();
+
+  function showError(msg) { document.getElementById('error-text').textContent = msg; document.getElementById('error-msg').classList.add('show'); }
+  function hideError() { document.getElementById('error-msg').classList.remove('show'); }
+
+  function togglePwd(id, btn) {
+    const input = document.getElementById(id);
+    const icon  = btn.querySelector('i');
+    input.type  = input.type === 'password' ? 'text' : 'password';
+    icon.className = input.type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
+  }
+
+  function checkStrength(val) {
+    const wrap  = document.getElementById('strength-wrap');
+    const label = document.getElementById('strength-label');
+    const segs  = [1,2,3,4].map(i => document.getElementById('seg'+i));
+    if (!val) { wrap.classList.remove('show'); return; }
+    wrap.classList.add('show');
+    let score = 0;
+    if (val.length >= 8) score++;
+    if (/[A-Z]/.test(val)) score++;
+    if (/[0-9]/.test(val)) score++;
+    if (/[^A-Za-z0-9]/.test(val)) score++;
+    const levels = ['','filled-weak','filled-fair','filled-fair','filled-strong'];
+    const labels = ['','Weak — too short','Fair — add numbers or symbols','Good — almost there!','Strong password ✓'];
+    segs.forEach((seg, i) => { seg.className = 'pwd-seg ' + (i < score ? levels[score] : ''); });
+    label.textContent = labels[score] || '';
+  }
+
+  // ── Email signup via Clerk API → local fallback ───────────────────────────
+  async function handleSignup() {
+    hideError();
+    const first    = document.getElementById('su-first').value.trim();
+    const last     = document.getElementById('su-last').value.trim();
+    const email    = document.getElementById('su-email').value.trim();
+    const password = document.getElementById('su-password').value;
+    const confirm  = document.getElementById('su-confirm').value;
+    const terms    = document.getElementById('terms-check').checked;
+
+    if (!first || !last)      { showError('Please enter your full name.'); return; }
+    if (!email)               { showError('Please enter your email address.'); return; }
+    if (!email.includes('@')) { showError('Please enter a valid email address.'); return; }
+    if (password.length < 8)  { showError('Password must be at least 8 characters.'); return; }
+    if (password !== confirm)  { showError('Passwords do not match.'); return; }
+    if (!terms)                { showError('Please accept the Terms of Service to continue.'); return; }
+
+    const btn = document.getElementById('signup-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Creating account…';
+
+    const name = first + ' ' + last;
+
+    try {
+      // Try Clerk email/password signup first
+      if (!clerkInstance) await loadClerkSilent();
+
+      if (clerkInstance) {
+        await signupWithClerkEmail(name, email, password);
+      } else {
+        await signupLocal(name, email, password);
+      }
+    } catch (err) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-user-plus"></i> Create Free Account';
+      showError(err.message || 'Could not create account. Please try again.');
+    }
+  }
+
+  async function signupWithClerkEmail(name, email, password) {
+    const btn = document.getElementById('signup-btn');
+    try {
+      const result = await clerkInstance.client.signUp.create({
+        firstName:    name.split(' ')[0],
+        lastName:     name.split(' ').slice(1).join(' ') || '',
+        emailAddress: email,
+        password:     password,
+      });
+
+      // May need email verification
+      if (result.status === 'complete') {
+        await clerkInstance.setActive({ session: result.createdSessionId });
+        Auth.loginClerk(clerkInstance.user);
+        showToast('Account created! Welcome to Klyro 🎉');
+        setTimeout(() => window.location.href = 'onboarding.html', 900);
+      } else if (result.status === 'missing_requirements') {
+        // Email verification needed — fall back to local for now
+        await signupLocal(name, email, password);
+      } else {
+        await signupLocal(name, email, password);
+      }
+    } catch (clerkErr) {
+      const msg = clerkErr.errors && clerkErr.errors[0] && clerkErr.errors[0].longMessage;
+      if (msg && msg.toLowerCase().includes('already')) {
+        throw new Error('An account with this email already exists. Try signing in.');
+      }
+      // Any other Clerk error — fall back to local
+      await signupLocal(name, email, password);
+    }
+  }
+
+  async function signupLocal(name, email, password) {
+    const btn = document.getElementById('signup-btn');
+    const result = await Auth.register({ name, email, password });
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-user-plus"></i> Create Free Account';
+    if (result.success) {
+      showToast('Account created! Welcome to Klyro 🎉');
+      setTimeout(() => window.location.href = 'onboarding.html', 900);
+    } else {
+      showError(result.message || 'Could not create account.');
+    }
+  }
+
+  // ── Clerk OAuth social signup ─────────────────────────────────────────────
+  async function socialSignup(provider) {
+    const btn = document.getElementById('btn-' + provider);
+    btn.disabled = true;
+    document.getElementById('clerk-modal-title').textContent = 'Sign up with ' + (provider === 'google' ? 'Google' : 'Apple');
+    document.getElementById('clerk-modal-sub').textContent   = 'Connecting to ' + (provider === 'google' ? 'Google' : 'Apple') + '…';
+    document.getElementById('clerk-overlay').classList.add('open');
+    try {
+      if (!clerkInstance) await loadClerkSilent();
+      await clerkInstance.authenticateWithRedirect({
+        strategy:            provider === 'google' ? 'oauth_google' : 'oauth_apple',
+        redirectUrl:         window.location.origin + '/signup.html?clerk_callback=1',
+        redirectUrlComplete: window.location.origin + '/onboarding.html',
+      });
+    } catch (err) {
+      closeClerkModal();
+      btn.disabled = false;
+      showError('Could not connect to ' + (provider === 'google' ? 'Google' : 'Apple') + '. Please try again.');
+    }
+  }
+
+  function closeClerkModal() {
+    document.getElementById('clerk-overlay').classList.remove('open');
+    document.getElementById('btn-google').disabled = false;
+    document.getElementById('btn-apple').disabled  = false;
+  }
+  document.getElementById('clerk-overlay').addEventListener('click', function(e) { if (e.target === this) closeClerkModal(); });
+
+  async function loadClerkSilent() {
+    if (clerkInstance) return;
+    const clerkDomain = atob(CLERK_PUBLISHABLE_KEY.split('_')[2]).slice(0, -1);
+    await new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://' + clerkDomain + '/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
+      s.async = true; s.crossOrigin = 'anonymous';
+      s.onload = resolve; s.onerror = reject;
+      document.head.appendChild(s);
+    });
+    clerkInstance = new window.Clerk(CLERK_PUBLISHABLE_KEY);
+    await clerkInstance.load();
+    if (clerkInstance.user) {
+      Auth.loginClerk(clerkInstance.user);
+      window.location.replace('onboarding.html');
+    }
+  }
+
+  (async function() {
+    if (window.location.search.includes('clerk_callback')) {
+      try { await loadClerkSilent(); } catch(e) {}
+    }
+  })();
+
+  document.addEventListener('keydown', e => { if (e.key === 'Enter') handleSignup(); });
+</script>
+</body>
+</html>

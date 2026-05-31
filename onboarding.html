@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exmo — Welcome</title>
+  <link rel="icon" type="image/png" href="exmo_logo.png">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="app.css">
+  <style>
+    .onboard-root {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      position: relative;
+      z-index: 1;
+    }
+    .onboard-card {
+      background: var(--glass-heavy);
+      backdrop-filter: var(--blur);
+      -webkit-backdrop-filter: var(--blur);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      padding: 48px;
+      width: 100%;
+      max-width: 560px;
+      animation: card-in 0.5s cubic-bezier(0.16,1,0.3,1);
+    }
+    @keyframes card-in {
+      from { opacity:0; transform:translateY(24px) scale(0.98); }
+      to   { opacity:1; transform:translateY(0) scale(1); }
+    }
+    .step { display: none; }
+    .step.active { display: block; }
+
+    /* Progress bar */
+    .progress-bar-wrap {
+      height: 4px;
+      background: var(--glass-dim);
+      border-radius: 2px;
+      margin-bottom: 40px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--gold), var(--gold-light));
+      border-radius: 2px;
+      transition: width 0.5s cubic-bezier(0.16,1,0.3,1);
+    }
+    .step-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 10px;
+    }
+    .step-title {
+      font-family: var(--font-display);
+      font-size: clamp(1.6rem, 4vw, 2.2rem);
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.15;
+      margin-bottom: 8px;
+    }
+    .step-sub {
+      font-size: 0.9rem;
+      color: var(--text-dim);
+      margin-bottom: 32px;
+      line-height: 1.6;
+    }
+
+    /* Option cards */
+    .option-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+    .option-grid.single-col { grid-template-columns: 1fr; }
+    .option-card {
+      padding: 16px 18px;
+      background: var(--glass-dim);
+      border: 1.5px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-family: var(--font-body);
+      font-size: 0.88rem;
+      font-weight: 500;
+      color: var(--text-mid);
+      text-align: left;
+    }
+    .option-card:hover {
+      background: var(--glass);
+      border-color: var(--gold-border);
+      color: var(--text);
+    }
+    .option-card.selected {
+      background: var(--gold-dim);
+      border-color: var(--gold);
+      color: var(--text);
+      font-weight: 600;
+    }
+    .option-card .opt-icon {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      background: var(--glass);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+      transition: background var(--transition);
+    }
+    .option-card.selected .opt-icon {
+      background: var(--gold);
+      color: white;
+    }
+
+    /* Slider input */
+    .range-wrap { margin-bottom: 28px; }
+    .range-display {
+      font-family: var(--font-display);
+      font-size: 2.4rem;
+      font-weight: 700;
+      color: var(--gold);
+      margin-bottom: 12px;
+    }
+    input[type=range] {
+      width: 100%;
+      -webkit-appearance: none;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--glass-dim);
+      outline: none;
+      cursor: pointer;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: var(--gold);
+      box-shadow: 0 0 8px rgba(212,160,23,0.4);
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+    input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+    /* Nav buttons */
+    .step-nav {
+      display: flex;
+      gap: 12px;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 8px;
+    }
+    .btn-skip {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-family: var(--font-body);
+      font-size: 0.85rem;
+      cursor: pointer;
+      text-decoration: underline;
+      padding: 4px 0;
+    }
+    .btn-skip:hover { color: var(--text); }
+
+    /* Emoji greeting */
+    .welcome-emoji {
+      font-size: 3.5rem;
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    @media (max-width: 520px) {
+      .onboard-card { padding: 32px 24px; }
+      .option-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="onboard-root">
+  <div class="onboard-card">
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="progress" style="width:0%"></div>
+    </div>
+
+    <!-- Step 1: Welcome -->
+    <div class="step active" id="step-1">
+      <span class="welcome-emoji">👋</span>
+      <div class="step-label">Step 1 of 5</div>
+      <div class="step-title" id="welcome-name">Welcome to Exmo!</div>
+      <div class="step-sub">Let's take 60 seconds to personalise your experience. This helps Exmo AI give you advice that actually fits your life.</div>
+      <div class="step-nav">
+        <span></span>
+        <button class="btn btn-gold" onclick="nextStep()">
+          Let's go <i class="fas fa-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 2: Primary goal -->
+    <div class="step" id="step-2">
+      <div class="step-label">Step 2 of 5</div>
+      <div class="step-title">What's your #1 financial goal right now?</div>
+      <div class="step-sub">This shapes the advice Exmo AI gives you every day.</div>
+      <div class="option-grid single-col" id="goal-options">
+        <button class="option-card" data-val="save_more" onclick="selectOption(this, 'primaryGoal')">
+          <div class="opt-icon"><i class="fas fa-piggy-bank"></i></div> Save more each month
+        </button>
+        <button class="option-card" data-val="track_spending" onclick="selectOption(this, 'primaryGoal')">
+          <div class="opt-icon"><i class="fas fa-receipt"></i></div> Understand where my money goes
+        </button>
+        <button class="option-card" data-val="pay_debt" onclick="selectOption(this, 'primaryGoal')">
+          <div class="opt-icon"><i class="fas fa-credit-card"></i></div> Pay off debt faster
+        </button>
+        <button class="option-card" data-val="build_wealth" onclick="selectOption(this, 'primaryGoal')">
+          <div class="opt-icon"><i class="fas fa-chart-line"></i></div> Build long-term wealth
+        </button>
+        <button class="option-card" data-val="big_purchase" onclick="selectOption(this, 'primaryGoal')">
+          <div class="opt-icon"><i class="fas fa-house"></i></div> Save for a big purchase
+        </button>
+        <button class="option-card" data-val="emergency_fund" onclick="selectOption(this, 'primaryGoal')">
+          <div class="opt-icon"><i class="fas fa-shield-halved"></i></div> Build an emergency fund
+        </button>
+      </div>
+      <div class="step-nav">
+        <button class="btn-skip" onclick="prevStep()"><i class="fas fa-arrow-left"></i> Back</button>
+        <button class="btn btn-gold" onclick="nextStep()">Continue <i class="fas fa-arrow-right"></i></button>
+      </div>
+    </div>
+
+    <!-- Step 3: Income range -->
+    <div class="step" id="step-3">
+      <div class="step-label">Step 3 of 5</div>
+      <div class="step-title">What's your approximate monthly income?</div>
+      <div class="step-sub">Used only to personalise your budget targets. We never store or share this.</div>
+      <div class="range-wrap">
+        <div class="range-display" id="income-display">$3,000</div>
+        <input type="range" id="income-slider" min="0" max="50000" step="500" value="3000"
+          oninput="updateIncomeDisplay(this.value)">
+        <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--text-dim);margin-top:6px;">
+          <span>$0</span><span>$25,000</span><span>$50,000+</span>
+        </div>
+      </div>
+      <div class="step-nav">
+        <button class="btn-skip" onclick="prevStep()"><i class="fas fa-arrow-left"></i> Back</button>
+        <button class="btn btn-gold" onclick="nextStep()">Continue <i class="fas fa-arrow-right"></i></button>
+      </div>
+    </div>
+
+    <!-- Step 4: Spending habits -->
+    <div class="step" id="step-4">
+      <div class="step-label">Step 4 of 5</div>
+      <div class="step-title">How would you describe your spending habits?</div>
+      <div class="step-sub">Be honest — Exmo works best when it knows the real picture.</div>
+      <div class="option-grid single-col">
+        <button class="option-card" data-val="very_careful" onclick="selectOption(this, 'spendingHabit')">
+          <div class="opt-icon"><i class="fas fa-lock"></i></div> Very careful — I track everything
+        </button>
+        <button class="option-card" data-val="mostly_good" onclick="selectOption(this, 'spendingHabit')">
+          <div class="opt-icon"><i class="fas fa-thumbs-up"></i></div> Mostly good — I have a loose budget
+        </button>
+        <button class="option-card" data-val="impulsive" onclick="selectOption(this, 'spendingHabit')">
+          <div class="opt-icon"><i class="fas fa-fire"></i></div> Impulsive — I spend first, think later
+        </button>
+        <button class="option-card" data-val="no_idea" onclick="selectOption(this, 'spendingHabit')">
+          <div class="opt-icon"><i class="fas fa-question"></i></div> Honestly, I have no idea
+        </button>
+      </div>
+      <div class="step-nav">
+        <button class="btn-skip" onclick="prevStep()"><i class="fas fa-arrow-left"></i> Back</button>
+        <button class="btn btn-gold" onclick="nextStep()">Continue <i class="fas fa-arrow-right"></i></button>
+      </div>
+    </div>
+
+    <!-- Step 5: Currency -->
+    <div class="step" id="step-5">
+      <div class="step-label">Step 5 of 5</div>
+      <div class="step-title">Choose your currency</div>
+      <div class="step-sub">This will be used across the entire app. You can change it any time in Settings.</div>
+      <div class="form-group" style="margin-bottom:28px;">
+        <select class="form-input" id="ob-currency" style="font-size:1rem;">
+        </select>
+      </div>
+      <div class="step-nav">
+        <button class="btn-skip" onclick="prevStep()"><i class="fas fa-arrow-left"></i> Back</button>
+        <button class="btn btn-gold" onclick="finishOnboarding()">
+          <i class="fas fa-rocket"></i> Take me to my dashboard
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="app.js"></script>
+<script>
+  Auth.require();
+
+  const TOTAL_STEPS = 5;
+  let currentStep = 1;
+  const answers = {};
+
+  // Populate currency select
+  (function() {
+    const sel = document.getElementById('ob-currency');
+    CURRENCIES.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.code;
+      opt.textContent = `${c.symbol}  ${c.code} — ${c.name}`;
+      if (c.code === 'USD') opt.selected = true;
+      sel.appendChild(opt);
+    });
+  })();
+
+  // Personalise welcome
+  (function() {
+    const user = Auth.getUser();
+    if (user?.name) {
+      document.getElementById('welcome-name').textContent =
+        `Welcome, ${user.name.split(' ')[0]}! 🎉`;
+    }
+  })();
+
+  function updateProgress() {
+    const pct = ((currentStep - 1) / TOTAL_STEPS) * 100;
+    document.getElementById('progress').style.width = pct + '%';
+  }
+
+  function selectOption(el, key) {
+    el.closest('.option-grid').querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    answers[key] = el.dataset.val;
+  }
+
+  function updateIncomeDisplay(val) {
+    const cur = CURRENCIES.find(c => c.code === (Store.getSettings().currencyCode || 'GHS')) || CURRENCIES[0];
+    const n = parseInt(val);
+    document.getElementById('income-display').textContent =
+      n >= 50000 ? `${cur.symbol}50,000+` : `${cur.symbol}${n.toLocaleString()}`;
+    answers.monthlyIncome = n;
+  }
+
+  function nextStep() {
+    if (currentStep < TOTAL_STEPS) {
+      document.getElementById('step-' + currentStep).classList.remove('active');
+      currentStep++;
+      document.getElementById('step-' + currentStep).classList.add('active');
+      updateProgress();
+    }
+  }
+
+  function prevStep() {
+    if (currentStep > 1) {
+      document.getElementById('step-' + currentStep).classList.remove('active');
+      currentStep--;
+      document.getElementById('step-' + currentStep).classList.add('active');
+      updateProgress();
+    }
+  }
+
+  function finishOnboarding() {
+    // Save answers into user settings
+    const s = Store.getSettings();
+    s.currencyCode   = document.getElementById('ob-currency').value;
+    s.primaryGoal    = answers.primaryGoal    || null;
+    s.spendingHabit  = answers.spendingHabit  || null;
+    s.monthlyIncome  = answers.monthlyIncome  || null;
+    s.incomeTarget   = answers.monthlyIncome  || null;
+    s.onboarded      = true;
+    Store.saveSettings(s);
+
+    // Mark user as onboarded
+    const users = Auth._getUsers();
+    const user  = Auth.getUser();
+    if (user) {
+      const idx = users.findIndex(u => u.id === user.id);
+      if (idx > -1) { users[idx].onboarded = true; Auth._saveUsers(users); }
+    }
+
+    showToast('All set! Welcome to Exmo 🎉');
+    setTimeout(() => window.location.href = 'pricing.html', 900);
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Klyro — Transactions</title>
+  <link rel="icon" type="image/png" href="exmo_logo.png">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="app.css">
+  <style>
+    .txn-actions { display:flex; gap:6px; align-items:center; }
+    .txn-edit {
+      background: var(--gold-dim);
+      border: 1px solid var(--gold-border);
+      color: var(--gold);
+      border-radius: 8px;
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      font-size: 0.78rem;
+      transition: all var(--transition);
+      flex-shrink: 0;
+    }
+    .txn-edit:hover { background: var(--gold); color: #fff; }
+    .txn-delete {
+      background: var(--red-dim);
+      border: 1px solid rgba(192,57,43,0.25);
+      color: var(--red);
+      border-radius: 8px;
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      font-size: 0.78rem;
+      transition: all var(--transition);
+      flex-shrink: 0;
+    }
+    .txn-delete:hover { background: var(--red); color: #fff; }
+  </style>
+</head>
+<body>
+
+<div id="sidebar-mount"></div>
+
+<div class="app-shell">
+  <main class="main-content">
+    <div class="page-header">
+      <h1>Transactions</h1>
+      <p>Every penny in and out — captured.</p>
+    </div>
+
+    <!-- Controls -->
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:24px;">
+      <div class="period-tabs" id="period-tabs">
+        <button class="period-tab active" data-period="month">This Month</button>
+        <button class="period-tab" data-period="week">This Week</button>
+        <button class="period-tab" data-period="year">This Year</button>
+        <button class="period-tab" data-period="all">All Time</button>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <select class="form-input" id="filter-type" style="width:auto;border-radius:9999px;padding:8px 16px;font-size:0.8rem;">
+          <option value="all">All Types</option>
+          <option value="income">Income only</option>
+          <option value="expense">Expenses only</option>
+        </select>
+        <select class="form-input" id="filter-cat" style="width:auto;border-radius:9999px;padding:8px 16px;font-size:0.8rem;">
+          <option value="all">All Categories</option>
+        </select>
+        <button class="btn btn-gold" onclick="openModal()">
+          <i class="fas fa-plus"></i> Add New
+        </button>
+      </div>
+    </div>
+
+    <!-- Plan limit warning -->
+    <div id="txn-limit-warning" style="display:none;"></div>
+
+    <!-- Summary strip -->
+    <div class="stats-grid" id="txn-stats" style="margin-bottom:24px;"></div>
+
+    <!-- Transaction list -->
+    <div class="glass-card" style="padding:28px;">
+      <div class="txn-list" id="txn-list"></div>
+    </div>
+  </main>
+</div>
+
+<!-- Add / Edit Transaction Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">New Transaction</div>
+      <button class="modal-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="type-toggle">
+      <button class="type-btn income active" id="m-income" onclick="setType('income')">
+        <i class="fas fa-plus"></i> Income
+      </button>
+      <button class="type-btn expense" id="m-expense" onclick="setType('expense')">
+        <i class="fas fa-minus"></i> Expense
+      </button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description</label>
+      <input type="text" class="form-input" id="m-desc" placeholder="e.g. Tesco Groceries">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Amount</label>
+        <input type="number" class="form-input" id="m-amount" placeholder="0.00" min="0" step="0.01">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Date</label>
+        <input type="date" class="form-input" id="m-date">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Category</label>
+      <select class="form-input" id="m-cat"></select>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px;">
+      <button class="btn btn-glass" style="flex:1;" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-gold" style="flex:1;" id="modal-save-btn" onclick="submitTransaction()">
+        <i class="fas fa-check"></i> Save
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>Auth.require();</script>
+
+<script>
+  /* ── Extended category lists ── */
+  const CATS_INCOME  = [
+    'salary','freelance','investment','bonus','commission',
+    'pension','rental income','dividends','allowance','gift','other'
+  ];
+  const CATS_EXPENSE = [
+    // Food
+    'groceries','dining','coffee',
+    // Home
+    'rent','mortgage','bills','utilities','internet','repairs','cleaning',
+    // Transport
+    'transport','fuel','parking','toll',
+    // Lifestyle
+    'entertainment','streaming','gaming','books','sports','gym',
+    // Personal
+    'clothing','beauty','haircut','health','medical','dental','pharmacy',
+    'personal','laundry',
+    // Family
+    'childcare','pets','gifts',
+    // Education & Work
+    'education','shopping','travel',
+    // Finance
+    'insurance','subscriptions','transfer','payment','loan repayment','tax',
+    'charity','other'
+  ];
+  const CATS_TRANSFER = ['transfer','bank transfer','payment','loan repayment','other'];
+
+  let currentPeriod = 'month';
+  let currentType   = 'income';
+  let filterType    = 'all';
+  let filterCat     = 'all';
+  let editingId     = null; // null = new, string = editing
+
+  function getCatsForType(type) {
+    if (type === 'income') return CATS_INCOME;
+    return CATS_EXPENSE;
+  }
+
+  function setType(type) {
+    currentType = type;
+    document.getElementById('m-income').classList.toggle('active', type === 'income');
+    document.getElementById('m-expense').classList.toggle('active', type === 'expense');
+    populateCatSelect('m-cat', type);
+  }
+
+  function populateCatSelect(id, type, selected) {
+    const cats = getCatsForType(type);
+    document.getElementById(id).innerHTML = cats.map(c =>
+      `<option value="${c}"${c === selected ? ' selected' : ''}>${c.charAt(0).toUpperCase()+c.slice(1)}</option>`
+    ).join('');
+  }
+
+  function openModal(editId) {
+    // Only gate new additions, not edits
+    if (!editId) {
+      const check = PlanGate.canAddTransaction();
+      if (!check.allowed) {
+        showToast(check.message || 'Transaction limit reached.', 'error');
+        PlanGate.showUpgradeModal('ai_chat');
+        return;
+      }
+    }
+    editingId = editId || null;
+    if (editId) {
+      // Edit mode — pre-fill
+      const txn = Store.getTransactions().find(t => t.id === editId);
+      if (!txn) return;
+      document.getElementById('modal-title').textContent = 'Edit Transaction';
+      document.getElementById('modal-save-btn').innerHTML = '<i class="fas fa-pen"></i> Update';
+      currentType = txn.type;
+      document.getElementById('m-income').classList.toggle('active', txn.type === 'income');
+      document.getElementById('m-expense').classList.toggle('active', txn.type === 'expense');
+      populateCatSelect('m-cat', txn.type, txn.category);
+      document.getElementById('m-desc').value   = txn.description;
+      document.getElementById('m-amount').value = txn.amount;
+      document.getElementById('m-date').value   = txn.date;
+    } else {
+      // New mode
+      document.getElementById('modal-title').textContent = 'New Transaction';
+      document.getElementById('modal-save-btn').innerHTML = '<i class="fas fa-check"></i> Save';
+      document.getElementById('m-date').value = new Date().toISOString().split('T')[0];
+      populateCatSelect('m-cat', currentType);
+      document.getElementById('m-desc').value   = '';
+      document.getElementById('m-amount').value = '';
+    }
+    document.getElementById('modal').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('modal').classList.remove('open');
+    editingId = null;
+    document.getElementById('m-desc').value   = '';
+    document.getElementById('m-amount').value = '';
+  }
+
+  function submitTransaction() {
+    const desc   = document.getElementById('m-desc').value.trim();
+    const amount = parseFloat(document.getElementById('m-amount').value);
+    const date   = document.getElementById('m-date').value;
+    const cat    = document.getElementById('m-cat').value;
+    if (!desc)   { showToast('Enter a description', 'error'); return; }
+    if (!amount || amount <= 0) { showToast('Enter a valid amount', 'error'); return; }
+
+    if (editingId) {
+      Store.updateTransaction(editingId, { type: currentType, amount, description: desc, category: cat, date });
+      showToast('Transaction updated!');
+    } else {
+      Store.addTransaction({ type: currentType, amount, description: desc, category: cat, date });
+      showToast('Transaction saved!');
+    }
+    closeModal();
+    renderPage();
+  }
+
+  function deleteTxn(id) {
+    if (!confirm('Delete this transaction?')) return;
+    Store.deleteTransaction(id);
+    showToast('Deleted', 'error');
+    renderPage();
+  }
+
+  function renderStats() {
+    const txns   = Store.getTransactions();
+    const filt   = Utils.filterByPeriod(txns, currentPeriod);
+    const totals = Utils.calcTotals(filt);
+    document.getElementById('txn-stats').innerHTML = `
+      <div class="glass-card stat-card">
+        <div class="stat-label"><i class="fas fa-arrow-down"></i> Income</div>
+        <div class="stat-value income">${Utils.formatCurrency(totals.income, true)}</div>
+      </div>
+      <div class="glass-card stat-card">
+        <div class="stat-label"><i class="fas fa-arrow-up"></i> Expenses</div>
+        <div class="stat-value expense">${Utils.formatCurrency(totals.expense, true)}</div>
+      </div>
+      <div class="glass-card stat-card">
+        <div class="stat-label"><i class="fas fa-scale-balanced"></i> Net</div>
+        <div class="stat-value ${totals.balance >= 0 ? 'income':'expense'}">${Utils.formatCurrency(totals.balance)}</div>
+      </div>
+      <div class="glass-card stat-card">
+        <div class="stat-label"><i class="fas fa-list"></i> Transactions</div>
+        <div class="stat-value" style="font-size:2rem;">${filt.length}</div>
+      </div>`;
+  }
+
+  function renderList() {
+    let txns = Utils.filterByPeriod(Store.getTransactions(), currentPeriod);
+    if (filterType !== 'all') txns = txns.filter(t => t.type === filterType);
+    if (filterCat  !== 'all') txns = txns.filter(t => t.category === filterCat);
+
+    const el = document.getElementById('txn-list');
+    if (!txns.length) {
+      el.innerHTML = `<div class="empty-state"><i class="fas fa-receipt"></i><p>No transactions found for this period.</p></div>`;
+      return;
+    }
+    el.innerHTML = txns.map(t => `
+      <div class="txn-item">
+        <div class="txn-icon ${t.type}"><i class="fas ${Utils.getCategoryIcon(t.category)}"></i></div>
+        <div class="txn-info">
+          <div class="txn-name">${t.description}</div>
+          <div class="txn-meta">
+            <span class="txn-cat-badge">${t.category}</span>
+            ${Utils.formatDate(t.date)}
+          </div>
+        </div>
+        <div class="txn-amount ${t.type}">${t.type === 'income' ? '+' : '-'}${Utils.formatCurrency(t.amount)}</div>
+        <div class="txn-actions">
+          <button class="txn-edit" onclick="openModal('${t.id}')" title="Edit"><i class="fas fa-pen"></i></button>
+          <button class="txn-delete" onclick="deleteTxn('${t.id}')" title="Delete"><i class="fas fa-trash-can"></i></button>
+        </div>
+      </div>`).join('');
+  }
+
+  function populateFilterCats() {
+    const all = [...new Set(Store.getTransactions().map(t => t.category))].sort();
+    const sel = document.getElementById('filter-cat');
+    sel.innerHTML = `<option value="all">All Categories</option>` +
+      all.map(c => `<option value="${c}">${c.charAt(0).toUpperCase()+c.slice(1)}</option>`).join('');
+  }
+
+  function renderPage() {
+    populateFilterCats();
+    renderStats();
+    renderList();
+    // Show limit warning
+    const check = PlanGate.canAddTransaction();
+    const warnEl = document.getElementById('txn-limit-warning');
+    if (!check.allowed) {
+      warnEl.style.display = 'block';
+      PlanGate.renderLimitWarning(0, 'txn-limit-warning');
+    } else if (check.remaining !== undefined) {
+      warnEl.style.display = 'block';
+      PlanGate.renderLimitWarning(check.remaining, 'txn-limit-warning');
+    } else {
+      warnEl.style.display = 'none';
+    }
+  }
+
+  // Period tabs
+  document.getElementById('period-tabs').addEventListener('click', e => {
+    const tab = e.target.closest('.period-tab');
+    if (!tab) return;
+    document.querySelectorAll('.period-tab').forEach(b => b.classList.remove('active'));
+    tab.classList.add('active');
+    currentPeriod = tab.dataset.period;
+    renderPage();
+  });
+
+  document.getElementById('filter-type').addEventListener('change', e => { filterType = e.target.value; renderPage(); });
+  document.getElementById('filter-cat').addEventListener('change', e => { filterCat = e.target.value; renderPage(); });
+
+  // Close modal on overlay click
+  document.getElementById('modal').addEventListener('click', e => {
+    if (e.target === document.getElementById('modal')) closeModal();
+  });
+
+  document.getElementById('sidebar-mount').innerHTML = renderSidebar();
+  initSidebar();
+  seedDemoData();
+  renderPage();
+</script>
+
+<!-- Bottom Nav (mobile only) -->
+<nav class="bottom-nav">
+  <a href="dashboard.html" class="bottom-nav-item" data-page="dashboard"><i class="fas fa-house"></i>Home</a>
+  <a href="transactions.html" class="bottom-nav-item" data-page="transactions"><i class="fas fa-right-left"></i>Transactions</a>
+  <a href="analysis.html" class="bottom-nav-item" data-page="analysis"><i class="fas fa-chart-pie"></i>Analysis</a>
+  <a href="ai.html" class="bottom-nav-item" data-page="ai"><i class="fas fa-brain"></i>AI</a>
+  <a href="settings.html" class="bottom-nav-item" data-page="settings"><i class="fas fa-gear"></i>Settings</a>
+</nav>
+<script>
+(function(){
+  var page = location.pathname.split('/').pop() || 'dashboard.html';
+  document.querySelectorAll('.bottom-nav-item[data-page]').forEach(function(el){
+    var p = el.dataset.page;
+    if(page.includes(p)||(p==='dashboard'&&['','index.html','dashboard.html'].includes(page)))
+      el.classList.add('active');
+  });
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Klyro — Analysis</title>
+  <link rel="icon" type="image/png" href="exmo_logo.png">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="app.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<div id="sidebar-mount"></div>
+
+<div class="app-shell">
+  <main class="main-content">
+    <div class="page-header">
+      <h1>Analysis</h1>
+      <p>Understand your money. Spot the patterns. Make smarter decisions.</p>
+    </div>
+
+    <!-- Period selector -->
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:28px;flex-wrap:wrap;">
+      <div class="period-tabs" id="period-tabs">
+        <button class="period-tab active" data-period="week">Weekly</button>
+        <button class="period-tab" data-period="month">Monthly</button>
+        <button class="period-tab" data-period="year">Yearly</button>
+      </div>
+    </div>
+
+    <!-- Summary stats -->
+    <div class="stats-grid" id="analysis-stats" style="margin-bottom:28px;"></div>
+
+    <!-- Charts row -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;" id="charts-row">
+      <!-- Income vs Expense Bar -->
+      <div class="glass-card" style="padding:28px;">
+        <div class="section-title" style="margin-bottom:20px;"><i class="fas fa-chart-column"></i> Income vs Expenses</div>
+        <div class="chart-container" style="height:240px;">
+          <canvas id="bar-chart"></canvas>
+        </div>
+      </div>
+      <!-- Spending by Category Doughnut -->
+      <div class="glass-card" style="padding:28px;">
+        <div class="section-title" style="margin-bottom:20px;"><i class="fas fa-chart-pie"></i> Spending by Category</div>
+        <div class="chart-container" style="height:240px;">
+          <canvas id="doughnut-chart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Category breakdown + AI suggestions -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;" id="bottom-row">
+      <div class="glass-card" style="padding:28px;">
+        <div class="section-title" style="margin-bottom:20px;"><i class="fas fa-list-check"></i> Category Breakdown</div>
+        <div class="cat-list" id="cat-breakdown"></div>
+      </div>
+      <div class="glass-card" style="padding:28px;">
+        <div class="section-title" style="margin-bottom:20px;"><i class="fas fa-lightbulb"></i> AI Suggestions</div>
+        <div id="analysis-ai-tips"></div>
+        <a href="ai.html" class="btn btn-glass btn-sm" style="width:100%;justify-content:center;margin-top:8px;">
+          Chat with Klyro AI <i class="fas fa-arrow-right"></i>
+        </a>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="app.js"></script>
+<script>Auth.require();</script>
+<script>
+  (function() {
+    if (!PlanGate.can('analysis')) {
+      document.addEventListener('DOMContentLoaded', function() {
+        const shell = document.querySelector('.app-shell');
+        if (shell) {
+          shell.innerHTML = '<main class="main-content"><div class="page-header"><h1>Analysis</h1><p>Understand your money. Spot the patterns.</p></div><div class="glass-card" style="padding:28px;" id="analysis-locked-banner"></div></main>';
+          PlanGate.renderLockedBanner('analysis', 'analysis-locked-banner');
+          document.getElementById('sidebar-mount').innerHTML = renderSidebar();
+          initSidebar();
+        }
+      });
+      window.__analysisGated = true;
+    }
+  })();
+</script>
+
+<script>
+  let currentPeriod = 'week';
+  let barChart, doughnutChart;
+
+  const CHART_COLORS = ['#d4a017','#f0c040','#c0392b','#27ae60','#2980b9','#8e44ad','#e67e22','#16a085','#d35400','#7f8c8d'];
+
+  function isDark() { return document.body.classList.contains('dark'); }
+  function textColor() { return isDark() ? 'rgba(240,236,227,0.7)' : 'rgba(90,80,64,0.8)'; }
+  function gridColor() { return isDark() ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'; }
+
+  function renderStats(txns) {
+    const totals = Utils.calcTotals(txns);
+    const sr = totals.income > 0 ? ((totals.income - totals.expense) / totals.income * 100).toFixed(1) : 0;
+    document.getElementById('analysis-stats').innerHTML = `
+      <div class="glass-card stat-card">
+        <div class="stat-label"><i class="fas fa-arrow-down"></i> Income</div>
+        <div class="stat-value income">${Utils.formatCurrency(totals.income, true)}</div>
+      </div>
+      <div class="glass-card stat-card">
+        <div class="stat-label"><i class="fas fa-arrow-up"></i> Expenses</div>
+        <div class="stat-value expense">${Utils.formatCurrency(totals.expense, true)}</div>
+      </div>
+      <div class="glass-card stat-card">
+        <div class="stat-label"><i class="fas fa-scale-balanced"></i> Net</div>
+        <div class="stat-value ${totals.balance >= 0 ? 'income':'expense'}">${Utils.formatCurrency(totals.balance)}</div>
+      </div>
+      <div class="glass-card stat-card">
+        <div class="stat-label"><i class="fas fa-piggy-bank"></i> Savings Rate</div>
+        <div class="stat-value ${sr >= 20 ? 'income' : sr > 0 ? 'balance' : 'expense'}">${sr}%</div>
+      </div>`;
+  }
+
+  function renderBarChart(txns) {
+    // Group by day/week or just show income vs expense for the period
+    const totals = Utils.calcTotals(txns);
+    const ctx = document.getElementById('bar-chart').getContext('2d');
+    if (barChart) barChart.destroy();
+    barChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['Income', 'Expenses', 'Net Savings'],
+        datasets: [{
+          data: [totals.income, totals.expense, Math.max(0, totals.balance)],
+          backgroundColor: ['rgba(39,174,96,0.6)','rgba(192,57,43,0.6)','rgba(212,160,23,0.6)'],
+          borderColor:      ['rgba(39,174,96,1)',  'rgba(192,57,43,1)',  'rgba(212,160,23,1)'],
+          borderWidth: 2,
+          borderRadius: 10,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { ticks: { color: textColor(), callback: v => getCurrency().symbol+v }, grid: { color: gridColor() }, border: { dash: [4,4] } },
+          x: { ticks: { color: textColor() }, grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  function renderDoughnutChart(txns) {
+    const cats = Utils.groupByCategory(txns);
+    const labels = Object.keys(cats);
+    const data   = Object.values(cats);
+    const ctx = document.getElementById('doughnut-chart').getContext('2d');
+    if (doughnutChart) doughnutChart.destroy();
+    if (!labels.length) { ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height); return; }
+    doughnutChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels,
+        datasets: [{
+          data,
+          backgroundColor: CHART_COLORS.slice(0, labels.length).map(c => c + 'cc'),
+          borderColor:      CHART_COLORS.slice(0, labels.length),
+          borderWidth: 2,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        cutout: '65%',
+        plugins: {
+          legend: { position: 'right', labels: { color: textColor(), boxWidth: 12, padding: 12, font: { size: 11 } } }
+        }
+      }
+    });
+  }
+
+  function renderCatBreakdown(txns) {
+    const cats   = Utils.groupByCategory(txns);
+    const sorted = Object.entries(cats).sort((a,b) => b[1]-a[1]);
+    const total  = Object.values(cats).reduce((a,b) => a+b, 0);
+    const el = document.getElementById('cat-breakdown');
+    if (!sorted.length) { el.innerHTML = `<div class="empty-state"><i class="fas fa-chart-pie"></i><p>No expense data yet.</p></div>`; return; }
+    el.innerHTML = sorted.map(([cat, amount]) => {
+      const pct = total > 0 ? ((amount/total)*100).toFixed(1) : 0;
+      return `<div class="cat-item" style="flex-direction:column;align-items:stretch;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+          <div class="cat-icon"><i class="fas ${Utils.getCategoryIcon(cat)}"></i></div>
+          <div style="flex:1;">
+            <div class="cat-label">${cat.charAt(0).toUpperCase()+cat.slice(1)}</div>
+          </div>
+          <div class="cat-amount">${Utils.formatCurrency(amount)}</div>
+          <div style="font-size:0.75rem;color:var(--text-dim);width:36px;text-align:right;">${pct}%</div>
+        </div>
+        <div class="cat-bar-wrap"><div class="cat-bar" style="width:${pct}%"></div></div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderAITips(txns) {
+    const totals = Utils.calcTotals(txns);
+    const cats   = Utils.groupByCategory(txns);
+    const sorted = Object.entries(cats).sort((a,b) => b[1]-a[1]);
+    const tips   = [];
+
+    if (!txns.length) {
+      tips.push({ text: "Add transactions and I'll generate personalised savings suggestions instantly!", type: '' });
+    } else {
+      const sr     = totals.income > 0 ? (totals.income - totals.expense) / totals.income * 100 : 0;
+      const health = Utils.getFinancialHealth(totals, txns);
+
+      // 1. Deficit — always first
+      if (totals.expense > totals.income) {
+        tips.push({ text: `🚨 <strong>You are overspending by ${Utils.formatCurrency(totals.expense - totals.income)}</strong> this period. Act now: freeze discretionary spending and audit your top categories for quick cuts.`, type: 'warning' });
+      }
+
+      // 2. Top category deep-dive
+      if (sorted[0]) {
+        const pct = totals.income > 0 ? ((sorted[0][1]/totals.income)*100).toFixed(0) : null;
+        const isHigh = sorted[0][1] > totals.income * 0.25;
+        tips.push({
+          text: `<strong>${sorted[0][0].charAt(0).toUpperCase()+sorted[0][0].slice(1)}</strong> is your biggest expense at ${Utils.formatCurrency(sorted[0][1])}${pct ? ` (${pct}% of income)` : ''}. ${isHigh ? `A 15% reduction would save you ${Utils.formatCurrency(sorted[0][1] * 0.15)} — worth exploring.` : 'Seems proportionate, but always look for waste.'}`,
+          type: isHigh ? 'warning' : ''
+        });
+      }
+
+      // 3. Savings rate with precise gap
+      if (sr < 0) {
+        tips.push({ text: `Your savings rate is <strong>${sr.toFixed(1)}%</strong> — you are in a deficit. Reduce expenses by at least ${Utils.formatCurrency(Math.abs(totals.balance))} to break even.`, type: 'warning' });
+      } else if (sr < 10 && totals.income > 0) {
+        const need = Utils.formatCurrency(totals.income * 0.2 - (totals.income - totals.expense));
+        tips.push({ text: `Savings rate is <strong>${sr.toFixed(1)}%</strong> — below the 20% benchmark. You need to save ${need} more this period to hit it. Apply the 50/30/20 rule: 50% needs, 30% wants, 20% savings.`, type: 'warning' });
+      } else if (sr >= 20) {
+        tips.push({ text: `🏆 <strong>${sr.toFixed(1)}% savings rate</strong> — excellent! You're outperforming most people. Invest the surplus: consider an index fund or boosting your emergency fund to 6 months of expenses (${Utils.formatCurrency(totals.expense * 6)}).`, type: 'positive' });
+      } else {
+        const gap = Utils.formatCurrency(totals.income * 0.2 - (totals.income - totals.expense));
+        tips.push({ text: `Savings rate: <strong>${sr.toFixed(1)}%</strong>. You're ${gap} short of the 20% target. Small daily savings — even cutting one coffee — compound into thousands over a year.`, type: '' });
+      }
+
+      // 4. Category-specific advice
+      if (cats['dining'] > totals.income * 0.1) {
+        tips.push({ text: `Dining out is ${Utils.formatCurrency(cats['dining'])} — over 10% of income. Meal-prepping 3 nights a week could cut this by 40%.`, type: '' });
+      }
+      if (cats['entertainment'] > totals.income * 0.08) {
+        tips.push({ text: `Entertainment is ${Utils.formatCurrency(cats['entertainment'])}. Audit your subscriptions — the average person pays for 4+ they rarely use.`, type: '' });
+      }
+
+      // 5. Health score
+      tips.push({ text: `Your financial health score this period: <strong>${health}/100</strong>. ${health >= 75 ? '💪 Strong — maintain consistency.' : health >= 50 ? '📈 Good foundation — keep building.' : '⚠️ Needs work — focus on the savings rate first.'}`, type: health >= 75 ? 'positive' : health < 40 ? 'warning' : '' });
+    }
+
+    document.getElementById('analysis-ai-tips').innerHTML = tips.map(tip =>
+      `<div class="ai-bubble ${tip.type}" style="margin-bottom:12px;">
+        <div class="ai-bubble-header"><i class="fas fa-brain"></i> Klyro AI</div>
+        <div class="ai-bubble-text">${tip.text}</div>
+      </div>`).join('');
+  }
+
+  function renderPage() {
+    const txns = Utils.filterByPeriod(Store.getTransactions(), currentPeriod);
+    renderStats(txns);
+    renderBarChart(txns);
+    renderDoughnutChart(txns);
+    renderCatBreakdown(txns);
+    renderAITips(txns);
+  }
+
+  document.getElementById('period-tabs').addEventListener('click', e => {
+    const tab = e.target.closest('.period-tab');
+    if (!tab) return;
+    document.querySelectorAll('.period-tab').forEach(b => b.classList.remove('active'));
+    tab.classList.add('active');
+    currentPeriod = tab.dataset.period;
+    renderPage();
+  });
+
+  // Responsive grid
+  function checkGrids() {
+    const narrow = window.innerWidth < 900;
+    document.getElementById('charts-row').style.gridTemplateColumns = narrow ? '1fr' : '1fr 1fr';
+    document.getElementById('bottom-row').style.gridTemplateColumns = narrow ? '1fr' : '1fr 1fr';
+  }
+  checkGrids();
+  window.addEventListener('resize', checkGrids);
+
+  if (window.__analysisGated) throw new Error('Analysis gated');
+  document.getElementById('sidebar-mount').innerHTML = renderSidebar();
+  initSidebar();
+  seedDemoData();
+  renderPage();
+</script>
+
+<!-- Bottom Nav (mobile only) -->
+<nav class="bottom-nav">
+  <a href="dashboard.html" class="bottom-nav-item" data-page="dashboard"><i class="fas fa-house"></i>Home</a>
+  <a href="transactions.html" class="bottom-nav-item" data-page="transactions"><i class="fas fa-right-left"></i>Transactions</a>
+  <a href="analysis.html" class="bottom-nav-item" data-page="analysis"><i class="fas fa-chart-pie"></i>Analysis</a>
+  <a href="ai.html" class="bottom-nav-item" data-page="ai"><i class="fas fa-brain"></i>AI</a>
+  <a href="settings.html" class="bottom-nav-item" data-page="settings"><i class="fas fa-gear"></i>Settings</a>
+</nav>
+<script>
+(function(){
+  var page = location.pathname.split('/').pop() || 'dashboard.html';
+  document.querySelectorAll('.bottom-nav-item[data-page]').forEach(function(el){
+    var p = el.dataset.page;
+    if(page.includes(p)||(p==='dashboard'&&['','index.html','dashboard.html'].includes(page)))
+      el.classList.add('active');
+  });
+})();
+</script>
+
+</body>
+</html>

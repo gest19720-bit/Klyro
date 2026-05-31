@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Klyro — Settings</title>
+  <link rel="icon" type="image/png" href="exmo_logo.png">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="app.css">
+  <style>
+    /* Conversion Modal Styles */
+    .conversion-modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+      animation: fade-in 0.3s ease;
+    }
+    .conversion-modal-overlay.open {
+      display: flex;
+    }
+    @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+    .conversion-modal {
+      background: var(--glass-heavy);
+      backdrop-filter: var(--blur);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius);
+      max-width: 540px;
+      width: 90%;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+      animation: modal-slide 0.4s cubic-bezier(0.16,1,0.3,1);
+    }
+    @keyframes modal-slide {
+      from { opacity: 0; transform: translateY(40px) scale(0.95); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .conversion-modal-header {
+      padding: 28px;
+      border-bottom: 1px solid var(--glass-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .conversion-modal-title {
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .conversion-modal-close {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      background: var(--glass-dim);
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 1.1rem;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .conversion-modal-close:hover {
+      background: var(--gold-dim);
+      color: var(--gold);
+    }
+
+    .conversion-modal-body {
+      padding: 28px;
+    }
+
+    .conversion-info {
+      background: var(--glass-dim);
+      border-left: 3px solid var(--gold);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      margin-bottom: 24px;
+      font-size: 0.9rem;
+      color: var(--text-mid);
+      line-height: 1.6;
+    }
+    .conversion-info i {
+      color: var(--gold);
+      margin-right: 8px;
+      font-size: 1.1rem;
+    }
+
+    .conversion-currencies {
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+
+    .currency-box {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 16px;
+      background: var(--glass-dim);
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+    .currency-box:last-child {
+      margin-bottom: 0;
+    }
+    .currency-symbol {
+      width: 48px; height: 48px;
+      border-radius: 12px;
+      background: var(--gold-dim);
+      color: var(--gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .currency-details {
+      flex: 1;
+    }
+    .currency-code {
+      font-weight: 700;
+      color: var(--text);
+      font-size: 0.95rem;
+    }
+    .currency-name {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+    }
+    .arrow-exchange {
+      font-size: 1.5rem;
+      color: var(--gold);
+      margin: 0 12px;
+    }
+
+    .conversion-preview {
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .preview-title {
+      font-weight: 700;
+      color: var(--text);
+      font-size: 0.9rem;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+    }
+    .preview-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      font-size: 0.9rem;
+    }
+    .preview-row:last-child {
+      border-bottom: none;
+    }
+    .preview-label {
+      color: var(--text-mid);
+      flex: 1;
+    }
+    .preview-value {
+      font-weight: 600;
+      color: var(--text);
+      text-align: right;
+    }
+    .preview-value.new {
+      color: var(--gold);
+    }
+
+    .exchange-rate-info {
+      background: linear-gradient(135deg, rgba(212,160,23,0.1), rgba(212,160,23,0.05));
+      border: 1px solid var(--gold-border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      margin-bottom: 24px;
+      font-size: 0.85rem;
+      color: var(--text-mid);
+      text-align: center;
+    }
+    .exchange-rate-value {
+      font-family: 'Courier New', monospace;
+      font-weight: 700;
+      color: var(--gold);
+      font-size: 1.1rem;
+      margin: 8px 0;
+    }
+
+    .conversion-modal-footer {
+      padding: 20px 28px;
+      border-top: 1px solid var(--glass-border);
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+    .conversion-modal-footer .btn {
+      min-width: 140px;
+    }
+
+    /* Loading state */
+    .conversion-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: var(--gold);
+      font-weight: 600;
+    }
+    .conversion-loading i {
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* Success state */
+    .conversion-success {
+      background: var(--green-dim);
+      border-left: 3px solid var(--green);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--green);
+      margin-bottom: 24px;
+    }
+    .conversion-success i {
+      font-size: 1.3rem;
+      flex-shrink: 0;
+    }
+
+    /* Avatar Upload Custom Styles */
+    .avatar-settings-container {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 20px;
+      background: var(--glass-dim);
+      padding: 16px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--glass-border);
+    }
+    .avatar-preview-wrapper {
+      position: relative;
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      overflow: hidden;
+      background: var(--gold-dim);
+      border: 2px solid var(--gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .avatar-preview-wrapper img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .avatar-preview-wrapper .avatar-letter {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--gold);
+    }
+    .avatar-actions-btns {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="sidebar-mount"></div>
+
+<div class="app-shell">
+  <main class="main-content">
+    <div class="page-header">
+      <h1>Settings</h1>
+      <p>Customise your Klyro experience.</p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;" id="settings-grid">
+
+      <div class="glass-card" style="padding:28px;">
+        <div class="section-title" style="margin-bottom:20px;"><i class="fas fa-palette"></i> Appearance</div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Dark Mode</div>
+            <div class="settings-desc">Switch to a darker colour scheme</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="dark-mode-toggle">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Currency</div>
+            <div class="settings-desc">Your preferred currency symbol</div>
+          </div>
+          <select class="form-input" id="currency-select" style="width:auto;border-radius:var(--radius-sm);padding:8px 12px;min-width:160px;">
+            </select>
+        </div>
+      </div>
+
+      <div class="glass-card" style="padding:28px;">
+        <div class="section-title" style="margin-bottom:20px;"><i class="fas fa-bell"></i> Notifications</div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">AI Weekly Summary</div>
+            <div class="settings-desc">Get a weekly finance report from Klyro AI</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="weekly-summary" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Overspend Alerts</div>
+            <div class="settings-desc">Notify when expenses exceed income</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="overspend-alerts" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Goal Milestones</div>
+            <div class="settings-desc">Celebrate when you hit savings milestones</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="goal-alerts" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="glass-card" style="padding:28px;">
+        <div class="section-title" style="margin-bottom:20px;"><i class="fas fa-user-circle"></i> Profile</div>
+        
+        <div class="avatar-settings-container">
+          <div class="avatar-preview-wrapper" id="settings-avatar-container">
+            <span class="avatar-letter" id="settings-avatar-letter">?</span>
+          </div>
+          <div class="avatar-actions-btns">
+            <label class="btn btn-glass btn-sm" style="cursor: pointer; margin: 0;">
+              <i class="fas fa-upload"></i> Upload Image
+              <input type="file" id="avatar-input" accept="image/*" style="display: none;" onchange="handleAvatarUpload(event)">
+            </label>
+            <button class="btn btn-danger btn-sm" id="btn-remove-avatar" onclick="removeAvatar()" style="display: none;">
+              <i class="fas fa-circle-xmark"></i> Remove
+            </button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Display Name</label>
+          <input type="text" class="form-input" id="display-name" placeholder="Your name">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" class="form-input" id="display-email" placeholder="your@email.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Monthly Income Target</label>
+          <input type="number" class="form-input" id="income-target" placeholder="e.g. 3000" min="0">
+        </div>
+        <button class="btn btn-gold" onclick="saveProfile()">
+          <i class="fas fa-check"></i> Save Profile
+        </button>
+      </div>
+
+      <div class="glass-card" style="padding:28px;">
+        <div class="section-title" style="margin-bottom:20px;"><i class="fas fa-database"></i> Your Data</div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px;" id="data-stats"></div>
+
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <button class="btn btn-glass" onclick="exportData()">
+            <i class="fas fa-download"></i> Export Data (CSV)
+          </button>
+          <button class="btn btn-glass" onclick="resetDemo()">
+            <i class="fas fa-rotate-left"></i> Reset to Demo Data
+          </button>
+          <button class="btn btn-danger" onclick="clearAllData()">
+            <i class="fas fa-trash-can"></i> Clear All Data
+          </button>
+        </div>
+
+        <div class="settings-row" style="margin-top:20px;">
+          <div>
+            <div class="settings-label">App Version</div>
+            <div class="settings-desc">Klyro v1.0 — Currency Conversion</div>
+          </div>
+          <span style="font-size:0.78rem;color:var(--gold);font-weight:600;">v2.1</span>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="glass-card" style="padding:28px;margin-top:24px;">
+      <div class="section-title" style="margin-bottom:20px;"><i class="fas fa-bullseye"></i> Savings Goals</div>
+      <div id="goals-list" style="margin-bottom:18px;"></div>
+      <div style="background:var(--glass-dim);border:1px solid var(--glass-border);border-radius:var(--radius-sm);padding:20px;">
+        <div class="form-row" style="margin-bottom:0;">
+          <div class="form-group" style="margin-bottom:12px;">
+            <label class="form-label">Goal Name</label>
+            <input type="text" class="form-input" id="goal-name" placeholder="e.g. Europe Trip">
+          </div>
+          <div class="form-group" style="margin-bottom:12px;">
+            <label class="form-label">Emoji</label>
+            <input type="text" class="form-input" id="goal-emoji" placeholder="✈️" maxlength="4">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">Target Amount</label>
+            <input type="number" class="form-input" id="goal-target" placeholder="2000" min="1">
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">Already Saved</label>
+            <input type="number" class="form-input" id="goal-saved" placeholder="0" min="0">
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:12px;margin-bottom:0;">
+          <label class="form-label">Deadline (optional)</label>
+          <input type="date" class="form-input" id="goal-deadline">
+        </div>
+        <button class="btn btn-gold" id="goal-add-btn" style="width:100%;margin-top:16px;" onclick="addGoalFromSettings()">
+          <i class="fas fa-plus"></i> Add Goal
+        </button>
+        <button class="btn btn-glass" id="goal-cancel-edit" style="width:100%;margin-top:8px;display:none;" onclick="cancelEditGoal()">
+          <i class="fas fa-times"></i> Cancel Edit
+        </button>
+      </div>
+    </div>
+
+    <div class="glass-card" style="padding:28px;margin-top:24px;border-color:rgba(192,57,43,0.25);">
+      <div class="section-title" style="margin-bottom:16px;color:var(--red);"><i class="fas fa-triangle-exclamation"></i> Danger Zone</div>
+      <p style="font-size:0.88rem;color:var(--text-dim);margin-bottom:16px;">These actions are permanent and cannot be undone.</p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <button class="btn btn-danger" onclick="clearAllData()">
+          <i class="fas fa-trash-can"></i> Delete All Transactions
+        </button>
+        <button class="btn btn-danger" style="background-color: #c0392b; border-color: #c0392b;" onclick="deleteAccountPermanent()">
+          <i class="fas fa-user-xmark"></i> Delete Account Permanently
+        </button>
+        <button class="btn btn-danger" onclick="handleLogout()">
+          <i class="fas fa-right-from-bracket"></i> Log Out
+        </button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="conversion-modal-overlay" id="conversion-modal">
+  <div class="conversion-modal">
+    <div class="conversion-modal-header">
+      <div class="conversion-modal-title">
+        <i class="fas fa-exchange"></i> Convert Currency
+      </div>
+      <button class="conversion-modal-close" onclick="closeConversionModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <div class="conversion-modal-body">
+      <div class="conversion-info">
+        <i class="fas fa-info-circle"></i>
+        All your transactions and goals will be converted to the new currency using current exchange rates.
+      </div>
+
+      <div id="conversion-content">
+        <div class="conversion-currencies">
+          <div style="text-align:center;margin-bottom:16px;">
+            <div class="preview-title">Currency Exchange</div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div style="flex:1;">
+              <div class="currency-box">
+                <div class="currency-symbol" id="old-currency-symbol">£</div>
+                <div class="currency-details">
+                  <div class="currency-code" id="old-currency-code">GBP</div>
+                  <div class="currency-name" id="old-currency-name">British Pound</div>
+                </div>
+              </div>
+            </div>
+            <div class="arrow-exchange"><i class="fas fa-arrow-right"></i></div>
+            <div style="flex:1;text-align:right;">
+              <div class="currency-box">
+                <div class="currency-details" style="text-align:right;">
+                  <div class="currency-code" id="new-currency-code">USD</div>
+                  <div class="currency-name" id="new-currency-name">US Dollar</div>
+                </div>
+                <div class="currency-symbol" id="new-currency-symbol">$</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="exchange-rate-info">
+          <div style="font-size:0.8rem;color:var(--text-mid);">Exchange Rate</div>
+          <div class="exchange-rate-value" id="exchange-rate-display">1 GBP = 1.26 USD</div>
+          <div style="font-size:0.75rem;color:var(--text-dim);margin-top:4px;">Last updated today</div>
+        </div>
+
+        <div class="conversion-preview">
+          <div class="preview-title">📊 Impact Preview</div>
+          <div class="preview-row">
+            <div class="preview-label">Transactions Count</div>
+            <div class="preview-value" id="preview-txn-count">0</div>
+          </div>
+          <div class="preview-row">
+            <div class="preview-label">Total Income</div>
+            <div style="text-align:right;">
+              <div style="font-size:0.8rem;color:var(--text-dim);" id="preview-old-income">£5,000.00</div>
+              <div class="preview-value new" id="preview-new-income">→ $6,300.00</div>
+            </div>
+          </div>
+          <div class="preview-row">
+            <div class="preview-label">Total Expenses</div>
+            <div style="text-align:right;">
+              <div style="font-size:0.8rem;color:var(--text-dim);" id="preview-old-expense">£2,000.00</div>
+              <div class="preview-value new" id="preview-new-expense">→ $2,520.00</div>
+            </div>
+          </div>
+          <div class="preview-row">
+            <div class="preview-label">Net Balance</div>
+            <div style="text-align:right;">
+              <div style="font-size:0.8rem;color:var(--text-dim);" id="preview-old-balance">£3,000.00</div>
+              <div class="preview-value new" id="preview-new-balance">→ $3,780.00</div>
+            </div>
+          </div>
+          <div class="preview-row" style="border-bottom: none;">
+            <div class="preview-label">Goals to Convert</div>
+            <div class="preview-value" id="preview-goals-count">0</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="conversion-success" style="display:none;">
+        <div class="conversion-success">
+          <i class="fas fa-check-circle"></i>
+          <div>
+            <div style="font-weight:700;">Conversion Complete!</div>
+            <div style="font-size:0.85rem;margin-top:4px;">All transactions and goals have been converted.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="conversion-modal-footer">
+      <button class="btn btn-glass" onclick="closeConversionModal()">
+        Cancel
+      </button>
+      <button class="btn btn-gold" id="confirm-conversion-btn" onclick="confirmConversion()">
+        <i class="fas fa-check"></i> Convert Now
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>Auth.require();</script>
+
+<script>
+  let pendingCurrencyCode = null;
+
+  function renderGoalsList() {
+    const goals = Store.getGoals();
+    const cur = getCurrency();
+    document.getElementById('goals-list').innerHTML = goals.length ? goals.map(g => `
+      <div class="goal-card glass-card" style="padding:16px;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:start;">
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+              <span style="font-size:1.4rem;">${g.emoji||'🎯'}</span>
+              <div>
+                <div style="font-weight:700;color:var(--text);">${g.name}</div>
+                <div style="font-size:0.8rem;color:var(--text-dim);">${g.deadline ? 'Due: ' + g.deadline : 'No deadline'}</div>
+              </div>
+            </div>
+            <div style="margin-top:8px;">
+              <div style="display:flex;justify-content:space-between;font-size:0.85rem;color:var(--text-mid);margin-bottom:4px;">
+                <span>${Utils.formatCurrency(g.saved || 0)} / ${Utils.formatCurrency(g.target)}</span>
+                <span>${Math.min(100,((g.saved||0)/g.target*100)).toFixed(0)}%</span>
+              </div>
+              <div style="height:6px;background:var(--glass-dim);border-radius:3px;overflow:hidden;">
+                <div style="height:100%;width:${Math.min(100,((g.saved||0)/g.target*100)).toFixed(0)}%;background:linear-gradient(90deg,var(--gold),var(--gold-light));border-radius:3px;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <button class="btn btn-glass btn-sm" style="flex:1;" onclick="openEditGoal('${g.id}')"><i class="fas fa-pen"></i> Edit</button>
+          <button class="btn btn-danger btn-sm" style="flex:1;" onclick="deleteGoalSettings('${g.id}')"><i class="fas fa-trash-can"></i> Delete</button>
+        </div>
+      </div>`).join('') : `<div class="empty-state" style="padding:20px 0;"><i class="fas fa-bullseye"></i><p>No goals yet. Add one below!</p></div>`;
+  }
+
+  /* ─── Edit Goal ─── */
+  let editingGoalId = null;
+
+  function openEditGoal(id) {
+    const g = Store.getGoals().find(x => x.id === id);
+    if (!g) return;
+    editingGoalId = id;
+    document.getElementById('goal-name').value     = g.name;
+    document.getElementById('goal-emoji').value    = g.emoji || '';
+    document.getElementById('goal-target').value   = g.target;
+    document.getElementById('goal-saved').value    = g.saved || 0;
+    document.getElementById('goal-deadline').value = g.deadline || '';
+    document.getElementById('goal-add-btn').innerHTML = '<i class="fas fa-pen"></i> Update Goal';
+    document.getElementById('goal-cancel-edit').style.display = 'block';
+    document.getElementById('goal-add-btn').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function cancelEditGoal() {
+    editingGoalId = null;
+    document.getElementById('goal-name').value     = '';
+    document.getElementById('goal-emoji').value    = '';
+    document.getElementById('goal-target').value   = '';
+    document.getElementById('goal-saved').value    = '';
+    document.getElementById('goal-deadline').value = '';
+    document.getElementById('goal-add-btn').innerHTML = '<i class="fas fa-plus"></i> Add Goal';
+    document.getElementById('goal-cancel-edit').style.display = 'none';
+  }
+
+  function addGoalFromSettings() {
+    if (!PlanGate.can('savings_goals')) {
+      PlanGate.showUpgradeModal('savings_goals');
+      return;
+    }
+    const name   = document.getElementById('goal-name').value.trim();
+    const emoji  = document.getElementById('goal-emoji').value.trim() || '🎯';
+    const target = parseFloat(document.getElementById('goal-target').value);
+    const saved  = parseFloat(document.getElementById('goal-saved').value) || 0;
+    const dl     = document.getElementById('goal-deadline').value;
+    if (!name)        { showToast('Enter a goal name', 'error'); return; }
+    if (!target || target <= 0) { showToast('Enter a target amount', 'error'); return; }
+
+    if (editingGoalId) {
+      Store.updateGoal(editingGoalId, { name, emoji, target, saved, deadline: dl || null });
+      showToast('Goal updated! ✏️');
+      cancelEditGoal();
+    } else {
+      Store.addGoal({ name, emoji, target, saved, deadline: dl || null });
+      showToast('Goal added! 🎯');
+      document.getElementById('goal-name').value   = '';
+      document.getElementById('goal-emoji').value  = '';
+      document.getElementById('goal-target').value = '';
+      document.getElementById('goal-saved').value  = '';
+    }
+    renderGoalsList();
+    renderDataStats();
+  }
+
+  function deleteGoalSettings(id) {
+    if (!confirm('Delete this goal?')) return;
+    Store.deleteGoal(id);
+    showToast('Goal deleted', 'error');
+    renderGoalsList();
+    renderDataStats();
+  }
+
+  function renderAvatarView() {
+    const user = Auth.getUser();
+    const container = document.getElementById('settings-avatar-container');
+    const removeBtn = document.getElementById('btn-remove-avatar');
+    
+    if (user && user.avatar) {
+      container.innerHTML = `<img src="${user.avatar}" alt="Avatar">`;
+      removeBtn.style.display = 'block';
+    } else {
+      const initial = user?.name?.charAt(0)?.toUpperCase() || '?';
+      container.innerHTML = `<span class="avatar-letter" id="settings-avatar-letter">${initial}</span>`;
+      removeBtn.style.display = 'none';
+    }
+  }
+
+  function handleAvatarUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    if (file.size > 1024 * 1024 * 1.5) {
+      showToast('Image is too large. Keep it under 1.5MB', 'error');
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const base64Data = e.target.result;
+      const success = Auth.updateUserAvatar(base64Data);
+      if (success) {
+        showToast('Profile image updated successfully! 📸');
+        renderAvatarView();
+        // Update application shell sidebar synchronously
+        document.getElementById('sidebar-mount').innerHTML = renderSidebar();
+        initSidebar();
+      } else {
+        showToast('Error updating avatar image', 'error');
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function removeAvatar() {
+    if (!confirm('Remove profile picture?')) return;
+    Auth.updateUserAvatar(null);
+    showToast('Avatar picture removed');
+    renderAvatarView();
+    document.getElementById('sidebar-mount').innerHTML = renderSidebar();
+    initSidebar();
+  }
+
+  function loadSettings() {
+    const s = Store.getSettings();
+    if (s.darkMode) {
+      document.body.classList.add('dark');
+      document.getElementById('dark-mode-toggle').checked = true;
+    }
+    if (s.currencyCode) document.getElementById('currency-select').value = s.currencyCode;
+    if (s.name)         document.getElementById('display-name').value = s.name;
+    if (s.email)        document.getElementById('display-email').value = s.email;
+    if (s.incomeTarget) document.getElementById('income-target').value = s.incomeTarget;
+    if (s.weeklySummary    !== undefined) document.getElementById('weekly-summary').checked    = s.weeklySummary;
+    if (s.overspendAlerts  !== undefined) document.getElementById('overspend-alerts').checked  = s.overspendAlerts;
+    if (s.goalAlerts       !== undefined) document.getElementById('goal-alerts').checked       = s.goalAlerts;
+    renderAvatarView();
+  }
+
+  function renderDataStats() {
+    const txns  = Store.getTransactions();
+    const goals = Store.getGoals();
+    const totals = Utils.calcTotals(txns);
+    document.getElementById('data-stats').innerHTML = `
+      <div class="glass-card stat-card" style="padding:16px;">
+        <div class="stat-label" style="font-size:0.65rem;">Transactions</div>
+        <div class="stat-value" style="font-size:1.8rem;">${txns.length}</div>
+      </div>
+      <div class="glass-card stat-card" style="padding:16px;">
+        <div class="stat-label" style="font-size:0.65rem;">Goals</div>
+        <div class="stat-value" style="font-size:1.8rem;">${goals.length}</div>
+      </div>`;
+  }
+
+  document.getElementById('dark-mode-toggle').addEventListener('change', e => {
+    document.body.classList.toggle('dark', e.target.checked);
+    const s = Store.getSettings();
+    s.darkMode = e.target.checked;
+    Store.saveSettings(s);
+    showToast(e.target.checked ? 'Dark mode on' : 'Light mode on');
+  });
+
+  // Populate currency select from master list
+  (function() {
+    const sel = document.getElementById('currency-select');
+    const saved = Store.getSettings().currencyCode || 'GHS';
+    CURRENCIES.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.code;
+      opt.textContent = c.symbol + ' ' + c.code + ' — ' + c.name;
+      if (c.code === saved) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  })();
+
+  // ═══════════════════════════════════════════════════════════
+  // CURRENCY CONVERSION HANDLER
+  // ═══════════════════════════════════════════════════════════
+  document.getElementById('currency-select').addEventListener('change', e => {
+    if (!PlanGate.can('currency_conversion')) {
+      e.target.value = Store.getSettings().currencyCode || 'USD';
+      PlanGate.showUpgradeModal('currency_conversion');
+      return;
+    }
+    const newCurrency = e.target.value;
+    const currentSettings = Store.getSettings();
+    const oldCurrency = currentSettings.currencyCode || 'GHS';
+
+    // If same currency, ignore
+    if (newCurrency === oldCurrency) return;
+
+    // If no transactions/goals, just change without modal
+    const txns = Store.getTransactions();
+    const goals = Store.getGoals();
+
+    if (!txns.length && !goals.length) {
+      currentSettings.currencyCode = newCurrency;
+      Store.saveSettings(currentSettings);
+      const cur = CURRENCIES.find(c => c.code === newCurrency);
+      showToast('Currency changed to ' + cur.symbol + ' ' + cur.code + ' 🎉');
+      return;
+    }
+
+    // Show conversion modal
+    pendingCurrencyCode = newCurrency;
+    showConversionModal(oldCurrency, newCurrency);
+  });
+
+  function showConversionModal(oldCode, newCode) {
+    const preview = CurrencyConverter.getConversionPreview(oldCode, newCode);
+    const oldCur = preview.oldCurrency;
+    const newCur = preview.newCurrency;
+
+    // Update modal content
+    document.getElementById('old-currency-symbol').textContent = oldCur.symbol;
+    document.getElementById('old-currency-code').textContent = oldCur.code;
+    document.getElementById('old-currency-name').textContent = oldCur.name;
+
+    document.getElementById('new-currency-symbol').textContent = newCur.symbol;
+    document.getElementById('new-currency-code').textContent = newCur.code;
+    document.getElementById('new-currency-name').textContent = newCur.name;
+
+    const rate = preview.rate;
+    document.getElementById('exchange-rate-display').textContent = 
+      `1 ${oldCode} = ${rate} ${newCode}`;
+
+    // Preview
+    document.getElementById('preview-txn-count').textContent = preview.txns.count;
+    document.getElementById('preview-old-income').textContent = 
+      `${oldCur.symbol}${parseFloat(preview.txns.income / (preview.rate || 1)).toLocaleString('en-GB', {minimumFractionDigits:2,maximumFractionDigits:2})}`;
+    document.getElementById('preview-new-income').textContent = 
+      `→ ${newCur.symbol}${parseFloat(preview.txns.income).toLocaleString('en-GB', {minimumFractionDigits:2,maximumFractionDigits:2})}`;
+
+    document.getElementById('preview-old-expense').textContent = 
+      `${oldCur.symbol}${parseFloat(preview.txns.expense / (preview.rate || 1)).toLocaleString('en-GB', {minimumFractionDigits:2,maximumFractionDigits:2})}`;
+    document.getElementById('preview-new-expense').textContent = 
+      `→ ${newCur.symbol}${parseFloat(preview.txns.expense).toLocaleString('en-GB', {minimumFractionDigits:2,maximumFractionDigits:2})}`;
+
+    document.getElementById('preview-old-balance').textContent = 
+      `${oldCur.symbol}${parseFloat(preview.txns.balance / (preview.rate || 1)).toLocaleString('en-GB', {minimumFractionDigits:2,maximumFractionDigits:2})}`;
+    document.getElementById('preview-new-balance').textContent = 
+      `→ ${newCur.symbol}${parseFloat(preview.txns.balance).toLocaleString('en-GB', {minimumFractionDigits:2,maximumFractionDigits:2})}`;
+
+    document.getElementById('preview-goals-count').textContent = preview.goals.count;
+
+    // Show modal
+    document.getElementById('conversion-modal').classList.add('open');
+  }
+
+  function closeConversionModal() {
+    document.getElementById('conversion-modal').classList.remove('open');
+    // Reset currency select
+    const currentSettings = Store.getSettings();
+    document.getElementById('currency-select').value = currentSettings.currencyCode || 'GHS';
+    pendingCurrencyCode = null;
+  }
+
+  function confirmConversion() {
+    if (!pendingCurrencyCode) return;
+
+    const currentSettings = Store.getSettings();
+    const oldCurrency = currentSettings.currencyCode || 'GHS';
+
+    // Disable button and show loading
+    const btn = document.getElementById('confirm-conversion-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Converting...';
+
+    // Simulate async operation
+    setTimeout(() => {
+      // Convert transactions
+      CurrencyConverter.convertAllTransactions(oldCurrency, pendingCurrencyCode);
+
+      // Convert goals
+      CurrencyConverter.convertAllGoals(oldCurrency, pendingCurrencyCode);
+
+      // Update settings
+      currentSettings.currencyCode = pendingCurrencyCode;
+      Store.saveSettings(currentSettings);
+
+      // Show success
+      document.getElementById('conversion-content').style.display = 'none';
+      document.getElementById('conversion-success').style.display = 'block';
+      btn.innerHTML = '<i class="fas fa-check"></i> Done!';
+      btn.disabled = false;
+
+      const newCur = CURRENCIES.find(c => c.code === pendingCurrencyCode);
+      showToast(`Converted to ${newCur.symbol} ${newCur.code}! 💱`);
+
+      setTimeout(() => {
+        closeConversionModal();
+        location.reload();
+      }, 1500);
+    }, 600);
+  }
+
+  ['weekly-summary','overspend-alerts','goal-alerts'].forEach(id => {
+    document.getElementById(id).addEventListener('change', e => {
+      const s = Store.getSettings();
+      s[id.replace(/-([a-z])/g, (_,l) => l.toUpperCase())] = e.target.checked;
+      Store.saveSettings(s);
+    });
+  });
+
+  function saveProfile() {
+    const s = Store.getSettings();
+    s.name           = document.getElementById('display-name').value.trim();
+    s.email          = document.getElementById('display-email').value.trim();
+    s.incomeTarget   = document.getElementById('income-target').value;
+    Store.saveSettings(s);
+    
+    // Sync local metadata changes back up into registry bank
+    Auth.syncProfileDetails(s.name, s.email);
+    
+    showToast('Profile saved!');
+    document.getElementById('sidebar-mount').innerHTML = renderSidebar();
+    initSidebar();
+  }
+
+  function exportData() {
+    const txns = Store.getTransactions();
+    if (!txns.length) { showToast('No data to export', 'error'); return; }
+    const rows = [['Date','Type','Description','Category','Amount','Currency']];
+    txns.forEach(t => rows.push([t.date, t.type, `"${t.description}"`, t.category, t.amount, t.originalCurrency || 'USD']));
+    const csv  = rows.map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = 'klyro-transactions.csv'; a.click();
+    URL.revokeObjectURL(url);
+    showToast('Exported successfully!');
+  }
+
+  function clearAllData() {
+    if (!confirm('This will permanently delete all your transactions. Are you sure?')) return;
+    localStorage.removeItem(Store._key('exmo_transactions'));
+    localStorage.removeItem(Store._key('exmo_goals'));
+    showToast('All data cleared', 'error');
+    renderDataStats();
+  }
+
+  function deleteAccountPermanent() {
+    const confirmation1 = confirm("WARNING: This will permanently delete your Klyro account along with all your transactions, custom parameters, images, and goals.\n\nThis process is immediate and completely irreversible. Do you want to proceed?");
+    if (!confirmation1) return;
+    
+    const confirmation2 = confirm("Are you absolutely sure? This is your last warning.");
+    if (!confirmation2) return;
+    
+    showToast('Processing account deletion...', 'error');
+    
+    setTimeout(() => {
+      Auth.destroyCurrentAccount();
+    }, 1000);
+  }
+
+  function resetDemo() {
+    if (!confirm('This will replace your current data with demo data. Continue?')) return;
+    localStorage.removeItem(Store._key('exmo_transactions'));
+    localStorage.removeItem(Store._key('exmo_goals'));
+    _loadDemoData();
+    showToast('Demo data restored!');
+    renderDataStats();
+  }
+
+  // Responsive grid
+  function checkGrid() {
+    const g = document.getElementById('settings-grid');
+    if (g) g.style.gridTemplateColumns = window.innerWidth < 900 ? '1fr' : '1fr 1fr';
+  }
+  checkGrid();
+  window.addEventListener('resize', checkGrid);
+
+  document.getElementById('sidebar-mount').innerHTML = renderSidebar();
+  initSidebar();
+
+  // Show lock indicators based on plan
+  (function applyPlanLocks() {
+    // Currency conversion lock badge
+    if (!PlanGate.can('currency_conversion')) {
+      const badge = document.getElementById('currency-lock-badge');
+      if (badge) badge.style.display = 'inline-flex';
+      const sel = document.getElementById('currency-select');
+      if (sel) sel.style.opacity = '0.5';
+    }
+    // Savings goals lock banner
+    if (!PlanGate.can('savings_goals')) {
+      const banner = document.getElementById('goals-lock-banner');
+      if (banner) {
+        banner.style.display = 'block';
+        PlanGate.renderLockedBanner('savings_goals', 'goals-lock-banner');
+        const addBtn = document.getElementById('goal-add-btn');
+        if (addBtn) addBtn.style.display = 'none';
+        const goalsList = document.getElementById('goals-list');
+        if (goalsList) goalsList.style.display = 'none';
+      }
+    }
+  })();
+  seedDemoData();
+  loadSettings();
+  renderGoalsList();
+  // Pre-fill from auth profile if not already saved
+  (function() {
+    const u = Auth.getUser();
+    if (!u) return;
+    const nameEl  = document.getElementById('display-name');
+    const emailEl = document.getElementById('display-email');
+    if (nameEl  && !nameEl.value  && u.name)  nameEl.value  = u.name;
+    if (emailEl && !emailEl.value && u.email) emailEl.value = u.email;
+  })();
+  renderDataStats();
+</script>
+
+<nav class="bottom-nav">
+  <a href="dashboard.html" class="bottom-nav-item" data-page="dashboard"><i class="fas fa-house"></i>Home</a>
+  <a href="transactions.html" class="bottom-nav-item" data-page="transactions"><i class="fas fa-right-left"></i>Transactions</a>
+  <a href="analysis.html" class="bottom-nav-item" data-page="analysis"><i class="fas fa-chart-pie"></i>Analysis</a>
+  <a href="ai.html" class="bottom-nav-item" data-page="ai"><i class="fas fa-brain"></i>AI</a>
+  <a href="settings.html" class="bottom-nav-item" data-page="settings"><i class="fas fa-gear"></i>Settings</a>
+</nav>
+<script>
+(function(){
+  var page = location.pathname.split('/').pop() || 'dashboard.html';
+  document.querySelectorAll('.bottom-nav-item[data-page]').forEach(function(el){
+    var p = el.dataset.page;
+    if(page.includes(p)||(p==='dashboard'&&['','index.html','dashboard.html'].includes(page)))
+      el.classList.add('active');
+  });
+})();
+</script>
+
+</body>
+</html>
