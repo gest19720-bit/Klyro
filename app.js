@@ -6,15 +6,93 @@
 'use strict';
 
 /* ══════════════════════════════════════
+   SUPABASE CLIENT
+   ⚠️  Paste your Project URL and anon key from
+   Supabase Dashboard → Settings → API
+   Use window.__KLYRO_SUPABASE_URL__ / __KEY__
+   for build-time injection (recommended).
+══════════════════════════════════════ */
+const SUPABASE_URL = window.__KLYRO_SUPABASE_URL__ || 'https://ecxjttbbesbjpisealrp.supabase.co';
+const SUPABASE_KEY = window.__KLYRO_SUPABASE_KEY__ || 'sb_publishable__qiqb1L9zW6Q4guscaGvbA_4r0daTME';
+
+const _sb = (typeof supabase !== 'undefined')
+  ? supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+    })
+  : null; // graceful degradation if CDN not loaded yet
+
+/* ── In-memory cache (keeps all HTML reads synchronous) ────────────── */
+const _cache = {
+  transactions: null,  // null = not yet loaded; [] = loaded but empty
+  settings:     null,
+  goals:        null,
+  invoices:     null,
+  receipts:     null,
+  ready:        false,
+  userId:       null,
+};
+
+/* ── Session cache for synchronous Auth.getUser() calls ────────────── */
+let _sessionCache = null;
+if (_sb) {
+  _sb.auth.getSession().then(({ data: { session } }) => {
+    if (session) { _sessionCache = session.user; _cache.userId = session.user.id; }
+  });
+  _sb.auth.onAuthStateChange((_event, session) => {
+    _sessionCache = session?.user || null;
+    _cache.userId = session?.user?.id || null;
+  });
+}
+
+/* ── Async helpers for Supabase writes ─────────────────────────────── */
+function _genId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+async function _upsert(table, row) {
+  if (!_sb) return;
+  const { error } = await _sb.from(table).upsert(row, { onConflict: 'id' });
+  if (error) console.error('[Klyro] upsert', table, error.message);
+}
+async function _sbDelete(table, id) {
+  if (!_sb) return;
+  const { error } = await _sb.from(table).delete().eq('id', id);
+  if (error) console.error('[Klyro] delete', table, error.message);
+}
+
+/* ── Load all user data into cache (called after auth) ─────────────── */
+async function _initData() {
+  if (!_cache.userId || !_sb) return;
+  const uid = _cache.userId;
+  const [txRes, stRes, goRes, invRes, recRes] = await Promise.all([
+    _sb.from('transactions').select('*').eq('user_id', uid).order('date', { ascending: false }),
+    _sb.from('settings').select('*').eq('user_id', uid).maybeSingle(),
+    _sb.from('goals').select('*').eq('user_id', uid),
+    _sb.from('invoices').select('*').eq('user_id', uid).order('created_at', { ascending: false }),
+    _sb.from('receipts').select('*').eq('user_id', uid).order('created_at', { ascending: false }),
+  ]);
+  _cache.transactions = txRes.data  || [];
+  _cache.goals        = goRes.data  || [];
+  _cache.invoices     = invRes.data || [];
+  _cache.receipts     = recRes.data || [];
+  // Expose settings without internal user_id field
+  const raw = stRes.data || {};
+  delete raw.user_id;
+  _cache.settings = raw;
+  _cache.ready = true;
+  document.dispatchEvent(new Event('klyro:ready'));
+}
+
+/* ══════════════════════════════════════
    THEME PERSISTENCE — apply before render
-   Reads dark mode from localStorage immediately
-   so there's no white flash on navigation.
+   Falls back to localStorage for guests /
+   before Supabase settings are loaded.
 ══════════════════════════════════════ */
 (function() {
   try {
-    const uid = sessionStorage.getItem('exmo_session') || localStorage.getItem('exmo_session') || 'guest';
-    const s = JSON.parse(localStorage.getItem('exmo_settings_' + uid) || '{}');
-    if (s.darkMode) document.documentElement.classList.add('dark-pre');
+    // Try Supabase cache first (populated by _initData after login)
+    // On first paint it won't be ready yet, so we also keep a localStorage mirror
+    const localTheme = localStorage.getItem('klyro_theme') || 'light';
+    if (localTheme === 'dark') document.documentElement.classList.add('dark-pre');
   } catch {}
 })();
 
@@ -432,120 +510,169 @@ const CurrencyConverter = {
 };
 
 /* ══════════════════════════════════════
-   AUTH  (localStorage-based)
+   AUTH  (Supabase-backed)
+   Public API identical to original so no
+   HTML pages need changes.
 ══════════════════════════════════════ */
 const Auth = {
-  KEY_USERS:   'exmo_users',
-  KEY_SESSION: 'exmo_session',
 
-  _getUsers() {
-    try { return JSON.parse(localStorage.getItem(this.KEY_USERS) || '[]'); }
-    catch { return []; }
+  /* Called on every protected page */
+  require() {
+    if (!_sb) { console.warn('[Klyro] Supabase not initialised'); return; }
+    _sb.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        window.location.href = 'login.html';
+      } else {
+        _sessionCache    = session.user;
+        _cache.userId    = session.user.id;
+        _initData();
+      }
+    });
   },
-  _saveUsers(u) { localStorage.setItem(this.KEY_USERS, JSON.stringify(u)); },
 
+  /* Synchronous — returns { id, name, email, avatar, onboarded } */
   getUser() {
-    try {
-      const sid = sessionStorage.getItem(this.KEY_SESSION) || localStorage.getItem(this.KEY_SESSION);
-      if (!sid) return null;
-      return this._getUsers().find(u => u.id === sid) || null;
-    } catch { return null; }
+    const raw = _sessionCache;
+    if (!raw) return null;
+    return {
+      id:        raw.id,
+      email:     raw.email,
+      name:      raw.user_metadata?.name || raw.email?.split('@')[0] || 'User',
+      avatar:    raw.user_metadata?.avatar_url || raw.user_metadata?.avatar || null,
+      onboarded: raw.user_metadata?.onboarded || false,
+    };
   },
 
-  register({ name, email, password }) {
-    const users = this._getUsers();
-    if (users.find(u => u.email.toLowerCase() === email.toLowerCase()))
-      return { success: false, message: 'An account with this email already exists.' };
-    const user = { id: Date.now().toString(), name, email, password, avatar: null, createdAt: new Date().toISOString() };
-    users.push(user);
-    this._saveUsers(users);
-    sessionStorage.setItem(this.KEY_SESSION, user.id);
-    localStorage.setItem(this.KEY_SESSION, user.id);
-
-    // ── Make.com: new signup ──
-    MakeWebhook.send('user.signup', { name, email, signupDate: user.createdAt });
-
-    return { success: true, user };
+  /* Sign up with email + password + name */
+  async register({ name, email, password }) {
+    if (!_sb) return { success: false, message: 'Service unavailable.' };
+    const { data, error } = await _sb.auth.signUp({
+      email, password,
+      options: { data: { name, onboarded: false } }
+    });
+    if (error) return { success: false, message: error.message };
+    _sessionCache = data.user;
+    _cache.userId = data.user?.id || null;
+    MakeWebhook.send('user.signup', { name, email, signupDate: new Date().toISOString() });
+    return { success: true, user: data.user };
   },
 
-  login(email, password) {
-    const user = this._getUsers().find(
-      u => u.email.toLowerCase() === email.toLowerCase() && u.password === password
-    );
-    if (!user) return { success: false, message: 'Incorrect email or password.' };
-    sessionStorage.setItem(this.KEY_SESSION, user.id);
-    localStorage.setItem(this.KEY_SESSION, user.id);
-
-    // ── Make.com: user logged in ──
-    MakeWebhook.send('user.login', { name: user.name, email: user.email, loginDate: new Date().toISOString() });
-
-    return { success: true, user };
-  },
-
-  updateUserAvatar(base64Str) {
-    const currentUser = this.getUser();
-    if (!currentUser) return false;
-    
-    const users = this._getUsers();
-    const idx = users.findIndex(u => u.id === currentUser.id);
-    if (idx > -1) {
-      users[idx].avatar = base64Str;
-      this._saveUsers(users);
-      return true;
+  /* Sign in with email + password */
+  async login(email, password) {
+    if (!_sb) return { success: false, message: 'Service unavailable.' };
+    const { data, error } = await _sb.auth.signInWithPassword({ email, password });
+    if (error) {
+      Auth._recordFailure(email);
+      const lockMsg = Auth._isLocked(email);
+      if (lockMsg) return { success: false, message: lockMsg, locked: true };
+      const d = Auth._getRateData(email);
+      const left = 5 - (d.attempts || 0);
+      return {
+        success: false,
+        message: 'Incorrect email or password.' + (left > 0 ? ` ${left} attempt${left !== 1 ? 's' : ''} remaining.` : '')
+      };
     }
-    return false;
+    Auth._clearRateData(email);
+    localStorage.removeItem('klyro_last_email');
+    _sessionCache = data.user;
+    _cache.userId = data.user.id;
+    await _initData();
+    MakeWebhook.send('user.login', { name: data.user.user_metadata?.name || '', email, loginDate: new Date().toISOString() });
+    return { success: true, user: data.user };
   },
 
-  syncProfileDetails(name, email) {
-    const currentUser = this.getUser();
-    if (!currentUser) return false;
-    
-    const users = this._getUsers();
-    const idx = users.findIndex(u => u.id === currentUser.id);
-    if (idx > -1) {
-      users[idx].name = name;
-      users[idx].email = email;
-      this._saveUsers(users);
-      return true;
+  /* Sign in with Clerk session (OAuth bridge — keeps login.html working) */
+  loginClerk(clerkUser, remember) {
+    // Clerk OAuth lands here; we build a minimal session-like object
+    // and redirect — Supabase handles the real session via detectSessionInUrl
+    _sessionCache = {
+      id:    clerkUser.id,
+      email: clerkUser.primaryEmailAddress?.emailAddress || clerkUser.email || '',
+      user_metadata: {
+        name:      (clerkUser.firstName || '') + ' ' + (clerkUser.lastName || ''),
+        onboarded: false,
+      }
+    };
+  },
+
+  /* Update user profile metadata */
+  async syncProfileDetails(name, email) {
+    if (!_sb) return false;
+    const { error } = await _sb.auth.updateUser({ email, data: { name } });
+    if (error) { console.error('[Klyro] syncProfile:', error.message); return false; }
+    if (_sessionCache) {
+      _sessionCache.email = email;
+      _sessionCache.user_metadata = { ..._sessionCache.user_metadata, name };
     }
-    return false;
+    return true;
   },
 
-  destroyCurrentAccount() {
-    const currentUser = this.getUser();
-    if (!currentUser) return;
-    
-    const uid = currentUser.id;
-    
-    // 1. Notify remote webhooks first before deleting client records
-    MakeWebhook.send('user.deleted', { name: currentUser.name, email: currentUser.email, deletedAt: new Date().toISOString() });
-    
-    // 2. Erase user-scoped transaction, goal and settings files
-    localStorage.removeItem('exmo_transactions_' + uid);
-    localStorage.removeItem('exmo_goals_' + uid);
-    localStorage.removeItem('exmo_settings_' + uid);
-    
-    // 3. Remove entry completely from the shared users registry bank
-    const globalUsers = this._getUsers();
-    const updatedRegistry = globalUsers.filter(u => u.id !== uid);
-    this._saveUsers(updatedRegistry);
-    
-    // 4. Wipe operational sessions and bounce back to login wall
-    sessionStorage.removeItem(this.KEY_SESSION);
-    localStorage.removeItem(this.KEY_SESSION);
-    
+  /* Update avatar — stores URL in user metadata */
+  async updateUserAvatar(urlOrBase64) {
+    if (!_sb) return false;
+    const { error } = await _sb.auth.updateUser({ data: { avatar: urlOrBase64 } });
+    if (error) { console.error('[Klyro] avatar:', error.message); return false; }
+    if (_sessionCache?.user_metadata) _sessionCache.user_metadata.avatar = urlOrBase64;
+    return true;
+  },
+
+  /* Delete account — wipes all Supabase rows then signs out */
+  async destroyCurrentAccount() {
+    const user = this.getUser();
+    if (!user || !_sb) return;
+    MakeWebhook.send('user.deleted', { name: user.name, email: user.email, deletedAt: new Date().toISOString() });
+    const uid = _cache.userId;
+    await Promise.all([
+      _sb.from('transactions').delete().eq('user_id', uid),
+      _sb.from('goals').delete().eq('user_id', uid),
+      _sb.from('settings').delete().eq('user_id', uid),
+      _sb.from('invoices').delete().eq('user_id', uid),
+      _sb.from('receipts').delete().eq('user_id', uid),
+    ]);
+    await _sb.auth.signOut();
     window.location.replace('login.html');
   },
 
-  logout() {
-    sessionStorage.removeItem(this.KEY_SESSION);
-    localStorage.removeItem(this.KEY_SESSION);
+  /* Sign out */
+  async logout() {
+    if (_sb) await _sb.auth.signOut();
+    _sessionCache = null;
+    _cache.userId = null;
+    _cache.ready  = false;
     window.location.href = 'login.html';
   },
 
-  require() {
-    if (!this.getUser()) window.location.replace('login.html');
-  }
+  /* ── Rate limiting (localStorage — intentionally stays local) ────── */
+  /* ── Rate Limiting has to be in the backend database or cache not localStorage ────── */
+  _getRateData(email) {
+    try { return JSON.parse(localStorage.getItem('klyro_rl_' + email) || '{}'); }
+    catch { return {}; }
+  },
+  _saveRateData(email, d) {
+    localStorage.setItem('klyro_rl_' + email, JSON.stringify(d));
+  },
+  _recordFailure(email) {
+    const d = this._getRateData(email);
+    d.attempts = (d.attempts || 0) + 1;
+    d.last = Date.now();
+    if (d.attempts >= 5) d.lockedUntil = Date.now() + 15 * 60 * 1000;
+    this._saveRateData(email, d);
+  },
+  _isLocked(email) {
+    const d = this._getRateData(email);
+    if (d.lockedUntil && Date.now() < d.lockedUntil) {
+      const mins = Math.ceil((d.lockedUntil - Date.now()) / 60000);
+      return `Too many failed attempts. Try again in ${mins} minute${mins !== 1 ? 's' : ''}.`;
+    }
+    return null;
+  },
+  _clearRateData(email) {
+    localStorage.removeItem('klyro_rl_' + email);
+  },
+
+  /* ── Legacy shims so onboarding.html / signup.html don't crash ───── */
+  _getUsers()   { const u = this.getUser(); return u ? [u] : []; },
+  _saveUsers()  { /* no-op — data lives in Supabase Auth now */ },
 };
 
 
@@ -774,146 +901,169 @@ const PlanGate = {
 };
 
 /* ══════════════════════════════════════
-   DATA STORE  (per-user, namespaced)
+   DATA STORE  (Supabase-backed)
+   Identical public API — reads hit the in-memory
+   cache instantly; writes are optimistic + async.
 ══════════════════════════════════════ */
 const Store = {
-  _uid() { const u = Auth.getUser(); return u ? u.id : 'guest'; },
-  _key(base) { return base + '_' + this._uid(); },
 
-  getTransactions() {
-    try { return JSON.parse(localStorage.getItem(this._key('exmo_transactions')) || '[]'); }
-    catch { return []; }
+  /* ── Transactions ─────────────────────────────────────────────────── */
+  getTransactions() { return _cache.transactions || []; },
+
+  saveTransactions(txns) {
+    _cache.transactions = txns;
+    if (!_cache.userId) return;
+    txns.forEach(t => {
+      if (!t.user_id) t.user_id = _cache.userId;
+      _upsert('transactions', t);
+    });
   },
-  saveTransactions(txns) { localStorage.setItem(this._key('exmo_transactions'), JSON.stringify(txns)); },
+
   addTransaction(txn) {
-    // ── Plan gate: enforce free-tier monthly transaction limit ──
     const limitCheck = PlanGate.canAddTransaction();
     if (!limitCheck.allowed) {
       if (typeof showToast === 'function') showToast(limitCheck.message, 'error');
-      PlanGate.showUpgradeModal('ai_chat'); // students plan unlocks unlimited
+      PlanGate.showUpgradeModal('ai_chat');
       return null;
     }
-
-    const txns = this.getTransactions();
-    txn.id   = Date.now().toString();
-    txn.date = txn.date || new Date().toISOString().split('T')[0];
+    txn.id               = _genId();
+    txn.date             = txn.date || new Date().toISOString().split('T')[0];
     txn.originalCurrency = txn.originalCurrency || getCurrency().code;
-    txns.unshift(txn);
-    this.saveTransactions(txns);
-
-    // ── Make.com: fire on every new transaction ──
+    txn.created_at       = new Date().toISOString();
+    if (_cache.transactions === null) _cache.transactions = [];
+    _cache.transactions.unshift(txn);
+    if (_cache.userId) _upsert('transactions', { ...txn, user_id: _cache.userId });
     MakeWebhook.send('transaction.added', {
-      type:        txn.type,
-      amount:      txn.amount,
-      description: txn.description,
-      category:    txn.category,
-      date:        txn.date,
-      currency:    txn.originalCurrency
+      type: txn.type, amount: txn.amount, description: txn.description,
+      category: txn.category, date: txn.date, currency: txn.originalCurrency
     });
-
     return txn;
   },
+
   deleteTransaction(id) {
-    this.saveTransactions(this.getTransactions().filter(t => t.id !== id));
+    _cache.transactions = (_cache.transactions || []).filter(t => t.id !== id);
+    _sbDelete('transactions', id);
   },
+
   updateTransaction(id, fields) {
-    const txns = this.getTransactions();
-    const idx = txns.findIndex(t => t.id === id);
-    if (idx > -1) {
-      txns[idx] = { ...txns[idx], ...fields };
-      this.saveTransactions(txns);
-      return txns[idx];
+    const txns = _cache.transactions || [];
+    const idx  = txns.findIndex(t => t.id === id);
+    if (idx === -1) return null;
+    txns[idx] = { ...txns[idx], ...fields };
+    _upsert('transactions', { ...txns[idx], user_id: _cache.userId });
+    return txns[idx];
+  },
+
+  /* ── Settings ─────────────────────────────────────────────────────── */
+  getSettings() { return { ...(_cache.settings || {}) }; },
+
+  saveSettings(s) {
+    _cache.settings = { ...s };
+    // Mirror theme to localStorage for the pre-render flash fix
+    if (s.darkMode !== undefined) localStorage.setItem('klyro_theme', s.darkMode ? 'dark' : 'light');
+    if (!_cache.userId) return;
+    _upsert('settings', { ...s, user_id: _cache.userId });
+    if (s.onboarded !== undefined && _sb) {
+      _sb.auth.updateUser({ data: { onboarded: s.onboarded } }).catch(() => {});
     }
-    return null;
   },
 
-  getSettings() {
-    try { return JSON.parse(localStorage.getItem(this._key('exmo_settings')) || '{}'); }
-    catch { return {}; }
-  },
-  saveSettings(s) { localStorage.setItem(this._key('exmo_settings'), JSON.stringify(s)); },
+  /* ── Goals ────────────────────────────────────────────────────────── */
+  getGoals() { return _cache.goals || []; },
 
-  getGoals() {
-    try { return JSON.parse(localStorage.getItem(this._key('exmo_goals')) || '[]'); }
-    catch { return []; }
+  saveGoals(goals) {
+    _cache.goals = goals;
+    if (!_cache.userId) return;
+    goals.forEach(g => { if (!g.user_id) g.user_id = _cache.userId; _upsert('goals', g); });
   },
-  saveGoals(goals) { localStorage.setItem(this._key('exmo_goals'), JSON.stringify(goals)); },
+
   addGoal(goal) {
-    const goals = this.getGoals();
-    goal.id = Date.now().toString();
+    goal.id               = _genId();
     goal.originalCurrency = goal.originalCurrency || getCurrency().code;
-    goals.push(goal);
-    this.saveGoals(goals);
-
-    // ── Make.com: fire on every new goal ──
+    if (_cache.goals === null) _cache.goals = [];
+    _cache.goals.push(goal);
+    if (_cache.userId) _upsert('goals', { ...goal, user_id: _cache.userId });
     MakeWebhook.send('goal.created', {
-      name:     goal.name,
-      target:   goal.target,
-      saved:    goal.saved    || 0,
-      deadline: goal.deadline || null,
-      emoji:    goal.emoji    || '🎯'
+      name: goal.name, target: goal.target, saved: goal.saved || 0,
+      deadline: goal.deadline || null, emoji: goal.emoji || '🎯'
     });
-
     return goal;
   },
-  deleteGoal(id) { this.saveGoals(this.getGoals().filter(g => g.id !== id)); },
-  updateGoal(id, fields) {
-    const goals = this.getGoals();
-    const idx = goals.findIndex(g => g.id === id);
-    if (idx > -1) {
-      goals[idx] = { ...goals[idx], ...fields };
-      this.saveGoals(goals);
-      return goals[idx];
-    }
-    return null;
-  },
-  updateGoalSaved(id, amount) {
-    const goals = this.getGoals();
-    const g = goals.find(g => g.id === id);
-    if (g) {
-      g.saved = Math.min(parseFloat(g.target), (parseFloat(g.saved) || 0) + parseFloat(amount));
-      this.saveGoals(goals);
-    }
+
+  deleteGoal(id) {
+    _cache.goals = (_cache.goals || []).filter(g => g.id !== id);
+    _sbDelete('goals', id);
   },
 
-  // ── Invoices ──────────────────────────────────────────────────────────────
-  getInvoices() {
-    try { return JSON.parse(localStorage.getItem(this._key('klyro_invoices')) || '[]'); }
-    catch { return []; }
+  updateGoal(id, fields) {
+    const goals = _cache.goals || [];
+    const idx   = goals.findIndex(g => g.id === id);
+    if (idx === -1) return null;
+    goals[idx] = { ...goals[idx], ...fields };
+    _upsert('goals', { ...goals[idx], user_id: _cache.userId });
+    return goals[idx];
   },
-  saveInvoices(list) { localStorage.setItem(this._key('klyro_invoices'), JSON.stringify(list)); },
+
+  updateGoalSaved(id, amount) {
+    const goals = _cache.goals || [];
+    const g     = goals.find(g => g.id === id);
+    if (!g) return;
+    g.saved = Math.min(parseFloat(g.target), (parseFloat(g.saved) || 0) + parseFloat(amount));
+    _upsert('goals', { ...g, user_id: _cache.userId });
+  },
+
+  /* ── Invoices ─────────────────────────────────────────────────────── */
+  getInvoices() { return _cache.invoices || []; },
+
+  saveInvoices(list) {
+    _cache.invoices = list;
+    if (!_cache.userId) return;
+    list.forEach(i => { if (!i.user_id) i.user_id = _cache.userId; _upsert('invoices', i); });
+  },
+
   addInvoice(inv) {
-    const list = this.getInvoices();
-    inv.id        = 'INV-' + Date.now();
+    inv.id        = 'INV-' + _genId();
     inv.createdAt = new Date().toISOString();
     inv.status    = inv.status || 'draft';
-    list.unshift(inv);
-    this.saveInvoices(list);
+    if (_cache.invoices === null) _cache.invoices = [];
+    _cache.invoices.unshift(inv);
+    if (_cache.userId) _upsert('invoices', { ...inv, user_id: _cache.userId });
     return inv;
   },
-  updateInvoice(id, fields) {
-    const list = this.getInvoices();
-    const idx  = list.findIndex(i => i.id === id);
-    if (idx > -1) { list[idx] = { ...list[idx], ...fields }; this.saveInvoices(list); return list[idx]; }
-    return null;
-  },
-  deleteInvoice(id) { this.saveInvoices(this.getInvoices().filter(i => i.id !== id)); },
-  getInvoice(id)    { return this.getInvoices().find(i => i.id === id) || null; },
 
-  // ── Receipts (converted from paid invoices) ───────────────────────────────
-  getReceipts() {
-    try { return JSON.parse(localStorage.getItem(this._key('klyro_receipts')) || '[]'); }
-    catch { return []; }
+  updateInvoice(id, fields) {
+    const list = _cache.invoices || [];
+    const idx  = list.findIndex(i => i.id === id);
+    if (idx === -1) return null;
+    list[idx] = { ...list[idx], ...fields };
+    _upsert('invoices', { ...list[idx], user_id: _cache.userId });
+    return list[idx];
   },
-  saveReceipts(list) { localStorage.setItem(this._key('klyro_receipts'), JSON.stringify(list)); },
+
+  deleteInvoice(id) {
+    _cache.invoices = (_cache.invoices || []).filter(i => i.id !== id);
+    _sbDelete('invoices', id);
+  },
+
+  getInvoice(id) { return (_cache.invoices || []).find(i => i.id === id) || null; },
+
+  /* ── Receipts ─────────────────────────────────────────────────────── */
+  getReceipts() { return _cache.receipts || []; },
+
+  saveReceipts(list) {
+    _cache.receipts = list;
+    if (!_cache.userId) return;
+    list.forEach(r => { if (!r.user_id) r.user_id = _cache.userId; _upsert('receipts', r); });
+  },
+
   addReceipt(receipt) {
-    const list = this.getReceipts();
-    receipt.id        = 'REC-' + Date.now();
+    receipt.id        = 'REC-' + _genId();
     receipt.createdAt = new Date().toISOString();
-    list.unshift(receipt);
-    this.saveReceipts(list);
+    if (_cache.receipts === null) _cache.receipts = [];
+    _cache.receipts.unshift(receipt);
+    if (_cache.userId) _upsert('receipts', { ...receipt, user_id: _cache.userId });
     return receipt;
-  }
+  },
 };
 
 /* ══════════════════════════════════════
@@ -1179,8 +1329,10 @@ function initSidebar() {
     });
   }
 
+  // Dark mode — read from cache (set by Store.saveSettings) or localStorage mirror
   const s = Store.getSettings();
-  if (s.darkMode) {
+  const isDark = s.darkMode ?? (localStorage.getItem('klyro_theme') === 'dark');
+  if (isDark) {
     document.body.classList.add('dark');
     document.documentElement.classList.add('dark-pre');
   } else {
@@ -1196,9 +1348,89 @@ function handleLogout() {
 }
 
 /* ══════════════════════════════════════
-   SEED / DEMO  — no-op; clean slate
+   SEED / DEMO DATA
+   Waits for Supabase cache, then seeds
+   demo transactions if the account is empty.
 ══════════════════════════════════════ */
-function seedDemoData() {}
+async function seedDemoData() {
+  // Wait until _initData() has populated the cache
+  if (!_cache.ready) {
+    await new Promise(resolve => document.addEventListener('klyro:ready', resolve, { once: true }));
+  }
+  if ((_cache.transactions || []).length > 0) return; // account already has data
+  _loadDemoData();
+}
+
+/* ══════════════════════════════════════
+   MIGRATION HELPER
+   One-shot: reads any leftover localStorage
+   data and pushes it to Supabase.
+   Call migrateFromLocalStorage() from any
+   page after Auth.require() resolves.
+══════════════════════════════════════ */
+async function migrateFromLocalStorage() {
+  if (!_cache.userId || !_sb) return;
+  const MIGRATED_KEY = 'klyro_migrated_v2';
+  if (localStorage.getItem(MIGRATED_KEY)) return;
+
+  // Read old namespaced keys (both 'exmo_' and 'klyro_' prefixes)
+  const uid = _cache.userId;
+  const oldKeys = {
+    transactions: ['exmo_transactions_' + uid, 'klyro_transactions_' + uid],
+    goals:        ['exmo_goals_' + uid,        'klyro_goals_' + uid],
+    settings:     ['exmo_settings_' + uid,     'klyro_settings_' + uid],
+    invoices:     ['klyro_invoices_' + uid],
+    receipts:     ['klyro_receipts_' + uid],
+  };
+  const read = (keys) => {
+    for (const k of keys) {
+      try { const v = localStorage.getItem(k); if (v) return JSON.parse(v); } catch {}
+    }
+    return null;
+  };
+
+  let migrated = 0;
+  const oldTxns     = read(oldKeys.transactions);
+  const oldGoals    = read(oldKeys.goals);
+  const oldSettings = read(oldKeys.settings);
+  const oldInvoices = read(oldKeys.invoices);
+  const oldReceipts = read(oldKeys.receipts);
+
+  if (oldTxns?.length && !(_cache.transactions || []).length) {
+    for (const t of oldTxns) await _upsert('transactions', { ...t, user_id: uid });
+    migrated += oldTxns.length;
+  }
+  if (oldGoals?.length && !(_cache.goals || []).length) {
+    for (const g of oldGoals) await _upsert('goals', { ...g, user_id: uid });
+    migrated += oldGoals.length;
+  }
+  if (oldSettings && Object.keys(oldSettings).length && !(_cache.settings || {}).currencyCode) {
+    await _upsert('settings', { ...oldSettings, user_id: uid });
+    migrated++;
+  }
+  if (oldInvoices?.length && !(_cache.invoices || []).length) {
+    for (const inv of oldInvoices) await _upsert('invoices', { ...inv, user_id: uid });
+    migrated += oldInvoices.length;
+  }
+  if (oldReceipts?.length && !(_cache.receipts || []).length) {
+    for (const r of oldReceipts) await _upsert('receipts', { ...r, user_id: uid, image: null });
+    migrated += oldReceipts.length;
+  }
+
+  localStorage.setItem(MIGRATED_KEY, '1');
+  if (migrated > 0) {
+    await _initData(); // refresh cache from DB
+    showToast(`Migrated ${migrated} records to Supabase ✓`);
+  }
+}
+
+/* ══════════════════════════════════════
+   NOTE: Add the Supabase CDN script to
+   every HTML page BEFORE app.js:
+
+   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+   <script src="app.js"></script>
+══════════════════════════════════════ */
 
 function _loadDemoData() {
   const s  = getCurrency().symbol;
