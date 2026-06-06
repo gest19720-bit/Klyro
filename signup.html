@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Klyro — Create Account</title>
-  <link rel="icon" type="image/png" href="exmo_logo.png">
+  <link rel="icon" type="image/png" href="klyro_logo.png">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="app.css">
@@ -82,7 +82,7 @@
   <div class="auth-panel">
     <div class="auth-form-wrap">
       <div class="auth-logo">
-        <img src="exmo_logo.png" alt="Klyro" onerror="this.style.display='none'">
+        <img src="klyro_logo.png" alt="Klyro" onerror="this.style.display='none'">
         <span class="auth-logo-text">Klyro</span>
       </div>
       <div class="auth-heading">Create your account</div>
@@ -178,9 +178,13 @@
 </div>
 
 <div id="toast" class="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="app.js"></script>
 <script>
-  const CLERK_PUBLISHABLE_KEY = 'pk_test_ZGFzaGluZy1iZWUtNTkuY2xlcmsuYWNjb3VudHMuZGV2JA';
+  // ⚠️  Replace with your live key (pk_live_…) before deploying to production.
+  //     Move to a build-time env variable (e.g. import.meta.env.VITE_CLERK_KEY)
+  //     so rotating the key only requires changing it in one place.
+  const CLERK_PUBLISHABLE_KEY = window.__KLYRO_CLERK_KEY__ || 'pk_test_ZGFzaGluZy1iZWUtNTkuY2xlcmsuYWNjb3VudHMuZGV2JA';
   let clerkInstance = null;
 
   (function() { if (Auth.getUser()) window.location.replace('dashboard.html'); })();
@@ -191,8 +195,17 @@
   function togglePwd(id, btn) {
     const input = document.getElementById(id);
     const icon  = btn.querySelector('i');
-    input.type  = input.type === 'password' ? 'text' : 'password';
-    icon.className = input.type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
+    const show  = input.type === 'password'; // true = about to reveal
+    input.type  = show ? 'text' : 'password';
+    icon.className = show ? 'fas fa-eye-slash' : 'fas fa-eye';
+
+    // Fix #6: keep confirm field in sync so users can visually compare both passwords
+    const paired = id === 'su-password' ? 'su-confirm' : 'su-password';
+    const pairedInput = document.getElementById(paired);
+    if (pairedInput) pairedInput.type = show ? 'text' : 'password';
+    // Update paired eye icon too
+    const pairedEye = pairedInput && pairedInput.parentElement.querySelector('.input-eye i');
+    if (pairedEye) pairedEye.className = show ? 'fas fa-eye-slash' : 'fas fa-eye';
   }
 
   function checkStrength(val) {
@@ -348,7 +361,12 @@
     }
   })();
 
-  document.addEventListener('keydown', e => { if (e.key === 'Enter') handleSignup(); });
+  // Scoped Enter-key handler — only fires from within the signup form fields
+  ['su-first', 'su-last', 'su-email', 'su-password', 'su-confirm'].forEach(function(id) {
+    document.getElementById(id).addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') handleSignup();
+    });
+  });
 </script>
 </body>
 </html>
