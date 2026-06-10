@@ -696,6 +696,7 @@ const PlanGate = {
     advanced_analysis:    { minPlan: 'individuals',  label: 'Advanced Analysis' },
     team_features:        { minPlan: 'businesses',   label: 'Team Features' },
     invoices:             { minPlan: 'businesses',   label: 'Invoices & Receipts' },
+    wealth_forecast:      { minPlan: 'businesses',   label: 'Wealth Forecasting' },
     automated_invoicing:  { minPlan: 'enterprise',   label: 'Automated Invoicing' },
     api_access:           { minPlan: 'enterprise',   label: 'API Access' },
     transaction_limit:    { free: 20 },  // monthly limit for free plan only
@@ -725,6 +726,11 @@ const PlanGate = {
     const feature = this.FEATURES[featureKey];
     if (!feature || !feature.minPlan) return true;
     return this.planLevel(this.currentPlan()) >= this.planLevel(feature.minPlan);
+  },
+
+  // ── Is business plan or higher ────────────────────────────────────────────
+  isBusiness() {
+    return this.planLevel(this.currentPlan()) >= this.planLevel('businesses');
   },
 
   // ── Check free-tier numeric limits ───────────────────────────────────────
@@ -1296,9 +1302,10 @@ function renderSidebar() {
     <a href="transactions.html" class="nav-item" data-page="transactions"><i class="fas fa-right-left"></i> Transactions</a>
     <a href="analysis.html" class="nav-item" data-page="analysis"><i class="fas fa-chart-pie"></i> Analysis</a>
     <span class="nav-section-label">Intelligence</span>
-    <a href="ai.html" class="nav-item" data-page="ai"><i class="fas fa-brain"></i> Klyro AI</a>
-    <span class="nav-section-label">Business</span>
-    <a href="invoices.html" class="nav-item" data-page="invoices"><i class="fas fa-file-invoice-dollar"></i> Invoices</a>
+    ${PlanGate.isBusiness()
+      ? `<a href="business.html" class="nav-item" data-page="business"><i class="fas fa-briefcase"></i> Business</a>`
+      : `<a href="ai.html" class="nav-item" data-page="ai"><i class="fas fa-brain"></i> Klyro AI</a>`
+    }
     <span class="nav-section-label">Account</span>
     <a href="settings.html" class="nav-item" data-page="settings"><i class="fas fa-gear"></i> Settings</a>
     <div class="sidebar-bottom">

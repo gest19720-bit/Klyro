@@ -703,7 +703,7 @@
     }
   }
 
-  function handleAvatarUpload(event) {
+  async function handleAvatarUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
     
@@ -715,7 +715,7 @@
     const reader = new FileReader();
     reader.onload = function(e) {
       const base64Data = e.target.result;
-      const success = Auth.updateUserAvatar(base64Data);
+      const success = await Auth.updateUserAvatar(base64Data);
       if (success) {
         showToast('Profile image updated successfully! 📸');
         renderAvatarView();
@@ -729,16 +729,19 @@
     reader.readAsDataURL(file);
   }
 
-  function removeAvatar() {
+  async function removeAvatar() {
     if (!confirm('Remove profile picture?')) return;
-    Auth.updateUserAvatar(null);
+    await Auth.updateUserAvatar(null);
     showToast('Avatar picture removed');
     renderAvatarView();
     document.getElementById('sidebar-mount').innerHTML = renderSidebar();
     initSidebar();
   }
 
-  function loadSettings() {
+  async function loadSettings() {
+  if (!_cache.ready) {
+    await new Promise(resolve => document.addEventListener('klyro:ready', resolve, { once: true }));
+  }
     const s = Store.getSettings();
     if (s.darkMode) {
       document.body.classList.add('dark');
@@ -1031,12 +1034,21 @@
   <a href="dashboard.html" class="bottom-nav-item" data-page="dashboard"><i class="fas fa-house"></i>Home</a>
   <a href="transactions.html" class="bottom-nav-item" data-page="transactions"><i class="fas fa-right-left"></i>Transactions</a>
   <a href="analysis.html" class="bottom-nav-item" data-page="analysis"><i class="fas fa-chart-pie"></i>Analysis</a>
-  <a href="ai.html" class="bottom-nav-item" data-page="ai"><i class="fas fa-brain"></i>AI</a>
+  <span id="bnav-smart-tab"></span>
   <a href="settings.html" class="bottom-nav-item" data-page="settings"><i class="fas fa-gear"></i>Settings</a>
 </nav>
 <script>
 (function(){
   var page = location.pathname.split('/').pop() || 'dashboard.html';
+  // Inject smart tab (Business for businesses+, AI for others)
+  var smartEl = document.getElementById('bnav-smart-tab');
+  if (smartEl && typeof PlanGate !== 'undefined') {
+    if (PlanGate.isBusiness()) {
+      smartEl.outerHTML = '<a href="business.html" class="bottom-nav-item" data-page="business"><i class="fas fa-briefcase"></i>Business</a>';
+    } else {
+      smartEl.outerHTML = '<a href="ai.html" class="bottom-nav-item" data-page="ai"><i class="fas fa-brain"></i>AI</a>';
+    }
+  }
   document.querySelectorAll('.bottom-nav-item[data-page]').forEach(function(el){
     var p = el.dataset.page;
     if(page.includes(p)||(p==='dashboard'&&['','index.html','dashboard.html'].includes(page)))

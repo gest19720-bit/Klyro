@@ -225,21 +225,25 @@
   // Boot
   document.getElementById('sidebar-mount').innerHTML = renderSidebar();
   initSidebar();
-  seedDemoData();
   document.getElementById('today-date').textContent = new Date().toLocaleDateString('en-GB', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-  // Personalised greeting
-  (function() {
+  populateCatSelect();
+
+  // Wait for Supabase data before rendering
+  async function boot() {
+    if (!_cache.ready) {
+      await new Promise(resolve => document.addEventListener('klyro:ready', resolve, { once: true }));
+    }
+    // Personalised greeting
     const user = Auth.getUser();
     const hour = new Date().getHours();
     const tod  = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
     const firstName = user?.name?.split(' ')[0] || '';
     const el = document.getElementById('greeting-text');
-    if (el) el.textContent = firstName
-      ? `Good ${tod}, ${firstName} 👋`
-      : `Good ${tod} 👋`;
-  })();
-  populateCatSelect();
-  renderPage();
+    if (el) el.textContent = firstName ? `Good ${tod}, ${firstName} 👋` : `Good ${tod} 👋`;
+    await seedDemoData();
+    renderPage();
+  }
+  boot();
 
 </script>
 
@@ -248,12 +252,21 @@
   <a href="dashboard.html" class="bottom-nav-item" data-page="dashboard"><i class="fas fa-house"></i>Home</a>
   <a href="transactions.html" class="bottom-nav-item" data-page="transactions"><i class="fas fa-right-left"></i>Transactions</a>
   <a href="analysis.html" class="bottom-nav-item" data-page="analysis"><i class="fas fa-chart-pie"></i>Analysis</a>
-  <a href="ai.html" class="bottom-nav-item" data-page="ai"><i class="fas fa-brain"></i>AI</a>
+  <span id="bnav-smart-tab"></span>
   <a href="settings.html" class="bottom-nav-item" data-page="settings"><i class="fas fa-gear"></i>Settings</a>
 </nav>
 <script>
 (function(){
   var page = location.pathname.split('/').pop() || 'dashboard.html';
+  // Inject smart tab (Business for businesses+, AI for others)
+  var smartEl = document.getElementById('bnav-smart-tab');
+  if (smartEl && typeof PlanGate !== 'undefined') {
+    if (PlanGate.isBusiness()) {
+      smartEl.outerHTML = '<a href="business.html" class="bottom-nav-item" data-page="business"><i class="fas fa-briefcase"></i>Business</a>';
+    } else {
+      smartEl.outerHTML = '<a href="ai.html" class="bottom-nav-item" data-page="ai"><i class="fas fa-brain"></i>AI</a>';
+    }
+  }
   document.querySelectorAll('.bottom-nav-item[data-page]').forEach(function(el){
     var p = el.dataset.page;
     if(page.includes(p)||(p==='dashboard'&&['','index.html','dashboard.html'].includes(page)))

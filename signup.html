@@ -181,31 +181,31 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="app.js"></script>
 <script>
-  // ⚠️  Replace with your live key (pk_live_…) before deploying to production.
-  //     Move to a build-time env variable (e.g. import.meta.env.VITE_CLERK_KEY)
-  //     so rotating the key only requires changing it in one place.
-  const CLERK_PUBLISHABLE_KEY = window.__KLYRO_CLERK_KEY__ || 'pk_test_ZGFzaGluZy1iZWUtNTkuY2xlcmsuYWNjb3VudHMuZGV2JA';
-  let clerkInstance = null;
+  // Redirect if already logged in
+  (function() {
+    if (Auth.getUser()) window.location.replace('dashboard.html');
+  })();
 
-  (function() { if (Auth.getUser()) window.location.replace('dashboard.html'); })();
-
-  function showError(msg) { document.getElementById('error-text').textContent = msg; document.getElementById('error-msg').classList.add('show'); }
+  function showError(msg) {
+    document.getElementById('error-text').textContent = msg;
+    document.getElementById('error-msg').classList.add('show');
+  }
   function hideError() { document.getElementById('error-msg').classList.remove('show'); }
 
   function togglePwd(id, btn) {
     const input = document.getElementById(id);
     const icon  = btn.querySelector('i');
-    const show  = input.type === 'password'; // true = about to reveal
+    const show  = input.type === 'password';
     input.type  = show ? 'text' : 'password';
     icon.className = show ? 'fas fa-eye-slash' : 'fas fa-eye';
-
-    // Fix #6: keep confirm field in sync so users can visually compare both passwords
+    // Keep confirm field in sync
     const paired = id === 'su-password' ? 'su-confirm' : 'su-password';
     const pairedInput = document.getElementById(paired);
-    if (pairedInput) pairedInput.type = show ? 'text' : 'password';
-    // Update paired eye icon too
-    const pairedEye = pairedInput && pairedInput.parentElement.querySelector('.input-eye i');
-    if (pairedEye) pairedEye.className = show ? 'fas fa-eye-slash' : 'fas fa-eye';
+    if (pairedInput) {
+      pairedInput.type = show ? 'text' : 'password';
+      const pairedEye = pairedInput.parentElement.querySelector('.input-eye i');
+      if (pairedEye) pairedEye.className = show ? 'fas fa-eye-slash' : 'fas fa-eye';
+    }
   }
 
   function checkStrength(val) {
@@ -225,7 +225,6 @@
     label.textContent = labels[score] || '';
   }
 
-  // ── Email signup via Clerk API → local fallback ───────────────────────────
   async function handleSignup() {
     hideError();
     const first    = document.getElementById('su-first').value.trim();
@@ -235,10 +234,10 @@
     const confirm  = document.getElementById('su-confirm').value;
     const terms    = document.getElementById('terms-check').checked;
 
-    if (!first || !last)      { showError('Please enter your full name.'); return; }
-    if (!email)               { showError('Please enter your email address.'); return; }
-    if (!email.includes('@')) { showError('Please enter a valid email address.'); return; }
-    if (password.length < 8)  { showError('Password must be at least 8 characters.'); return; }
+    if (!first || !last)       { showError('Please enter your full name.'); return; }
+    if (!email)                { showError('Please enter your email address.'); return; }
+    if (!email.includes('@'))  { showError('Please enter a valid email address.'); return; }
+    if (password.length < 8)   { showError('Password must be at least 8 characters.'); return; }
     if (password !== confirm)  { showError('Passwords do not match.'); return; }
     if (!terms)                { showError('Please accept the Terms of Service to continue.'); return; }
 
@@ -246,83 +245,43 @@
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Creating account…';
 
-    const name = first + ' ' + last;
-
-    try {
-      // Try Clerk email/password signup first
-      if (!clerkInstance) await loadClerkSilent();
-
-      if (clerkInstance) {
-        await signupWithClerkEmail(name, email, password);
-      } else {
-        await signupLocal(name, email, password);
-      }
-    } catch (err) {
-      btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-user-plus"></i> Create Free Account';
-      showError(err.message || 'Could not create account. Please try again.');
-    }
-  }
-
-  async function signupWithClerkEmail(name, email, password) {
-    const btn = document.getElementById('signup-btn');
-    try {
-      const result = await clerkInstance.client.signUp.create({
-        firstName:    name.split(' ')[0],
-        lastName:     name.split(' ').slice(1).join(' ') || '',
-        emailAddress: email,
-        password:     password,
-      });
-
-      // May need email verification
-      if (result.status === 'complete') {
-        await clerkInstance.setActive({ session: result.createdSessionId });
-        Auth.loginClerk(clerkInstance.user);
-        showToast('Account created! Welcome to Klyro 🎉');
-        setTimeout(() => window.location.href = 'onboarding.html', 900);
-      } else if (result.status === 'missing_requirements') {
-        // Email verification needed — fall back to local for now
-        await signupLocal(name, email, password);
-      } else {
-        await signupLocal(name, email, password);
-      }
-    } catch (clerkErr) {
-      const msg = clerkErr.errors && clerkErr.errors[0] && clerkErr.errors[0].longMessage;
-      if (msg && msg.toLowerCase().includes('already')) {
-        throw new Error('An account with this email already exists. Try signing in.');
-      }
-      // Any other Clerk error — fall back to local
-      await signupLocal(name, email, password);
-    }
-  }
-
-  async function signupLocal(name, email, password) {
-    const btn = document.getElementById('signup-btn');
+    const name = (first + ' ' + last).trim();
     const result = await Auth.register({ name, email, password });
+
     btn.disabled = false;
     btn.innerHTML = '<i class="fas fa-user-plus"></i> Create Free Account';
+
     if (result.success) {
       showToast('Account created! Welcome to Klyro 🎉');
       setTimeout(() => window.location.href = 'onboarding.html', 900);
     } else {
-      showError(result.message || 'Could not create account.');
+      // Surface a human-friendly version of Supabase error messages
+      const msg = result.message || 'Could not create account.';
+      if (msg.toLowerCase().includes('already registered') || msg.toLowerCase().includes('already exists')) {
+        showError('An account with this email already exists. Try signing in instead.');
+      } else if (msg.toLowerCase().includes('password')) {
+        showError('Password is too weak. Use at least 8 characters with a mix of letters and numbers.');
+      } else if (msg.toLowerCase().includes('email')) {
+        showError('Please enter a valid email address.');
+      } else {
+        showError(msg);
+      }
     }
   }
 
-  // ── Clerk OAuth social signup ─────────────────────────────────────────────
+  // Social signup — uses Supabase OAuth
   async function socialSignup(provider) {
     const btn = document.getElementById('btn-' + provider);
     btn.disabled = true;
     document.getElementById('clerk-modal-title').textContent = 'Sign up with ' + (provider === 'google' ? 'Google' : 'Apple');
-    document.getElementById('clerk-modal-sub').textContent   = 'Connecting to ' + (provider === 'google' ? 'Google' : 'Apple') + '…';
+    document.getElementById('clerk-modal-sub').textContent   = 'Redirecting…';
     document.getElementById('clerk-overlay').classList.add('open');
     try {
-      if (!clerkInstance) await loadClerkSilent();
-      await clerkInstance.authenticateWithRedirect({
-        strategy:            provider === 'google' ? 'oauth_google' : 'oauth_apple',
-        redirectUrl:         window.location.origin + '/signup.html?clerk_callback=1',
-        redirectUrlComplete: window.location.origin + '/onboarding.html',
+      const { error } = await _sb.auth.signInWithOAuth({
+        provider: provider,
+        options: { redirectTo: window.location.origin + '/onboarding.html' }
       });
+      if (error) throw error;
     } catch (err) {
       closeClerkModal();
       btn.disabled = false;
@@ -335,33 +294,11 @@
     document.getElementById('btn-google').disabled = false;
     document.getElementById('btn-apple').disabled  = false;
   }
-  document.getElementById('clerk-overlay').addEventListener('click', function(e) { if (e.target === this) closeClerkModal(); });
+  document.getElementById('clerk-overlay').addEventListener('click', function(e) {
+    if (e.target === this) closeClerkModal();
+  });
 
-  async function loadClerkSilent() {
-    if (clerkInstance) return;
-    const clerkDomain = atob(CLERK_PUBLISHABLE_KEY.split('_')[2]).slice(0, -1);
-    await new Promise((resolve, reject) => {
-      const s = document.createElement('script');
-      s.src = 'https://' + clerkDomain + '/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
-      s.async = true; s.crossOrigin = 'anonymous';
-      s.onload = resolve; s.onerror = reject;
-      document.head.appendChild(s);
-    });
-    clerkInstance = new window.Clerk(CLERK_PUBLISHABLE_KEY);
-    await clerkInstance.load();
-    if (clerkInstance.user) {
-      Auth.loginClerk(clerkInstance.user);
-      window.location.replace('onboarding.html');
-    }
-  }
-
-  (async function() {
-    if (window.location.search.includes('clerk_callback')) {
-      try { await loadClerkSilent(); } catch(e) {}
-    }
-  })();
-
-  // Scoped Enter-key handler — only fires from within the signup form fields
+  // Enter key support
   ['su-first', 'su-last', 'su-email', 'su-password', 'su-confirm'].forEach(function(id) {
     document.getElementById(id).addEventListener('keydown', function(e) {
       if (e.key === 'Enter') handleSignup();
