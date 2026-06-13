@@ -38,9 +38,23 @@ if (_sb) {
   _sb.auth.getSession().then(({ data: { session } }) => {
     if (session) { _sessionCache = session.user; _cache.userId = session.user.id; }
   });
-  _sb.auth.onAuthStateChange((_event, session) => {
+  _sb.auth.onAuthStateChange((event, session) => {
     _sessionCache = session?.user || null;
     _cache.userId = session?.user?.id || null;
+
+    // SIGNED_IN fires when an OAuth callback lands (detectSessionInUrl picks it up).
+    // We need to boot _initData here so protected pages get their data even when
+    // the page loaded before the OAuth redirect completed.
+    if (event === 'SIGNED_IN' && session?.user && !_cache.ready) {
+      _initData().then(() => {
+        // Route new OAuth users (not yet onboarded) to onboarding.
+        const page = window.location.pathname.split('/').pop() || '';
+        const onProtectedPage = !['login.html','signup.html','index.html',''].includes(page);
+        if (onProtectedPage && !session.user.user_metadata?.onboarded) {
+          window.location.replace('onboarding.html');
+        }
+      });
+    }
   });
 }
 
@@ -523,8 +537,19 @@ const Auth = {
       if (!session) {
         window.location.href = 'login.html';
       } else {
-        _sessionCache    = session.user;
-        _cache.userId    = session.user.id;
+        _sessionCache = session.user;
+        _cache.userId = session.user.id;
+
+        // Route unboarded users (e.g. new OAuth signups) to onboarding,
+        // except when they're already on onboarding or pricing pages.
+        const page = window.location.pathname.split('/').pop() || '';
+        const isOnboarded = session.user.user_metadata?.onboarded;
+        const skipCheck   = ['onboarding.html', 'pricing.html'].includes(page);
+        if (!isOnboarded && !skipCheck) {
+          window.location.replace('onboarding.html');
+          return;
+        }
+
         _initData();
       }
     });
