@@ -97,6 +97,58 @@ async function _initData() {
 }
 
 /* ══════════════════════════════════════
+   ACCENT COLOUR THEMES
+   10 selectable accent palettes. Replaces
+   --gold / --gold-light / --gold-dim /
+   --gold-border / --accent-rgb everywhere.
+══════════════════════════════════════ */
+const THEMES = [
+  { id: 'gold',     name: 'Classic Gold', accent: '#d4a017', light: '#f0c040', rgb: '212,160,23' },
+  { id: 'emerald',  name: 'Emerald',      accent: '#1f9d6e', light: '#34c98c', rgb: '31,157,110' },
+  { id: 'sapphire', name: 'Sapphire',     accent: '#2f6fed', light: '#5b93ff', rgb: '47,111,237' },
+  { id: 'rose',     name: 'Rose',         accent: '#e0457b', light: '#f078a3', rgb: '224,69,123' },
+  { id: 'sunset',   name: 'Sunset',       accent: '#e8742c', light: '#f5a45c', rgb: '232,116,44' },
+  { id: 'violet',   name: 'Violet',       accent: '#7c3aed', light: '#a78bfa', rgb: '124,58,237' },
+  { id: 'teal',     name: 'Ocean Teal',   accent: '#0d9488', light: '#2dd4bf', rgb: '13,148,136' },
+  { id: 'crimson',  name: 'Crimson',      accent: '#c2483f', light: '#e2746a', rgb: '194,72,63'  },
+  { id: 'graphite', name: 'Graphite',     accent: '#51596b', light: '#7c8597', rgb: '81,89,107'  },
+  { id: 'indigo',   name: 'Indigo',       accent: '#4338ca', light: '#6366f1', rgb: '67,56,202'  },
+];
+
+function _applyAccentTheme(id) {
+  const t = THEMES.find(x => x.id === id) || THEMES[0];
+  const root = document.documentElement.style;
+  root.setProperty('--gold', t.accent);
+  root.setProperty('--gold-light', t.light);
+  root.setProperty('--gold-dim', `rgba(${t.rgb},0.18)`);
+  root.setProperty('--gold-border', `rgba(${t.rgb},0.3)`);
+  root.setProperty('--accent-rgb', t.rgb);
+  return t;
+}
+
+/* Public API — used by the Settings page theme picker.
+   Theme.apply() updates the CSS variables instantly (no reload, no
+   save button needed) and persists the choice the same way Dark
+   Mode does: into Store/Supabase settings + a localStorage mirror. */
+const Theme = {
+  list() { return THEMES; },
+  current() {
+    const s = (typeof Store !== 'undefined') ? Store.getSettings() : {};
+    return s.accentTheme || localStorage.getItem('klyro_accent') || 'gold';
+  },
+  apply(id) {
+    const t = _applyAccentTheme(id);
+    try { localStorage.setItem('klyro_accent', t.id); } catch {}
+    if (typeof Store !== 'undefined') {
+      const s = Store.getSettings();
+      s.accentTheme = t.id;
+      Store.saveSettings(s);
+    }
+    return t;
+  },
+};
+
+/* ══════════════════════════════════════
    THEME PERSISTENCE — apply before render
    Falls back to localStorage for guests /
    before Supabase settings are loaded.
@@ -107,6 +159,11 @@ async function _initData() {
     // On first paint it won't be ready yet, so we also keep a localStorage mirror
     const localTheme = localStorage.getItem('klyro_theme') || 'light';
     if (localTheme === 'dark') document.documentElement.classList.add('dark-pre');
+
+    // Accent colour theme — also mirrored to localStorage so it survives
+    // before Supabase settings load, same pattern as dark mode above.
+    const localAccent = localStorage.getItem('klyro_accent');
+    if (localAccent) _applyAccentTheme(localAccent);
   } catch {}
 })();
 
@@ -992,6 +1049,7 @@ const Store = {
     _cache.settings = { ...s };
     // Mirror theme to localStorage for the pre-render flash fix
     if (s.darkMode !== undefined) localStorage.setItem('klyro_theme', s.darkMode ? 'dark' : 'light');
+    if (s.accentTheme !== undefined) localStorage.setItem('klyro_accent', s.accentTheme);
     if (!_cache.userId) return;
     _upsert('settings', { ...s, user_id: _cache.userId });
     if (s.onboarded !== undefined && _sb) {
@@ -1370,6 +1428,10 @@ function initSidebar() {
   } else {
     document.documentElement.classList.remove('dark-pre');
   }
+
+  // Accent theme — read from cache or localStorage mirror, same pattern as dark mode
+  const accentId = s.accentTheme || localStorage.getItem('klyro_accent') || 'gold';
+  _applyAccentTheme(accentId);
 }
 
 function handleLogout() {

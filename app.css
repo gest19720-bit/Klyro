@@ -11,6 +11,7 @@
   --gold-light:  #f0c040;
   --gold-dim:    rgba(212,160,23,0.18);
   --gold-border: rgba(212,160,23,0.3);
+  --accent-rgb:  212,160,23;
 
   --white:       #ffffff;
   --off-white:   #f7f4ee;
@@ -91,8 +92,8 @@ body::before {
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(ellipse 70% 50% at 15% 20%, rgba(212,160,23,0.12) 0%, transparent 55%),
-    radial-gradient(ellipse 60% 60% at 85% 80%, rgba(212,160,23,0.08) 0%, transparent 55%);
+    radial-gradient(ellipse 70% 50% at 15% 20%, rgba(var(--accent-rgb),0.12) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 60% at 85% 80%, rgba(var(--accent-rgb),0.08) 0%, transparent 55%);
   pointer-events: none;
   z-index: 0;
   transition: background 0.4s ease;
@@ -100,8 +101,8 @@ body::before {
 html.dark-pre body::before,
 body.dark::before {
   background:
-    radial-gradient(ellipse 70% 50% at 15% 20%, rgba(212,160,23,0.07) 0%, transparent 55%),
-    radial-gradient(ellipse 60% 60% at 85% 80%, rgba(212,160,23,0.05) 0%, transparent 55%);
+    radial-gradient(ellipse 70% 50% at 15% 20%, rgba(var(--accent-rgb),0.07) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 60% at 85% 80%, rgba(var(--accent-rgb),0.05) 0%, transparent 55%);
 }
 
 /* ─── App Shell ─── */
@@ -984,6 +985,67 @@ select.form-input { cursor: pointer; }
     from { transform: translateY(100%); }
     to   { transform: translateY(0); }
   }
+}
+
+/* ─── Theme Swatches (Settings → Appearance) ─── */
+.theme-swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin-top: 16px;
+}
+.theme-swatch {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 6px;
+  background: var(--glass-dim);
+  border: 1.5px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.theme-swatch:hover {
+  background: var(--glass);
+  transform: translateY(-2px);
+}
+.theme-swatch.selected {
+  border-color: var(--swatch-c1);
+  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.15);
+}
+.theme-swatch-dot {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--swatch-c1), var(--swatch-c2));
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.theme-swatch-dot i {
+  color: #fff;
+  font-size: 0.7rem;
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+.theme-swatch.selected .theme-swatch-dot i { opacity: 1; }
+.theme-swatch-name {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-mid);
+  text-align: center;
+  line-height: 1.2;
+}
+.theme-swatch.selected .theme-swatch-name { color: var(--text); }
+
+@media (max-width: 640px) {
+  .theme-swatch-grid { grid-template-columns: repeat(4, 1fr); }
+}
+@media (max-width: 420px) {
+  .theme-swatch-grid { grid-template-columns: repeat(3, 1fr); }
 }
 
 /* ─── Page-specific Layout Hooks ─── */
