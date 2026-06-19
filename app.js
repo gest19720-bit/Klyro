@@ -49,7 +49,7 @@ if (_sb) {
       _initData().then(() => {
         // Route new OAuth users (not yet onboarded) to onboarding.
         const page = window.location.pathname.split('/').pop() || '';
-        const onProtectedPage = !['login.html','signup.html','index.html',''].includes(page);
+        const onProtectedPage = !['login.html','signup.html','index.html','onboarding.html','pricing.html',''].includes(page);
         if (onProtectedPage && !session.user.user_metadata?.onboarded) {
           window.location.replace('onboarding.html');
         }
