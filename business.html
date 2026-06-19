@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Klyro — Business</title>
-  <link rel="icon" type="image/png" href="exmo_logo.png">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap">
+  <link rel="icon" type="image/png" href="klyro_logo.png">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="app.css">
   <style>
@@ -1010,6 +1010,10 @@ function saveInvoice() {
   };
 
   const all = getInvoices();
+  const isNew = !editingInvoiceId;
+  const wasPaid = !isNew && (all.find(i => i.id === editingInvoiceId)?.status === 'paid');
+  const nowPaid = inv.status === 'paid';
+
   if (editingInvoiceId) {
     const idx = all.findIndex(i => i.id === editingInvoiceId);
     if (idx > -1) all[idx] = inv; else all.push(inv);
@@ -1017,7 +1021,35 @@ function saveInvoice() {
     all.unshift(inv);
   }
   saveInvoices(all);
-  showToast(editingInvoiceId ? 'Invoice updated!' : 'Invoice saved!');
+
+  // If invoice is being marked paid for the first time, add income + receipt
+  if (nowPaid && (isNew || !wasPaid)) {
+    inv.paidAt = inv.paidAt || new Date().toISOString();
+    Store.addTransaction({
+      type:        'income',
+      amount:      parseFloat(inv.total || 0),
+      description: `Invoice ${inv.number} — ${inv.client}`,
+      category:    'freelance',
+      date:        new Date().toISOString().split('T')[0],
+      invoiceId:   inv.id,
+    });
+    Store.addReceipt({
+      invoiceId:   inv.id,
+      invoiceNum:  inv.number,
+      fromName:    Store.getSettings().companyName || 'Your Business',
+      toName:      inv.client,
+      toEmail:     inv.email || '',
+      total:       inv.total,
+      currency:    Store.getSettings().currencyCode || 'USD',
+      paidAt:      inv.paidAt,
+      accentColor: '#d4a017',
+      items:       inv.lineItems || [],
+      source:      'invoice',
+    });
+    showToast(editingInvoiceId ? 'Invoice updated — income + receipt recorded ✓' : 'Invoice saved — income + receipt recorded ✓');
+  } else {
+    showToast(editingInvoiceId ? 'Invoice updated!' : 'Invoice saved!');
+  }
   closeInvoiceModal();
   renderInvoices();
 }
@@ -1032,10 +1064,136 @@ function deleteInvoice(id) {
 function markInvoicePaid(id) {
   const all = getInvoices();
   const idx = all.findIndex(i => i.id === id);
-  if (idx > -1) all[idx].status = 'paid';
+  if (idx === -1) return;
+  const inv = all[idx];
+  const wasAlreadyPaid = inv.status === 'paid';
+  inv.status = 'paid';
+  inv.paidAt = inv.paidAt || new Date().toISOString();
   saveInvoices(all);
-  showToast('Marked as paid! ✓');
+
+  if (!wasAlreadyPaid) {
+    // Auto-add income transaction
+    Store.addTransaction({
+      type:        'income',
+      amount:      parseFloat(inv.total || 0),
+      description: `Invoice ${inv.number} — ${inv.client}`,
+      category:    'freelance',
+      date:        new Date().toISOString().split('T')[0],
+      invoiceId:   inv.id,
+    });
+
+    // Auto-generate a receipt stored via Store
+    Store.addReceipt({
+      invoiceId:   inv.id,
+      invoiceNum:  inv.number,
+      fromName:    (Store.getSettings().companyName) || 'Your Business',
+      toName:      inv.client,
+      toEmail:     inv.email  || '',
+      total:       inv.total,
+      currency:    Store.getSettings().currencyCode || 'USD',
+      paidAt:      inv.paidAt,
+      accentColor: '#d4a017',
+      items:       inv.lineItems || [],
+      source:      'invoice',
+    });
+
+    showToast('Marked as paid — income + receipt recorded ✓');
+  } else {
+    showToast('Invoice already paid ✓');
+  }
   renderInvoices();
+}
+
+function printInvoiceReceipt(id) {
+  const inv = getInvoices().find(i => i.id === id);
+  if (!inv) return;
+  // Try to find matching stored receipt first
+  const stored = Store.getReceipts().find(r => r.invoiceId === id);
+  const accentColor = stored?.accentColor || '#d4a017';
+  const sym = (CURRENCIES.find(c => c.code === (inv.currency || Store.getSettings().currencyCode || 'USD')) || { symbol: '$' }).symbol;
+  const paidAt = inv.paidAt ? new Date(inv.paidAt) : new Date();
+  const dt = paidAt.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+  const fromName = Store.getSettings().companyName || 'Your Business';
+
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>Receipt ${inv.number}</title>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+      *{box-sizing:border-box;margin:0;padding:0;}
+      body{font-family:'Inter',sans-serif;color:#1a1a1a;background:#fff;padding:40px;}
+      .bar{height:5px;background:${accentColor};margin-bottom:32px;border-radius:2px;}
+      .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;}
+      h1{font-size:2rem;font-weight:900;color:${accentColor};text-transform:uppercase;letter-spacing:0.06em;}
+      .meta{font-size:0.78rem;color:#888;margin-top:6px;line-height:1.8;}
+      .paid-stamp{display:inline-flex;align-items:center;gap:8px;border:3px solid #27ae60;color:#27ae60;
+        border-radius:6px;padding:6px 16px;font-size:1rem;font-weight:900;letter-spacing:0.1em;
+        transform:rotate(-8deg);margin-bottom:24px;}
+      .parties{display:grid;grid-template-columns:1fr 1fr;gap:24px;background:#f9f9f7;
+        padding:22px;border-radius:10px;margin-bottom:28px;}
+      .party-label{font-size:0.65rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;
+        color:${accentColor};margin-bottom:6px;}
+      .party-name{font-weight:700;font-size:0.95rem;color:#1a1a1a;}
+      .party-sub{font-size:0.75rem;color:#666;margin-top:3px;line-height:1.6;}
+      table{width:100%;border-collapse:collapse;margin-bottom:20px;}
+      th{text-align:left;font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;
+        border-bottom:2px solid ${accentColor};padding:8px 4px;color:${accentColor};}
+      td{padding:10px 4px;border-bottom:1px solid #eee;font-size:0.82rem;color:#333;}
+      td:not(:first-child){text-align:right;}
+      .totals-box{display:flex;justify-content:flex-end;margin-bottom:28px;}
+      .totals-inner{width:230px;}
+      .t-row{display:flex;justify-content:space-between;font-size:0.82rem;padding:4px 0;color:#555;}
+      .t-row.grand{border-top:2px solid ${accentColor};margin-top:8px;padding-top:10px;
+        font-weight:700;font-size:1.05rem;color:#1a1a1a;}
+      .footer{background:${accentColor};color:#fff;text-align:center;font-size:0.72rem;
+        padding:14px;border-radius:6px;margin-top:24px;}
+      @media print{body{padding:20px;}@page{margin:0;size:A4;}}
+    </style></head><body>
+    <div class="bar"></div>
+    <div class="header">
+      <div>
+        <h1>Receipt</h1>
+        <div class="meta">
+          Receipt for Invoice: <strong>${inv.number}</strong><br>
+          Paid: ${dt}<br>
+          ${inv.email ? 'Client: ' + inv.email : ''}
+        </div>
+      </div>
+      <div class="paid-stamp">✓ PAID</div>
+    </div>
+    <div class="parties">
+      <div>
+        <div class="party-label">From</div>
+        <div class="party-name">${fromName}</div>
+      </div>
+      <div>
+        <div class="party-label">Received From</div>
+        <div class="party-name">${inv.client || '—'}</div>
+        ${inv.email ? `<div class="party-sub">${inv.email}</div>` : ''}
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>Description</th><th>Qty</th><th>Unit Price</th><th>Amount</th></tr></thead>
+      <tbody>
+        ${(inv.lineItems || []).map(item =>
+          `<tr>
+            <td>${item.desc || item.description || '—'}</td>
+            <td style="text-align:right;">${item.qty || 1}</td>
+            <td style="text-align:right;">${sym}${parseFloat(item.price || 0).toFixed(2)}</td>
+            <td style="text-align:right;">${sym}${((item.qty || 1) * (item.price || 0)).toFixed(2)}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>
+    <div class="totals-box"><div class="totals-inner">
+      <div class="t-row grand"><span>Total Paid</span><span>${sym}${parseFloat(inv.total || 0).toFixed(2)}</span></div>
+    </div></div>
+    ${inv.notes ? `<div style="font-size:0.78rem;color:#888;margin-bottom:20px;padding:14px;background:#f9f9f7;border-radius:8px;">
+      <strong style="color:#444;">Notes:</strong> ${inv.notes}</div>` : ''}
+    <div class="footer">
+      Generated by Klyro · ${fromName} · Payment confirmed ${dt}
+    </div>
+    <script>window.onload=function(){window.print();}<\/script>
+  </body></html>`);
+  win.document.close();
 }
 
 function renderInvoiceStats(invoices) {
@@ -1086,7 +1244,7 @@ function renderInvoices() {
       ${inv.notes ? `<div style="font-size:0.78rem;color:var(--text-dim);margin-bottom:12px;font-style:italic;">"${inv.notes}"</div>` : ''}
       <div class="doc-actions">
         <button class="doc-btn primary" onclick="openInvoiceModal('${inv.id}')"><i class="fas fa-pen"></i> Edit</button>
-        ${inv.status !== 'paid' ? `<button class="doc-btn" onclick="markInvoicePaid('${inv.id}')"><i class="fas fa-check"></i> Paid</button>` : ''}
+        ${inv.status !== 'paid' ? `<button class="doc-btn" onclick="markInvoicePaid('${inv.id}')"><i class="fas fa-check"></i> Paid</button>` : `<button class="doc-btn" onclick="printInvoiceReceipt('${inv.id}')" title="Print receipt"><i class="fas fa-receipt"></i> Receipt</button>`}
         <button class="doc-btn danger" onclick="deleteInvoice('${inv.id}')"><i class="fas fa-trash-can"></i></button>
       </div>
     </div>`;

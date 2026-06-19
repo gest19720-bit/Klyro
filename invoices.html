@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Klyro — Invoices</title>
-  <link rel="icon" type="image/png" href="exmo_logo.png">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap">
+  <link rel="icon" type="image/png" href="klyro_logo.png">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="app.css">
   <style>
@@ -228,7 +228,7 @@
       border-radius: 8px;
       overflow: hidden;
       box-shadow: 0 8px 32px rgba(0,0,0,0.15);
-      font-family: 'DM Sans', sans-serif;
+      font-family: 'Inter', sans-serif;
       color: #1a1a1a;
       min-height: 600px;
     }
@@ -1117,9 +1117,22 @@ if (!window.__invGated) {
   }
 
   function markPaid(id) {
+    const inv = Store.getInvoice(id);
+    if (!inv) return;
     Store.updateInvoice(id, { status: 'paid', paidAt: new Date().toISOString() });
+
+    // Add income transaction
+    Store.addTransaction({
+      type:        'income',
+      amount:      parseFloat(inv.total || 0),
+      description: `Invoice ${inv.number || id} — ${inv.toName || 'Client'}`,
+      category:    'freelance',
+      date:        new Date().toISOString().split('T')[0],
+      invoiceId:   id,
+    });
+
     generateReceipt(id);
-    showToast('Invoice marked as paid ✓');
+    showToast('Invoice paid — income + receipt recorded ✓');
     renderList();
   }
 
@@ -1192,7 +1205,7 @@ if (!window.__invGated) {
     const win = window.open('', '_blank');
     win.document.write(`<!DOCTYPE html><html><head><title>Receipt ${r.invoiceNum}</title>
       <style>
-        body{font-family:'DM Sans',sans-serif;color:#1a1a1a;margin:0;padding:40px;background:#fff;}
+        body{font-family:'Inter',sans-serif;color:#1a1a1a;margin:0;padding:40px;background:#fff;}
         .bar{height:4px;background:${r.accentColor||'#d4a017'};margin-bottom:32px;}
         h1{font-size:1.8rem;font-weight:900;color:${r.accentColor||'#d4a017'};text-transform:uppercase;letter-spacing:0.05em;margin:0 0 8px;}
         .meta{font-size:0.8rem;color:#888;margin-bottom:28px;}
