@@ -772,13 +772,14 @@
     await new Promise(resolve => document.addEventListener('klyro:ready', resolve, { once: true }));
   }
     const s = Store.getSettings();
+    const u = Auth.getUser(); // safe here — we've already awaited the session/cache being ready
     if (s.darkMode) {
       document.body.classList.add('dark');
       document.getElementById('dark-mode-toggle').checked = true;
     }
     if (s.currencyCode) document.getElementById('currency-select').value = s.currencyCode;
-    if (s.name)         document.getElementById('display-name').value = s.name;
-    if (s.email)        document.getElementById('display-email').value = s.email;
+    document.getElementById('display-name').value  = s.name  || u?.name  || '';
+    document.getElementById('display-email').value = s.email || u?.email || '';
     if (s.incomeTarget) document.getElementById('income-target').value = s.incomeTarget;
     if (s.weeklySummary    !== undefined) document.getElementById('weekly-summary').checked    = s.weeklySummary;
     if (s.overspendAlerts  !== undefined) document.getElementById('overspend-alerts').checked  = s.overspendAlerts;
@@ -1049,15 +1050,6 @@
   seedDemoData();
   loadSettings();
   renderGoalsList();
-  // Pre-fill from auth profile if not already saved
-  (function() {
-    const u = Auth.getUser();
-    if (!u) return;
-    const nameEl  = document.getElementById('display-name');
-    const emailEl = document.getElementById('display-email');
-    if (nameEl  && !nameEl.value  && u.name)  nameEl.value  = u.name;
-    if (emailEl && !emailEl.value && u.email) emailEl.value = u.email;
-  })();
   renderDataStats();
 </script>
 

@@ -49,7 +49,7 @@ if (_sb) {
       _initData().then(() => {
         // Route new OAuth users (not yet onboarded) to onboarding.
         const page = window.location.pathname.split('/').pop() || '';
-        const onProtectedPage = !['login.html','signup.html','index.html','onboarding.html','pricing.html',''].includes(page);
+        const onProtectedPage = !['login.html','signup.html','index.html',''].includes(page);
         if (onProtectedPage && !session.user.user_metadata?.onboarded) {
           window.location.replace('onboarding.html');
         }
@@ -98,21 +98,31 @@ async function _initData() {
 
 /* ══════════════════════════════════════
    ACCENT COLOUR THEMES
-   10 selectable accent palettes. Replaces
+   20 selectable accent palettes. Replaces
    --gold / --gold-light / --gold-dim /
    --gold-border / --accent-rgb everywhere.
 ══════════════════════════════════════ */
 const THEMES = [
-  { id: 'gold',     name: 'Classic Gold', accent: '#d4a017', light: '#f0c040', rgb: '212,160,23' },
-  { id: 'emerald',  name: 'Emerald',      accent: '#1f9d6e', light: '#34c98c', rgb: '31,157,110' },
-  { id: 'sapphire', name: 'Sapphire',     accent: '#2f6fed', light: '#5b93ff', rgb: '47,111,237' },
-  { id: 'rose',     name: 'Rose',         accent: '#e0457b', light: '#f078a3', rgb: '224,69,123' },
-  { id: 'sunset',   name: 'Sunset',       accent: '#e8742c', light: '#f5a45c', rgb: '232,116,44' },
-  { id: 'violet',   name: 'Violet',       accent: '#7c3aed', light: '#a78bfa', rgb: '124,58,237' },
-  { id: 'teal',     name: 'Ocean Teal',   accent: '#0d9488', light: '#2dd4bf', rgb: '13,148,136' },
-  { id: 'crimson',  name: 'Crimson',      accent: '#c2483f', light: '#e2746a', rgb: '194,72,63'  },
-  { id: 'graphite', name: 'Graphite',     accent: '#51596b', light: '#7c8597', rgb: '81,89,107'  },
-  { id: 'indigo',   name: 'Indigo',       accent: '#4338ca', light: '#6366f1', rgb: '67,56,202'  },
+  { id: 'gold',      name: 'Classic Gold', accent: '#d4a017', light: '#f0c040', rgb: '212,160,23' },
+  { id: 'emerald',   name: 'Emerald',      accent: '#1f9d6e', light: '#34c98c', rgb: '31,157,110' },
+  { id: 'sapphire',  name: 'Sapphire',     accent: '#2f6fed', light: '#5b93ff', rgb: '47,111,237' },
+  { id: 'rose',      name: 'Rose',         accent: '#e0457b', light: '#f078a3', rgb: '224,69,123' },
+  { id: 'sunset',    name: 'Sunset',       accent: '#e8742c', light: '#f5a45c', rgb: '232,116,44' },
+  { id: 'violet',    name: 'Violet',       accent: '#7c3aed', light: '#a78bfa', rgb: '124,58,237' },
+  { id: 'teal',      name: 'Ocean Teal',   accent: '#0d9488', light: '#2dd4bf', rgb: '13,148,136' },
+  { id: 'crimson',   name: 'Crimson',      accent: '#c2483f', light: '#e2746a', rgb: '194,72,63'  },
+  { id: 'graphite',  name: 'Graphite',     accent: '#51596b', light: '#7c8597', rgb: '81,89,107'  },
+  { id: 'indigo',    name: 'Indigo',       accent: '#4338ca', light: '#6366f1', rgb: '67,56,202'  },
+  { id: 'cyan',      name: 'Cyan Breeze',  accent: '#0891b2', light: '#22d3ee', rgb: '8,145,178'  },
+  { id: 'amber',     name: 'Amber',        accent: '#d97706', light: '#fbbf24', rgb: '217,119,6'  },
+  { id: 'fuchsia',   name: 'Fuchsia',      accent: '#c026d3', light: '#e879f9', rgb: '192,38,211' },
+  { id: 'mint',      name: 'Mint',         accent: '#059669', light: '#6ee7b7', rgb: '5,150,105'  },
+  { id: 'coral',     name: 'Coral',        accent: '#fb7185', light: '#fda4af', rgb: '251,113,133'},
+  { id: 'steel',     name: 'Steel Blue',   accent: '#3b6e8f', light: '#6fa8c9', rgb: '59,110,143' },
+  { id: 'lime',      name: 'Lime',         accent: '#65a30d', light: '#a3e635', rgb: '101,163,13' },
+  { id: 'burgundy',  name: 'Burgundy',     accent: '#9f1239', light: '#be123c', rgb: '159,18,57'  },
+  { id: 'bronze',    name: 'Bronze',       accent: '#8a5a2b', light: '#b9824a', rgb: '138,90,43'  },
+  { id: 'turquoise', name: 'Turquoise',    accent: '#0e9594', light: '#2dd4bf', rgb: '14,149,148' },
 ];
 
 function _applyAccentTheme(id) {
@@ -608,6 +618,20 @@ const Auth = {
         }
 
         _initData();
+
+        // The sidebar (and any profile fields) may have already been
+        // rendered synchronously by the page, before this async session
+        // lookup resolved — at that point Auth.getUser() returned null,
+        // so avatars showed "?" and email/name fields were blank.
+        // Re-render the sidebar now that the real user is known, and let
+        // pages listen for 'klyro:auth-ready' to refresh anything else
+        // that depends on Auth.getUser().
+        const sidebarMount = document.getElementById('sidebar-mount');
+        if (sidebarMount && typeof renderSidebar === 'function') {
+          sidebarMount.innerHTML = renderSidebar();
+          if (typeof initSidebar === 'function') initSidebar();
+        }
+        document.dispatchEvent(new Event('klyro:auth-ready'));
       }
     });
   },
