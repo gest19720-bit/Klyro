@@ -720,7 +720,7 @@
     }
     
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = async function(e) {
       const base64Data = e.target.result;
       const success = await Auth.updateUserAvatar(base64Data);
       if (success) {
