@@ -38,8 +38,8 @@
       --shadow-gold: 0 0 40px rgba(212,160,23,0.2);
       --trans: 0.35s cubic-bezier(0.16,1,0.3,1);
 
-      --font-d: 'Cormorant Garamond', Georgia, serif;
-      --font-b: 'DM Sans', system-ui, sans-serif;
+      --font-d: 'Cormorant Garamond', Californian FB, serif;
+      --font-b: 'DM Sans', Inter Display, sans-serif;
     }
 
     html { scroll-behavior: smooth; }
@@ -146,8 +146,7 @@
     .btn-nav-ghost {
       padding: 9px 22px;
       background: transparent;
-      border: 1px solid var(--border-b);
-      border-radius: var(--radius-pill);
+      border: 4px solid var(--border-b);
       color: var(--text-mid);
       font-family: var(--font-b);
       font-size: 0.85rem;
@@ -156,7 +155,11 @@
       text-decoration: none;
       transition: all 0.25s ease;
     }
-    .btn-nav-ghost:hover { border-color: var(--gold-border); color: var(--text); }
+    .btn-nav-ghost:hover { 
+      border-color: var(--gold-border); 
+      color: var(--text); 
+      background:var(--gold);
+    }
     .btn-nav-gold {
       padding: 9px 22px;
       background: linear-gradient(135deg, var(--gold), var(--gold-light));
@@ -1113,6 +1116,27 @@
       font-size: 0.9rem;
     }
     @media (max-width: 900px) { .nav-mobile-btn { display: flex; } }
+
+   .footer-product {
+      padding: 9px 22px;
+      height: 55px;
+      width: 250px;
+      background: transparent;
+      border: 4px solid var(--border-b);
+      color: var(--text-mid);
+      font-family: var(--font-b);
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.25s ease;
+    }
+    .footer-product:hover { 
+      border-color: var(--gold-border); 
+      color: var(--text); 
+      background:var(--gold);
+    }
+
   </style>
 </head>
 <body>
@@ -1134,8 +1158,8 @@
     <li><a href="dashboard.html">App</a></li>
   </ul>
   <div class="nav-cta">
-    <a href="login.html" class="btn-nav-ghost">Sign in</a>
-    <a href="signup.html" class="btn-nav-gold">Start free <i class="fas fa-arrow-right" style="font-size:0.7em;"></i></a>
+    <a href="login.html" class="btn-nav-ghost">SIGN IN</a>
+    <a href="signup.html" class="btn-nav-ghost">SIGN UP <i class="fas fa-arrow-right" style="font-size:0.7em;"></i></a>
     <button class="nav-mobile-btn" aria-label="Menu"><i class="fas fa-bars"></i></button>
   </div>
 </nav>
@@ -1150,7 +1174,7 @@
   <p class="hero-sub">Track every coin, understand every pattern, and let Klyro AI guide you toward financial freedom — in any currency, anywhere in the world.</p>
   <div class="hero-actions">
     <a href="signup.html" class="btn-hero-primary">
-      <i class="fas fa-rocket"></i> Start for free
+      <i class="fas fa-rocket"></i> Get Started
     </a>
     <a href="#features" class="btn-hero-secondary">
       <i class="fas fa-play-circle"></i> See how it works
@@ -1280,8 +1304,8 @@
   <div class="section-inner">
     <div class="stats-row">
       <div class="stat-block reveal">
-        <div class="stat-block-num" data-count="50000" data-suffix="+">0</div>
-        <div class="stat-block-label">Active users worldwide</div>
+        <div class="stat-block-num" data-count="5" data-suffix="+">0</div>
+        <div class="stat-block-label">Cool and exciting features</div>
       </div>
       <div class="stat-block reveal reveal-d1">
         <div class="stat-block-num" data-count="150" data-suffix="+">0</div>
@@ -1383,7 +1407,7 @@
 
       <!-- Goals -->
       <div class="feat-card reveal reveal-d2">
-        <div class="feat-icon"><i class="fas fa-bullseye-arrow"></i></div>
+        <div class="feat-icon"><i class="fas fa-shield"></i></div>
         <div class="feat-title">Savings Goals</div>
         <p class="feat-desc">Set milestones — a trip, an emergency fund, a new device. Klyro tracks your progress and nudges you when you're close.</p>
         <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px;">
@@ -1541,7 +1565,7 @@
           <li class="dim"><i class="fas fa-times"></i> Advanced analysis</li>
           <li class="dim"><i class="fas fa-times"></i> CSV/PDF export</li>
         </ul>
-        <a href="pricing.html" class="plan-cta">Get started</a>
+        <a href="signup.html" class="plan-cta">Get started</a>
       </div>
 
       <!-- Individuals — FEATURED -->
@@ -1563,7 +1587,7 @@
           <li><i class="fas fa-check"></i> Custom categories</li>
           <li class="dim"><i class="fas fa-times"></i> Invoicing tools</li>
         </ul>
-        <a href="pricing.html" class="plan-cta featured">Get started</a>
+        <a href="signup.html" class="plan-cta featured">Get started</a>
       </div>
 
       <!-- Businesses -->
@@ -1582,9 +1606,10 @@
           <li><i class="fas fa-check"></i> AI business coach</li>
           <li><i class="fas fa-check"></i> Team accounts</li>
           <li><i class="fas fa-check"></i> Priority support</li>
-          <li class="dim"><i class="fas fa-times"></i> Wealth forecasting</li>
+          <li><i class="fas fa-check"></i> Wealth forecasting</li>
+          <li><i class="fas fa-check"></i> Improved Analysis</li>
         </ul>
-        <a href="pricing.html" class="plan-cta">Get started</a>
+        <a href="signup.html" class="plan-cta">Get started</a>
       </div>
 
       <!-- Enterprise -->
@@ -1605,7 +1630,7 @@
           <li><i class="fas fa-check"></i> SLA + dedicated support</li>
           <li><i class="fas fa-check"></i> White-label option</li>
         </ul>
-        <a href="pricing.html" class="plan-cta">Contact us</a>
+        <a href="signup.html" class="plan-cta">Contact us</a>
       </div>
 
     </div>
@@ -1733,9 +1758,9 @@
       <p class="cta-sub">Join thousands of people who've already transformed how they manage money.<br>Free forever. No credit card needed.</p>
       <div class="cta-actions">
         <a href="signup.html" class="btn-hero-primary">
-          <i class="fas fa-rocket"></i> Start for free today
+          <i class="fas fa-rocket"></i> Get Started
         </a>
-        <a href="pricing.html" class="btn-hero-secondary">
+        <a href="#pricing" class="btn-hero-secondary">
           View all plans <i class="fas fa-arrow-right"></i>
         </a>
       </div>
@@ -1753,39 +1778,25 @@
       </a>
       <p class="footer-tagline">Finance that thinks with you. Track, understand, and grow your wealth — in any currency, anywhere.</p>
       <div class="footer-social">
-        <a href="#" class="footer-soc-btn"><i class="fab fa-twitter"></i></a>
+        <a href="#" class="footer-soc-btn"><i class="fab fa-whatsapp"></i></a>
+        <a href="" class="footer-soc-btn"><i class="fab fa-tiktok"></i></a>
         <a href="#" class="footer-soc-btn"><i class="fab fa-instagram"></i></a>
-        <a href="#" class="footer-soc-btn"><i class="fab fa-linkedin-in"></i></a>
-        <a href="#" class="footer-soc-btn"><i class="fab fa-github"></i></a>
+        <a href="#" class="footer-soc-btn"><i class="fas fa-envelope"></i></a>
       </div>
     </div>
     <div>
       <div class="footer-col-title">Product</div>
       <ul class="footer-links">
-        <li><a href="dashboard.html">Dashboard</a></li>
-        <li><a href="transactions.html">Transactions</a></li>
-        <li><a href="analysis.html">Analysis</a></li>
-        <li><a href="ai.html">Klyro AI</a></li>
-        <li><a href="invoices.html">Invoices</a></li>
+        <li><a href="signup.html">Create an Account</a></li>
       </ul>
     </div>
     <div>
-      <div class="footer-col-title">Plans</div>
-      <ul class="footer-links">
-        <li><a href="pricing.html">Free</a></li>
-        <li><a href="pricing.html">Students — $8</a></li>
-        <li><a href="pricing.html">Individuals — $10</a></li>
-        <li><a href="pricing.html">Businesses — $20</a></li>
-        <li><a href="pricing.html">Enterprise — $40</a></li>
-      </ul>
     </div>
     <div>
       <div class="footer-col-title">Account</div>
       <ul class="footer-links">
         <li><a href="signup.html">Sign up</a></li>
         <li><a href="login.html">Sign in</a></li>
-        <li><a href="settings.html">Settings</a></li>
-        <li><a href="onboarding.html">Onboarding</a></li>
       </ul>
     </div>
   </div>
@@ -1794,8 +1805,6 @@
     <div class="footer-links-bottom">
       <a href="#">Privacy Policy</a>
       <a href="#">Terms of Service</a>
-      <a href="#">Security</a>
-      <a href="#">Cookies</a>
     </div>
   </div>
 </footer>
@@ -1810,7 +1819,7 @@
   // ─── Billing toggle ───
   const PRICES = {
     monthly:  { students: 8,  individuals: 10, businesses: 20, enterprise: 40 },
-    yearly:   { students: 6,  individuals: 8,  businesses: 16, enterprise: 32 }
+    yearly:   { students: 77,  individuals: 96,  businesses: 192, enterprise:  384},
   };
   let billing = 'monthly';
 

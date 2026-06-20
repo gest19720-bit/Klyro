@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Exmo — Welcome</title>
+  <title>Klyro — Welcome</title>
   <link rel="icon" type="image/png" href="exmo_logo.png">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -196,8 +196,8 @@
     <div class="step active" id="step-1">
       <span class="welcome-emoji">👋</span>
       <div class="step-label">Step 1 of 5</div>
-      <div class="step-title" id="welcome-name">Welcome to Exmo!</div>
-      <div class="step-sub">Let's take 60 seconds to personalise your experience. This helps Exmo AI give you advice that actually fits your life.</div>
+      <div class="step-title" id="welcome-name">Welcome to Klyro!</div>
+      <div class="step-sub">Let's take 60 seconds to personalise your experience. This helps Klyro AI give you advice that actually fits your life.</div>
       <div class="step-nav">
         <span></span>
         <button class="btn btn-gold" onclick="nextStep()">
@@ -210,7 +210,7 @@
     <div class="step" id="step-2">
       <div class="step-label">Step 2 of 5</div>
       <div class="step-title">What's your #1 financial goal right now?</div>
-      <div class="step-sub">This shapes the advice Exmo AI gives you every day.</div>
+      <div class="step-sub">This shapes the advice Klyro AI gives you every day.</div>
       <div class="option-grid single-col" id="goal-options">
         <button class="option-card" data-val="save_more" onclick="selectOption(this, 'primaryGoal')">
           <div class="opt-icon"><i class="fas fa-piggy-bank"></i></div> Save more each month
@@ -260,7 +260,7 @@
     <div class="step" id="step-4">
       <div class="step-label">Step 4 of 5</div>
       <div class="step-title">How would you describe your spending habits?</div>
-      <div class="step-sub">Be honest — Exmo works best when it knows the real picture.</div>
+      <div class="step-sub">Be honest — Klyro works best when it knows the real picture.</div>
       <div class="option-grid single-col">
         <button class="option-card" data-val="very_careful" onclick="selectOption(this, 'spendingHabit')">
           <div class="opt-icon"><i class="fas fa-lock"></i></div> Very careful — I track everything
@@ -370,7 +370,7 @@
     }
   }
 
-  function finishOnboarding() {
+  async function finishOnboarding() {
     // Save answers into user settings
     const s = Store.getSettings();
     s.currencyCode   = document.getElementById('ob-currency').value;
@@ -381,15 +381,13 @@
     s.onboarded      = true;
     Store.saveSettings(s);
 
-    // Mark user as onboarded
-    const users = Auth._getUsers();
-    const user  = Auth.getUser();
-    if (user) {
-      const idx = users.findIndex(u => u.id === user.id);
-      if (idx > -1) { users[idx].onboarded = true; Auth._saveUsers(users); }
+    // Mark user as onboarded in Supabase metadata
+    if (_sb) {
+      await _sb.auth.updateUser({ data: { onboarded: true } });
+      if (_sessionCache?.user_metadata) _sessionCache.user_metadata.onboarded = true;
     }
 
-    showToast('All set! Welcome to Exmo 🎉');
+    showToast('All set! Welcome to Klyro 🎉');
     setTimeout(() => window.location.href = 'pricing.html', 900);
   }
 </script>

@@ -323,6 +323,13 @@
           <select class="form-input" id="currency-select" style="width:auto;border-radius:var(--radius-sm);padding:8px 12px;min-width:160px;">
             </select>
         </div>
+        <div class="settings-row" style="border-bottom:none;padding-bottom:0;">
+          <div>
+            <div class="settings-label">Theme Colour</div>
+            <div class="settings-desc">Pick an accent colour — applies instantly across the app</div>
+          </div>
+        </div>
+        <div class="theme-swatch-grid" id="theme-swatch-grid"></div>
       </div>
 
       <div class="glass-card" style="padding:28px;">
@@ -703,7 +710,7 @@
     }
   }
 
-  function handleAvatarUpload(event) {
+  async function handleAvatarUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
     
@@ -713,9 +720,9 @@
     }
     
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = async function(e) {
       const base64Data = e.target.result;
-      const success = Auth.updateUserAvatar(base64Data);
+      const success = await Auth.updateUserAvatar(base64Data);
       if (success) {
         showToast('Profile image updated successfully! 📸');
         renderAvatarView();
@@ -729,28 +736,55 @@
     reader.readAsDataURL(file);
   }
 
-  function removeAvatar() {
+  async function removeAvatar() {
     if (!confirm('Remove profile picture?')) return;
-    Auth.updateUserAvatar(null);
+    await Auth.updateUserAvatar(null);
     showToast('Avatar picture removed');
     renderAvatarView();
     document.getElementById('sidebar-mount').innerHTML = renderSidebar();
     initSidebar();
   }
 
-  function loadSettings() {
+  function renderThemeSwatches() {
+    const grid = document.getElementById('theme-swatch-grid');
+    if (!grid) return;
+    const current = Theme.current();
+    grid.innerHTML = Theme.list().map(t => `
+      <div class="theme-swatch ${t.id === current ? 'selected' : ''}" data-theme-id="${t.id}"
+           style="--swatch-c1:${t.accent};--swatch-c2:${t.light};"
+           onclick="selectTheme('${t.id}')" title="${t.name}">
+        <div class="theme-swatch-dot"><i class="fas fa-check"></i></div>
+        <div class="theme-swatch-name">${t.name}</div>
+      </div>`).join('');
+  }
+
+  function selectTheme(id) {
+    Theme.apply(id);                 // updates CSS vars instantly, persists to Store/localStorage
+    document.querySelectorAll('#theme-swatch-grid .theme-swatch').forEach(el => {
+      el.classList.toggle('selected', el.dataset.themeId === id);
+    });
+    const t = Theme.list().find(x => x.id === id);
+    showToast(`Theme set to ${t.name}`);
+  }
+
+  async function loadSettings() {
+  if (!_cache.ready) {
+    await new Promise(resolve => document.addEventListener('klyro:ready', resolve, { once: true }));
+  }
     const s = Store.getSettings();
+    const u = Auth.getUser(); // safe here — we've already awaited the session/cache being ready
     if (s.darkMode) {
       document.body.classList.add('dark');
       document.getElementById('dark-mode-toggle').checked = true;
     }
     if (s.currencyCode) document.getElementById('currency-select').value = s.currencyCode;
-    if (s.name)         document.getElementById('display-name').value = s.name;
-    if (s.email)        document.getElementById('display-email').value = s.email;
+    document.getElementById('display-name').value  = s.name  || u?.name  || '';
+    document.getElementById('display-email').value = s.email || u?.email || '';
     if (s.incomeTarget) document.getElementById('income-target').value = s.incomeTarget;
     if (s.weeklySummary    !== undefined) document.getElementById('weekly-summary').checked    = s.weeklySummary;
     if (s.overspendAlerts  !== undefined) document.getElementById('overspend-alerts').checked  = s.overspendAlerts;
     if (s.goalAlerts       !== undefined) document.getElementById('goal-alerts').checked       = s.goalAlerts;
+    renderThemeSwatches();
     renderAvatarView();
   }
 
@@ -989,6 +1023,7 @@
 
   document.getElementById('sidebar-mount').innerHTML = renderSidebar();
   initSidebar();
+  renderThemeSwatches();
 
   // Show lock indicators based on plan
   (function applyPlanLocks() {
@@ -1015,15 +1050,6 @@
   seedDemoData();
   loadSettings();
   renderGoalsList();
-  // Pre-fill from auth profile if not already saved
-  (function() {
-    const u = Auth.getUser();
-    if (!u) return;
-    const nameEl  = document.getElementById('display-name');
-    const emailEl = document.getElementById('display-email');
-    if (nameEl  && !nameEl.value  && u.name)  nameEl.value  = u.name;
-    if (emailEl && !emailEl.value && u.email) emailEl.value = u.email;
-  })();
   renderDataStats();
 </script>
 
@@ -1031,12 +1057,21 @@
   <a href="dashboard.html" class="bottom-nav-item" data-page="dashboard"><i class="fas fa-house"></i>Home</a>
   <a href="transactions.html" class="bottom-nav-item" data-page="transactions"><i class="fas fa-right-left"></i>Transactions</a>
   <a href="analysis.html" class="bottom-nav-item" data-page="analysis"><i class="fas fa-chart-pie"></i>Analysis</a>
-  <a href="ai.html" class="bottom-nav-item" data-page="ai"><i class="fas fa-brain"></i>AI</a>
+  <span id="bnav-smart-tab"></span>
   <a href="settings.html" class="bottom-nav-item" data-page="settings"><i class="fas fa-gear"></i>Settings</a>
 </nav>
 <script>
 (function(){
   var page = location.pathname.split('/').pop() || 'dashboard.html';
+  // Inject smart tab (Business for businesses+, AI for others)
+  var smartEl = document.getElementById('bnav-smart-tab');
+  if (smartEl && typeof PlanGate !== 'undefined') {
+    if (PlanGate.isBusiness()) {
+      smartEl.outerHTML = '<a href="business.html" class="bottom-nav-item" data-page="business"><i class="fas fa-briefcase"></i>Business</a>';
+    } else {
+      smartEl.outerHTML = '<a href="ai.html" class="bottom-nav-item" data-page="ai"><i class="fas fa-brain"></i>AI</a>';
+    }
+  }
   document.querySelectorAll('.bottom-nav-item[data-page]').forEach(function(el){
     var p = el.dataset.page;
     if(page.includes(p)||(p==='dashboard'&&['','index.html','dashboard.html'].includes(page)))

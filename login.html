@@ -238,7 +238,8 @@
         <button class="btn-social" id="btn-google" onclick="socialLogin('google')">
           <i class="fab fa-google"></i> Continue with Google
         </button>
-        <button class="btn-social" id="btn-apple" onclick="socialLogin('apple')">
+        <!-- Apple OAuth hidden — not yet configured in Supabase Dashboard -->
+        <button class="btn-social" id="btn-apple" onclick="socialLogin('apple')" style="display:none;" aria-hidden="true">
           <i class="fab fa-apple"></i> Continue with Apple
         </button>
 
@@ -322,17 +323,11 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="app.js"></script>
 <script>
-  // ⚠️  Replace with your live key (pk_live_…) before deploying to production.
-  //     Move to a build-time env variable (e.g. import.meta.env.VITE_CLERK_KEY)
-  //     so rotating the key only requires changing it in one place.
-  const CLERK_PUBLISHABLE_KEY = window.__KLYRO_CLERK_KEY__ || 'pk_test_ZGFzaGluZy1iZWUtNTkuY2xlcmsuYWNjb3VudHMuZGV2JA';
-  let clerkInstance = null;
   let lockoutInterval = null;
 
-  // Already logged in?
+  // Redirect if already logged in
   (function() { if (Auth.getUser()) window.location.replace('dashboard.html'); })();
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
   function showError(msg) {
     document.getElementById('error-text').textContent = msg;
     document.getElementById('error-msg').classList.add('show');
@@ -346,11 +341,11 @@
     icon.className = input.type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
   }
 
-  // ── Lockout countdown timer ───────────────────────────────────────────────
+  // Lockout countdown timer
   function startLockoutTimer(ms) {
-    const lockoutEl = document.getElementById('lockout-msg');
-    const timerEl   = document.getElementById('lockout-timer');
-    const loginBtn  = document.getElementById('login-btn');
+    const lockoutEl  = document.getElementById('lockout-msg');
+    const timerEl    = document.getElementById('lockout-timer');
+    const loginBtn   = document.getElementById('login-btn');
     const emailInput = document.getElementById('login-email');
     const pwdInput   = document.getElementById('login-password');
 
@@ -379,7 +374,7 @@
   }
 
   // Check if already locked on page load
-  (function checkExistingLockout() {
+  (function() {
     const email = localStorage.getItem('klyro_last_email') || '';
     if (!email) return;
     const d = Auth._getRateData(email);
@@ -389,7 +384,6 @@
     }
   })();
 
-  // ── Email/password login via Clerk API ────────────────────────────────────
   async function handleLogin() {
     hideError();
     const email    = document.getElementById('login-email').value.trim();
@@ -403,79 +397,21 @@
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Signing in…';
 
-    // Store email for lockout persistence across refreshes
     localStorage.setItem('klyro_last_email', email);
 
-    try {
-      // Try Clerk email/password first (if Clerk is loaded)
-      if (clerkInstance) {
-        await loginWithClerkEmail(email, password, remember);
-      } else {
-        // Fallback: load Clerk silently then sign in
-        await loadClerkSilent();
-        if (clerkInstance) {
-          await loginWithClerkEmail(email, password, remember);
-        } else {
-          // Final fallback: local Auth
-          await loginLocal(email, password, remember);
-        }
-      }
-    } catch (err) {
-      btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-arrow-right-to-bracket"></i> Sign In';
-      showError(err.message || 'Sign in failed. Please try again.');
-    }
-  }
-
-  async function loginWithClerkEmail(email, password, remember) {
-    const btn = document.getElementById('login-btn');
-    try {
-      const result = await clerkInstance.client.signIn.create({
-        identifier: email,
-        password:   password,
-      });
-
-      if (result.status === 'complete') {
-        await clerkInstance.setActive({ session: result.createdSessionId });
-        Auth.loginClerk(clerkInstance.user, remember);
-        localStorage.removeItem('klyro_last_email'); // Fix #4: clear stale email on success
-        window.location.replace('dashboard.html');
-      } else {
-        throw new Error('Sign in could not be completed. Please try again.');
-      }
-    } catch (clerkErr) {
-      // Clerk error codes
-      const code = clerkErr.errors && clerkErr.errors[0] && clerkErr.errors[0].code;
-      if (code === 'form_password_incorrect' || code === 'form_identifier_not_found') {
-        // Record failure in local rate limiter
-        Auth._recordFailure(email);
-        const lockMsg = Auth._isLocked(email);
-        if (lockMsg) {
-          const d = Auth._getRateData(email);
-          startLockoutTimer(d.lockedUntil - Date.now());
-          btn.disabled = false;
-          btn.innerHTML = '<i class="fas fa-arrow-right-to-bracket"></i> Sign In';
-          return;
-        }
-        const d    = Auth._getRateData(email);
-        const left = 5 - (d.attempts || 0);
-        throw new Error('Incorrect email or password.' + (left > 0 ? ' ' + left + ' attempt' + (left !== 1 ? 's' : '') + ' remaining.' : ''));
-      }
-      // Not a credential error — try local fallback
-      await loginLocal(email, password, remember);
-    }
-  }
-
-  async function loginLocal(email, password, remember) {
-    const btn = document.getElementById('login-btn');
     const result = await Auth.login(email, password, remember);
+
     btn.disabled = false;
     btn.innerHTML = '<i class="fas fa-arrow-right-to-bracket"></i> Sign In';
+
     if (result.success) {
-      localStorage.removeItem('klyro_last_email'); // Fix #4: clear stale email on success
-      window.location.replace('dashboard.html');
+      localStorage.removeItem('klyro_last_email');
+      // New users who haven't completed onboarding go there first
+      const user = Auth.getUser();
+      const isOnboarded = user?.onboarded || result.user?.user_metadata?.onboarded || false;
+      window.location.replace(isOnboarded ? 'dashboard.html' : 'onboarding.html');
     } else {
-      if (result.message && result.message.includes('locked')) {
+      if (result.locked) {
         const d = Auth._getRateData(email);
         startLockoutTimer(d.lockedUntil - Date.now());
       } else {
@@ -490,46 +426,30 @@
     if (!email) { showError('Enter your email address first, then click "Forgot password?"'); return; }
 
     try {
-      // Try Clerk built-in password reset
-      if (!clerkInstance) await loadClerkSilent();
-      if (clerkInstance) {
-        await clerkInstance.client.signIn.create({
-          strategy:   'reset_password_email_code',
-          identifier: email,
-        });
-        showToast('Password reset email sent — check your inbox.');
-      } else {
-        // Clerk unavailable — be honest rather than faking success
-        showToast('Password reset is unavailable right now. Please contact support.', 'error');
-      }
+      const { error } = await _sb.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/reset-password.html'
+      });
+      if (error) throw error;
+      showToast('Password reset email sent — check your inbox.');
     } catch (err) {
-      // Don't reveal whether the address exists (security best practice)
+      // Don't reveal whether the address exists
       showToast('If that email is registered, a reset link is on its way.');
     }
   }
 
-  // Scoped Enter-key handler — only fires from within the login form fields
-  ['login-email', 'login-password'].forEach(function(id) {
-    document.getElementById(id).addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') handleLogin();
-    });
-  });
-
-  // ── Clerk OAuth (Google / Apple) ──────────────────────────────────────────
+  // Social login — Supabase OAuth
   async function socialLogin(provider) {
     const btn = document.getElementById('btn-' + provider);
     btn.disabled = true;
     document.getElementById('clerk-modal-title').textContent = 'Continue with ' + (provider === 'google' ? 'Google' : 'Apple');
-    document.getElementById('clerk-modal-sub').textContent   = 'Connecting to ' + (provider === 'google' ? 'Google' : 'Apple') + '…';
+    document.getElementById('clerk-modal-sub').textContent   = 'Redirecting…';
     document.getElementById('clerk-overlay').classList.add('open');
-
     try {
-      if (!clerkInstance) await loadClerkSilent();
-      await clerkInstance.authenticateWithRedirect({
-        strategy:            provider === 'google' ? 'oauth_google' : 'oauth_apple',
-        redirectUrl:         window.location.origin + '/login.html?clerk_callback=1',
-        redirectUrlComplete: window.location.origin + '/dashboard.html',
+      const { error } = await _sb.auth.signInWithOAuth({
+        provider: provider,
+        options: { redirectTo: window.location.origin + '/dashboard.html' }
       });
+      if (error) throw error;
     } catch (err) {
       closeClerkModal();
       btn.disabled = false;
@@ -546,31 +466,12 @@
     if (e.target === this) closeClerkModal();
   });
 
-  // ── Clerk loader ──────────────────────────────────────────────────────────
-  async function loadClerkSilent() {
-    if (clerkInstance) return;
-    const clerkDomain = atob(CLERK_PUBLISHABLE_KEY.split('_')[2]).slice(0, -1);
-    await new Promise((resolve, reject) => {
-      const s = document.createElement('script');
-      s.src = 'https://' + clerkDomain + '/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
-      s.async = true; s.crossOrigin = 'anonymous';
-      s.onload = resolve; s.onerror = reject;
-      document.head.appendChild(s);
+  // Enter key support
+  ['login-email', 'login-password'].forEach(function(id) {
+    document.getElementById(id).addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') handleLogin();
     });
-    clerkInstance = new window.Clerk(CLERK_PUBLISHABLE_KEY);
-    await clerkInstance.load();
-    if (clerkInstance.user) {
-      Auth.loginClerk(clerkInstance.user, true);
-      window.location.replace('dashboard.html');
-    }
-  }
-
-  // Handle OAuth callback redirect
-  (async function() {
-    if (window.location.search.includes('clerk_callback')) {
-      try { await loadClerkSilent(); } catch(e) {}
-    }
-  })();
+  });
 </script>
 </body>
 </html>

@@ -51,6 +51,40 @@
       </div>
     </div>
 
+    <!-- Wealth Forecast (Business+ only) -->
+    <div id="wealth-forecast-section" style="display:none;margin-bottom:24px;">
+      <div class="glass-card" style="padding:28px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+          <div class="section-title"><i class="fas fa-chart-line"></i> Wealth Forecast</div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <label style="font-size:0.8rem;color:var(--text-dim);">Projection horizon:</label>
+            <select class="form-input" id="forecast-horizon" style="width:auto;padding:6px 12px;font-size:0.8rem;border-radius:9999px;">
+              <option value="12">12 months</option>
+              <option value="24">2 years</option>
+              <option value="60">5 years</option>
+              <option value="120">10 years</option>
+            </select>
+            <label style="font-size:0.8rem;color:var(--text-dim);">Growth rate:</label>
+            <select class="form-input" id="forecast-rate" style="width:auto;padding:6px 12px;font-size:0.8rem;border-radius:9999px;">
+              <option value="0">0% (savings only)</option>
+              <option value="4">4% (conservative)</option>
+              <option value="7" selected>7% (moderate)</option>
+              <option value="10">10% (aggressive)</option>
+            </select>
+          </div>
+        </div>
+        <!-- Forecast summary cards -->
+        <div class="stats-grid" id="forecast-stats" style="margin-bottom:24px;"></div>
+        <!-- Forecast chart -->
+        <div class="chart-container" style="height:280px;">
+          <canvas id="forecast-chart"></canvas>
+        </div>
+        <p style="font-size:0.72rem;color:var(--text-dim);margin-top:12px;text-align:center;">
+          <i class="fas fa-circle-info"></i> Projections are estimates based on your current savings rate and selected growth rate. Not financial advice.
+        </p>
+      </div>
+    </div>
+
     <!-- Category breakdown + AI suggestions -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;" id="bottom-row">
       <div class="glass-card" style="padding:28px;">
@@ -257,6 +291,122 @@
       </div>`).join('');
   }
 
+  let forecastChart;
+
+  function renderWealthForecast() {
+    if (!PlanGate.can('wealth_forecast')) return;
+    document.getElementById('wealth-forecast-section').style.display = 'block';
+
+    const txns      = Store.getTransactions();
+    const month     = Utils.filterByPeriod(txns, 'month');
+    const totals    = Utils.calcTotals(month);
+    const monthlySavings = Math.max(0, totals.income - totals.expense);
+    const annualRate = parseFloat(document.getElementById('forecast-rate').value) / 100;
+    const months     = parseInt(document.getElementById('forecast-horizon').value);
+    const monthlyRate = annualRate / 12;
+
+    // Project wealth month by month
+    const allTotals = Utils.calcTotals(txns);
+    let balance = Math.max(0, allTotals.balance);
+    const labels = [], values = [], baseValues = [];
+    const now = new Date();
+
+    for (let m = 0; m <= months; m++) {
+      const d = new Date(now.getFullYear(), now.getMonth() + m, 1);
+      labels.push(d.toLocaleDateString('en-GB', { month: 'short', year: m % 12 === 0 ? 'numeric' : undefined }));
+      const proj = m === 0 ? balance : values[m - 1] * (1 + monthlyRate) + monthlySavings;
+      const base = balance + monthlySavings * m;
+      values.push(Math.round(proj));
+      baseValues.push(Math.round(base));
+    }
+
+    const finalValue   = values[values.length - 1];
+    const totalSaved   = monthlySavings * months;
+    const growthGain   = finalValue - balance - totalSaved;
+    const years        = months / 12;
+
+    // Stats cards
+    document.getElementById('forecast-stats').innerHTML = `
+      <div class="glass-card stat-card">
+        <div class="stat-label"><i class="fas fa-seedling"></i> Projected Wealth</div>
+        <div class="stat-value income">${Utils.formatCurrency(finalValue)}</div>
+        <div class="stat-change">in ${years >= 1 ? years + ' yr' + (years > 1 ? 's' : '') : months + ' mo'}</div>
+      </div>
+      <div class="glass-card stat-card">
+        <div class="stat-label"><i class="fas fa-piggy-bank"></i> Total Contributions</div>
+        <div class="stat-value">${Utils.formatCurrency(totalSaved)}</div>
+        <div class="stat-change">${Utils.formatCurrency(monthlySavings)}/month</div>
+      </div>
+      <div class="glass-card stat-card">
+        <div class="stat-label"><i class="fas fa-chart-line"></i> Investment Gains</div>
+        <div class="stat-value ${growthGain > 0 ? 'income' : ''}">${Utils.formatCurrency(Math.max(0, growthGain))}</div>
+        <div class="stat-change">at ${document.getElementById('forecast-rate').value}% p.a.</div>
+      </div>
+      <div class="glass-card stat-card">
+        <div class="stat-label"><i class="fas fa-percent"></i> Return Multiplier</div>
+        <div class="stat-value income">${totalSaved > 0 ? ((finalValue / (balance + totalSaved)) * 100).toFixed(0) + '%' : '—'}</div>
+        <div class="stat-change">of total invested</div>
+      </div>`;
+
+    // Chart
+    const ctx = document.getElementById('forecast-chart').getContext('2d');
+    if (forecastChart) forecastChart.destroy();
+    forecastChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'With Growth',
+            data: values,
+            borderColor: 'rgba(212,160,23,1)',
+            backgroundColor: 'rgba(212,160,23,0.1)',
+            borderWidth: 2.5,
+            fill: true,
+            tension: 0.4,
+            pointRadius: 0,
+          },
+          {
+            label: 'Savings Only',
+            data: baseValues,
+            borderColor: 'rgba(100,130,180,0.7)',
+            backgroundColor: 'rgba(100,130,180,0.05)',
+            borderWidth: 1.5,
+            fill: true,
+            tension: 0.4,
+            pointRadius: 0,
+            borderDash: [5, 5],
+          }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { labels: { color: textColor(), boxWidth: 12, font: { size: 11 } } },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` ${ctx.dataset.label}: ${getCurrency().symbol}${ctx.raw.toLocaleString()}`
+            }
+          }
+        },
+        scales: {
+          y: {
+            ticks: { color: textColor(), callback: v => getCurrency().symbol + (v >= 1000 ? (v/1000).toFixed(0)+'k' : v) },
+            grid: { color: gridColor() }, border: { dash: [4,4] }
+          },
+          x: { ticks: { color: textColor(), maxTicksLimit: 8 }, grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  document.addEventListener('change', function(e) {
+    if (e.target.id === 'forecast-horizon' || e.target.id === 'forecast-rate') {
+      renderWealthForecast();
+    }
+  });
+
   function renderPage() {
     const txns = Utils.filterByPeriod(Store.getTransactions(), currentPeriod);
     renderStats(txns);
@@ -264,6 +414,7 @@
     renderDoughnutChart(txns);
     renderCatBreakdown(txns);
     renderAITips(txns);
+    renderWealthForecast();
   }
 
   document.getElementById('period-tabs').addEventListener('click', e => {
@@ -287,8 +438,15 @@
   if (window.__analysisGated) throw new Error('Analysis gated');
   document.getElementById('sidebar-mount').innerHTML = renderSidebar();
   initSidebar();
-  seedDemoData();
-  renderPage();
+
+  async function boot() {
+    if (!_cache.ready) {
+      await new Promise(resolve => document.addEventListener('klyro:ready', resolve, { once: true }));
+    }
+    await seedDemoData();
+    renderPage();
+  }
+  boot();
 </script>
 
 <!-- Bottom Nav (mobile only) -->
@@ -296,12 +454,21 @@
   <a href="dashboard.html" class="bottom-nav-item" data-page="dashboard"><i class="fas fa-house"></i>Home</a>
   <a href="transactions.html" class="bottom-nav-item" data-page="transactions"><i class="fas fa-right-left"></i>Transactions</a>
   <a href="analysis.html" class="bottom-nav-item" data-page="analysis"><i class="fas fa-chart-pie"></i>Analysis</a>
-  <a href="ai.html" class="bottom-nav-item" data-page="ai"><i class="fas fa-brain"></i>AI</a>
+  <span id="bnav-smart-tab"></span>
   <a href="settings.html" class="bottom-nav-item" data-page="settings"><i class="fas fa-gear"></i>Settings</a>
 </nav>
 <script>
 (function(){
   var page = location.pathname.split('/').pop() || 'dashboard.html';
+  // Inject smart tab (Business for businesses+, AI for others)
+  var smartEl = document.getElementById('bnav-smart-tab');
+  if (smartEl && typeof PlanGate !== 'undefined') {
+    if (PlanGate.isBusiness()) {
+      smartEl.outerHTML = '<a href="business.html" class="bottom-nav-item" data-page="business"><i class="fas fa-briefcase"></i>Business</a>';
+    } else {
+      smartEl.outerHTML = '<a href="ai.html" class="bottom-nav-item" data-page="ai"><i class="fas fa-brain"></i>AI</a>';
+    }
+  }
   document.querySelectorAll('.bottom-nav-item[data-page]').forEach(function(el){
     var p = el.dataset.page;
     if(page.includes(p)||(p==='dashboard'&&['','index.html','dashboard.html'].includes(page)))

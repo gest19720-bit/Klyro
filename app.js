@@ -38,9 +38,23 @@ if (_sb) {
   _sb.auth.getSession().then(({ data: { session } }) => {
     if (session) { _sessionCache = session.user; _cache.userId = session.user.id; }
   });
-  _sb.auth.onAuthStateChange((_event, session) => {
+  _sb.auth.onAuthStateChange((event, session) => {
     _sessionCache = session?.user || null;
     _cache.userId = session?.user?.id || null;
+
+    // SIGNED_IN fires when an OAuth callback lands (detectSessionInUrl picks it up).
+    // We need to boot _initData here so protected pages get their data even when
+    // the page loaded before the OAuth redirect completed.
+    if (event === 'SIGNED_IN' && session?.user && !_cache.ready) {
+      _initData().then(() => {
+        // Route new OAuth users (not yet onboarded) to onboarding.
+        const page = window.location.pathname.split('/').pop() || '';
+        const onProtectedPage = !['login.html','signup.html','index.html',''].includes(page);
+        if (onProtectedPage && !session.user.user_metadata?.onboarded) {
+          window.location.replace('onboarding.html');
+        }
+      });
+    }
   });
 }
 
@@ -83,6 +97,68 @@ async function _initData() {
 }
 
 /* ══════════════════════════════════════
+   ACCENT COLOUR THEMES
+   20 selectable accent palettes. Replaces
+   --gold / --gold-light / --gold-dim /
+   --gold-border / --accent-rgb everywhere.
+══════════════════════════════════════ */
+const THEMES = [
+  { id: 'gold',      name: 'Classic Gold', accent: '#d4a017', light: '#f0c040', rgb: '212,160,23' },
+  { id: 'emerald',   name: 'Emerald',      accent: '#1f9d6e', light: '#34c98c', rgb: '31,157,110' },
+  { id: 'sapphire',  name: 'Sapphire',     accent: '#2f6fed', light: '#5b93ff', rgb: '47,111,237' },
+  { id: 'rose',      name: 'Rose',         accent: '#e0457b', light: '#f078a3', rgb: '224,69,123' },
+  { id: 'sunset',    name: 'Sunset',       accent: '#e8742c', light: '#f5a45c', rgb: '232,116,44' },
+  { id: 'violet',    name: 'Violet',       accent: '#7c3aed', light: '#a78bfa', rgb: '124,58,237' },
+  { id: 'teal',      name: 'Ocean Teal',   accent: '#0d9488', light: '#2dd4bf', rgb: '13,148,136' },
+  { id: 'crimson',   name: 'Crimson',      accent: '#c2483f', light: '#e2746a', rgb: '194,72,63'  },
+  { id: 'graphite',  name: 'Graphite',     accent: '#51596b', light: '#7c8597', rgb: '81,89,107'  },
+  { id: 'indigo',    name: 'Indigo',       accent: '#4338ca', light: '#6366f1', rgb: '67,56,202'  },
+  { id: 'cyan',      name: 'Cyan Breeze',  accent: '#0891b2', light: '#22d3ee', rgb: '8,145,178'  },
+  { id: 'amber',     name: 'Amber',        accent: '#d97706', light: '#fbbf24', rgb: '217,119,6'  },
+  { id: 'fuchsia',   name: 'Fuchsia',      accent: '#c026d3', light: '#e879f9', rgb: '192,38,211' },
+  { id: 'mint',      name: 'Mint',         accent: '#059669', light: '#6ee7b7', rgb: '5,150,105'  },
+  { id: 'coral',     name: 'Coral',        accent: '#fb7185', light: '#fda4af', rgb: '251,113,133'},
+  { id: 'steel',     name: 'Steel Blue',   accent: '#3b6e8f', light: '#6fa8c9', rgb: '59,110,143' },
+  { id: 'lime',      name: 'Lime',         accent: '#65a30d', light: '#a3e635', rgb: '101,163,13' },
+  { id: 'burgundy',  name: 'Burgundy',     accent: '#9f1239', light: '#be123c', rgb: '159,18,57'  },
+  { id: 'bronze',    name: 'Bronze',       accent: '#8a5a2b', light: '#b9824a', rgb: '138,90,43'  },
+  { id: 'turquoise', name: 'Turquoise',    accent: '#0e9594', light: '#2dd4bf', rgb: '14,149,148' },
+];
+
+function _applyAccentTheme(id) {
+  const t = THEMES.find(x => x.id === id) || THEMES[0];
+  const root = document.documentElement.style;
+  root.setProperty('--gold', t.accent);
+  root.setProperty('--gold-light', t.light);
+  root.setProperty('--gold-dim', `rgba(${t.rgb},0.18)`);
+  root.setProperty('--gold-border', `rgba(${t.rgb},0.3)`);
+  root.setProperty('--accent-rgb', t.rgb);
+  return t;
+}
+
+/* Public API — used by the Settings page theme picker.
+   Theme.apply() updates the CSS variables instantly (no reload, no
+   save button needed) and persists the choice the same way Dark
+   Mode does: into Store/Supabase settings + a localStorage mirror. */
+const Theme = {
+  list() { return THEMES; },
+  current() {
+    const s = (typeof Store !== 'undefined') ? Store.getSettings() : {};
+    return s.accentTheme || localStorage.getItem('klyro_accent') || 'gold';
+  },
+  apply(id) {
+    const t = _applyAccentTheme(id);
+    try { localStorage.setItem('klyro_accent', t.id); } catch {}
+    if (typeof Store !== 'undefined') {
+      const s = Store.getSettings();
+      s.accentTheme = t.id;
+      Store.saveSettings(s);
+    }
+    return t;
+  },
+};
+
+/* ══════════════════════════════════════
    THEME PERSISTENCE — apply before render
    Falls back to localStorage for guests /
    before Supabase settings are loaded.
@@ -93,6 +169,11 @@ async function _initData() {
     // On first paint it won't be ready yet, so we also keep a localStorage mirror
     const localTheme = localStorage.getItem('klyro_theme') || 'light';
     if (localTheme === 'dark') document.documentElement.classList.add('dark-pre');
+
+    // Accent colour theme — also mirrored to localStorage so it survives
+    // before Supabase settings load, same pattern as dark mode above.
+    const localAccent = localStorage.getItem('klyro_accent');
+    if (localAccent) _applyAccentTheme(localAccent);
   } catch {}
 })();
 
@@ -523,9 +604,34 @@ const Auth = {
       if (!session) {
         window.location.href = 'login.html';
       } else {
-        _sessionCache    = session.user;
-        _cache.userId    = session.user.id;
+        _sessionCache = session.user;
+        _cache.userId = session.user.id;
+
+        // Route unboarded users (e.g. new OAuth signups) to onboarding,
+        // except when they're already on onboarding or pricing pages.
+        const page = window.location.pathname.split('/').pop() || '';
+        const isOnboarded = session.user.user_metadata?.onboarded;
+        const skipCheck   = ['onboarding.html', 'pricing.html'].includes(page);
+        if (!isOnboarded && !skipCheck) {
+          window.location.replace('onboarding.html');
+          return;
+        }
+
         _initData();
+
+        // The sidebar (and any profile fields) may have already been
+        // rendered synchronously by the page, before this async session
+        // lookup resolved — at that point Auth.getUser() returned null,
+        // so avatars showed "?" and email/name fields were blank.
+        // Re-render the sidebar now that the real user is known, and let
+        // pages listen for 'klyro:auth-ready' to refresh anything else
+        // that depends on Auth.getUser().
+        const sidebarMount = document.getElementById('sidebar-mount');
+        if (sidebarMount && typeof renderSidebar === 'function') {
+          sidebarMount.innerHTML = renderSidebar();
+          if (typeof initSidebar === 'function') initSidebar();
+        }
+        document.dispatchEvent(new Event('klyro:auth-ready'));
       }
     });
   },
@@ -696,6 +802,7 @@ const PlanGate = {
     advanced_analysis:    { minPlan: 'individuals',  label: 'Advanced Analysis' },
     team_features:        { minPlan: 'businesses',   label: 'Team Features' },
     invoices:             { minPlan: 'businesses',   label: 'Invoices & Receipts' },
+    wealth_forecast:      { minPlan: 'businesses',   label: 'Wealth Forecasting' },
     automated_invoicing:  { minPlan: 'enterprise',   label: 'Automated Invoicing' },
     api_access:           { minPlan: 'enterprise',   label: 'API Access' },
     transaction_limit:    { free: 20 },  // monthly limit for free plan only
@@ -725,6 +832,11 @@ const PlanGate = {
     const feature = this.FEATURES[featureKey];
     if (!feature || !feature.minPlan) return true;
     return this.planLevel(this.currentPlan()) >= this.planLevel(feature.minPlan);
+  },
+
+  // ── Is business plan or higher ────────────────────────────────────────────
+  isBusiness() {
+    return this.planLevel(this.currentPlan()) >= this.planLevel('businesses');
   },
 
   // ── Check free-tier numeric limits ───────────────────────────────────────
@@ -961,6 +1073,7 @@ const Store = {
     _cache.settings = { ...s };
     // Mirror theme to localStorage for the pre-render flash fix
     if (s.darkMode !== undefined) localStorage.setItem('klyro_theme', s.darkMode ? 'dark' : 'light');
+    if (s.accentTheme !== undefined) localStorage.setItem('klyro_accent', s.accentTheme);
     if (!_cache.userId) return;
     _upsert('settings', { ...s, user_id: _cache.userId });
     if (s.onboarded !== undefined && _sb) {
@@ -1296,9 +1409,10 @@ function renderSidebar() {
     <a href="transactions.html" class="nav-item" data-page="transactions"><i class="fas fa-right-left"></i> Transactions</a>
     <a href="analysis.html" class="nav-item" data-page="analysis"><i class="fas fa-chart-pie"></i> Analysis</a>
     <span class="nav-section-label">Intelligence</span>
-    <a href="ai.html" class="nav-item" data-page="ai"><i class="fas fa-brain"></i> Klyro AI</a>
-    <span class="nav-section-label">Business</span>
-    <a href="invoices.html" class="nav-item" data-page="invoices"><i class="fas fa-file-invoice-dollar"></i> Invoices</a>
+    ${PlanGate.isBusiness()
+      ? `<a href="business.html" class="nav-item" data-page="business"><i class="fas fa-briefcase"></i> Business</a>`
+      : `<a href="ai.html" class="nav-item" data-page="ai"><i class="fas fa-brain"></i> Klyro AI</a>`
+    }
     <span class="nav-section-label">Account</span>
     <a href="settings.html" class="nav-item" data-page="settings"><i class="fas fa-gear"></i> Settings</a>
     <div class="sidebar-bottom">
@@ -1338,6 +1452,10 @@ function initSidebar() {
   } else {
     document.documentElement.classList.remove('dark-pre');
   }
+
+  // Accent theme — read from cache or localStorage mirror, same pattern as dark mode
+  const accentId = s.accentTheme || localStorage.getItem('klyro_accent') || 'gold';
+  _applyAccentTheme(accentId);
 }
 
 function handleLogout() {
