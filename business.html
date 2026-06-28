@@ -1435,13 +1435,6 @@ document.getElementById('rec-filter-cat').addEventListener('change', renderRecei
 ══════════════════════════════════════════════════════════════ */
 document.getElementById('sidebar-mount').innerHTML = renderSidebar();
 initSidebar();
-async function boot() {
-  if (!_cache.ready) {
-    await new Promise(resolve => document.addEventListener('klyro:ready', resolve, { once: true }));
-  }
-  await seedDemoData();
-}
-boot();
 buildFinancialContext(); // populate context summary
 </script>
 

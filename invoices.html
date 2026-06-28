@@ -651,20 +651,25 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="app.js"></script>
-<script>Auth.require();</script>
 <script>
-  // ── Plan gate ─────────────────────────────────────────────────────────────
-  if (!PlanGate.can('invoices')) {
-    document.addEventListener('DOMContentLoaded', function() {
+  Auth.require();
+
+  function _checkInvoicesGate() {
+    if (!PlanGate.can('invoices')) {
+      window.__invGated = true;
       const shell = document.querySelector('.app-shell');
       if (shell) {
         shell.innerHTML = '<main class="main-content"><div class="page-header"><h1>Invoices &amp; Receipts</h1><p>Professional invoicing for your business.</p></div><div class="glass-card" style="padding:40px;" id="inv-locked"></div></main>';
         PlanGate.renderLockedBanner('invoices', 'inv-locked');
-        document.getElementById('sidebar-mount').innerHTML = renderSidebar();
-        initSidebar();
+        const mount = document.getElementById('sidebar-mount');
+        if (mount) { mount.innerHTML = renderSidebar(); initSidebar(); }
       }
-    });
-    window.__invGated = true;
+    }
+  }
+  if (_cache.ready) {
+    _checkInvoicesGate();
+  } else {
+    document.addEventListener('klyro:ready', _checkInvoicesGate, { once: true });
   }
 </script>
 <script>

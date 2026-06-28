@@ -76,6 +76,8 @@ async function _sbDelete(table, id) {
 /* ── Load all user data into cache (called after auth) ─────────────── */
 async function _initData() {
   if (!_cache.userId || !_sb) return;
+  if (_cache._loading) return;   // prevent concurrent double-loads
+  _cache._loading = true;
   const uid = _cache.userId;
   const [txRes, stRes, goRes, invRes, recRes] = await Promise.all([
     _sb.from('transactions').select('*').eq('user_id', uid).order('date', { ascending: false }),
@@ -92,7 +94,14 @@ async function _initData() {
   const raw = stRes.data || {};
   delete raw.user_id;
   _cache.settings = raw;
+  // Mirror plan to localStorage so PlanGate.currentPlan() works synchronously
+  // on the next page load (before klyro:ready fires).
+  try {
+    const plan = (_cache.settings || {}).plan;
+    if (plan) localStorage.setItem('klyro_plan', plan);
+  } catch {}
   _cache.ready = true;
+  _cache._loading = false;
   document.dispatchEvent(new Event('klyro:ready'));
 }
 
@@ -818,9 +827,12 @@ const PlanGate = {
   },
 
   // ── Get current plan ──────────────────────────────────────────────────────
+  // Reads from in-memory cache first; falls back to localStorage mirror so
+  // synchronous gate checks (before klyro:ready fires) return the right plan.
   currentPlan() {
     const s = Store ? Store.getSettings() : {};
-    return (s.plan || 'free').toLowerCase();
+    if (s.plan) return s.plan.toLowerCase();
+    try { return (localStorage.getItem('klyro_plan') || 'free').toLowerCase(); } catch { return 'free'; }
   },
 
   planLevel(plan) {
@@ -1071,9 +1083,10 @@ const Store = {
 
   saveSettings(s) {
     _cache.settings = { ...s };
-    // Mirror theme to localStorage for the pre-render flash fix
+    // Mirror theme + plan to localStorage for pre-render flash fix and sync PlanGate checks
     if (s.darkMode !== undefined) localStorage.setItem('klyro_theme', s.darkMode ? 'dark' : 'light');
     if (s.accentTheme !== undefined) localStorage.setItem('klyro_accent', s.accentTheme);
+    if (s.plan !== undefined) localStorage.setItem('klyro_plan', s.plan);
     if (!_cache.userId) return;
     _upsert('settings', { ...s, user_id: _cache.userId });
     if (s.onboarded !== undefined && _sb) {
@@ -1466,20 +1479,6 @@ function handleLogout() {
 }
 
 /* ══════════════════════════════════════
-   SEED / DEMO DATA
-   Waits for Supabase cache, then seeds
-   demo transactions if the account is empty.
-══════════════════════════════════════ */
-async function seedDemoData() {
-  // Wait until _initData() has populated the cache
-  if (!_cache.ready) {
-    await new Promise(resolve => document.addEventListener('klyro:ready', resolve, { once: true }));
-  }
-  if ((_cache.transactions || []).length > 0) return; // account already has data
-  _loadDemoData();
-}
-
-/* ══════════════════════════════════════
    MIGRATION HELPER
    One-shot: reads any leftover localStorage
    data and pushes it to Supabase.
@@ -1549,27 +1548,3 @@ async function migrateFromLocalStorage() {
    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
    <script src="app.js"></script>
 ══════════════════════════════════════ */
-
-function _loadDemoData() {
-  const s  = getCurrency().symbol;
-  const demo = [
-    { type:'income',  amount:3200, description:'Monthly Salary',    category:'salary',       date:'2026-04-01' },
-    { type:'income',  amount:450,  description:'Freelance Project',  category:'freelance',    date:'2026-04-05' },
-    { type:'expense', amount:950,  description:'Rent',               category:'rent',         date:'2026-04-02' },
-    { type:'expense', amount:86,   description:'Electricity Bill',   category:'bills',        date:'2026-04-03' },
-    { type:'expense', amount:42,   description:'Internet Broadband', category:'internet',     date:'2026-04-04' },
-    { type:'expense', amount:112,  description:'Weekly Groceries',   category:'groceries',    date:'2026-04-07' },
-    { type:'expense', amount:38,   description:'Lunch & Coffee',     category:'dining',       date:'2026-04-08' },
-    { type:'expense', amount:24,   description:'Bus Pass',           category:'transport',    date:'2026-04-09' },
-    { type:'expense', amount:15,   description:'Netflix',            category:'entertainment',date:'2026-04-10' },
-    { type:'income',  amount:200,  description:'Side Project',       category:'freelance',    date:'2026-04-12' },
-    { type:'expense', amount:67,   description:'Pharmacy',           category:'health',       date:'2026-04-15' },
-    { type:'expense', amount:55,   description:'New Jacket',         category:'clothing',     date:'2026-04-18' },
-    { type:'expense', amount:98,   description:'Supermarket Shop',   category:'groceries',    date:'2026-04-20' },
-    { type:'expense', amount:32,   description:'Spotify + Apps',     category:'entertainment',date:'2026-04-21' },
-  ];
-  demo.forEach(t => Store.addTransaction(t));
-  Store.addGoal({ name:'Europe Trip',    target:2000, saved:640,  emoji:'✈️', deadline:'2026-08-01' });
-  Store.addGoal({ name:'Emergency Fund', target:5000, saved:1800, emoji:'🛡️', deadline:'2026-12-01' });
-  Store.addGoal({ name:'New Laptop',     target:1200, saved:300,  emoji:'💻', deadline:'2026-06-01' });
-}

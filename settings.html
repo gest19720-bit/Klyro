@@ -410,9 +410,6 @@
           <button class="btn btn-glass" onclick="exportData()">
             <i class="fas fa-download"></i> Export Data (CSV)
           </button>
-          <button class="btn btn-glass" onclick="resetDemo()">
-            <i class="fas fa-rotate-left"></i> Reset to Demo Data
-          </button>
           <button class="btn btn-danger" onclick="clearAllData()">
             <i class="fas fa-trash-can"></i> Clear All Data
           </button>
@@ -1004,15 +1001,6 @@
     }, 1000);
   }
 
-  function resetDemo() {
-    if (!confirm('This will replace your current data with demo data. Continue?')) return;
-    localStorage.removeItem(Store._key('exmo_transactions'));
-    localStorage.removeItem(Store._key('exmo_goals'));
-    _loadDemoData();
-    showToast('Demo data restored!');
-    renderDataStats();
-  }
-
   // Responsive grid
   function checkGrid() {
     const g = document.getElementById('settings-grid');
@@ -1047,7 +1035,6 @@
       }
     }
   })();
-  seedDemoData();
   loadSettings();
   renderGoalsList();
   renderDataStats();
@@ -1063,20 +1050,31 @@
 <script>
 (function(){
   var page = location.pathname.split('/').pop() || 'dashboard.html';
-  // Inject smart tab (Business for businesses+, AI for others)
-  var smartEl = document.getElementById('bnav-smart-tab');
-  if (smartEl && typeof PlanGate !== 'undefined') {
-    if (PlanGate.isBusiness()) {
-      smartEl.outerHTML = '<a href="business.html" class="bottom-nav-item" data-page="business"><i class="fas fa-briefcase"></i>Business</a>';
-    } else {
-      smartEl.outerHTML = '<a href="ai.html" class="bottom-nav-item" data-page="ai"><i class="fas fa-brain"></i>AI</a>';
+  function _setSmartTab() {
+    var smartEl = document.getElementById('bnav-smart-tab');
+    if (smartEl && typeof PlanGate !== 'undefined') {
+      if (PlanGate.isBusiness()) {
+        smartEl.outerHTML = '<a href="business.html" class="bottom-nav-item" data-page="business"><i class="fas fa-briefcase"></i>Business</a>';
+      } else {
+        smartEl.outerHTML = '<a href="ai.html" class="bottom-nav-item" data-page="ai"><i class="fas fa-brain"></i>AI</a>';
+      }
     }
+    document.querySelectorAll('.bottom-nav-item[data-page]').forEach(function(el){
+      var p = el.dataset.page;
+      if(page.includes(p)||(p==='dashboard'&&['','index.html','dashboard.html'].includes(page)))
+        el.classList.add('active');
+    });
   }
-  document.querySelectorAll('.bottom-nav-item[data-page]').forEach(function(el){
-    var p = el.dataset.page;
-    if(page.includes(p)||(p==='dashboard'&&['','index.html','dashboard.html'].includes(page)))
-      el.classList.add('active');
-  });
+  if (typeof _cache !== 'undefined' && _cache.ready) {
+    _setSmartTab();
+  } else {
+    document.addEventListener('klyro:ready', _setSmartTab, { once: true });
+    document.querySelectorAll('.bottom-nav-item[data-page]').forEach(function(el){
+      var p = el.dataset.page;
+      if(page.includes(p)||(p==='dashboard'&&['','index.html','dashboard.html'].includes(page)))
+        el.classList.add('active');
+    });
+  }
 })();
 </script>
 

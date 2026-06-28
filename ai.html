@@ -191,12 +191,16 @@
   <a href="settings.html" class="bottom-nav-item" data-page="settings"><i class="fas fa-gear"></i>Settings</a>
 </nav>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="app.js"></script>
-<script>Auth.require();
-  // Gate entire AI page — requires Students plan or higher
-  if (!PlanGate.can('ai_chat')) {
-    window.__aiGated = true;
-    document.addEventListener('DOMContentLoaded', function() {
+<script>
+  Auth.require();
+
+  // Gate check deferred until klyro:ready so that paid users' plan is loaded
+  // from Supabase before we decide to lock/unlock the page.
+  function _checkAIGate() {
+    if (!PlanGate.can('ai_chat')) {
+      window.__aiGated = true;
       const mount = document.getElementById('sidebar-mount');
       if (mount) { mount.innerHTML = renderSidebar(); initSidebar(); }
       const shell = document.querySelector('.app-shell');
@@ -204,7 +208,14 @@
         shell.innerHTML = '<main class="main-content"><div class="page-header"><h1>Klyro AI</h1><p>Your personal AI finance coach.</p></div><div class="glass-card" style="padding:28px;" id="ai-locked-banner"></div></main>';
         PlanGate.renderLockedBanner('ai_chat', 'ai-locked-banner');
       }
-    });
+    }
+  }
+  // If cache is already ready (e.g. fast page load), check immediately.
+  // Otherwise wait for the data to arrive.
+  if (_cache.ready) {
+    _checkAIGate();
+  } else {
+    document.addEventListener('klyro:ready', _checkAIGate, { once: true });
   }
 </script>
 <script>
@@ -352,11 +363,8 @@ function mdToHtml(text) {
     .replace(/\*(.+?)\*/g,     '<em>$1</em>')
     .replace(/`(.+?)`/g,       '<code>$1</code>')
     .replace(/^[\-•] /gm,      '&bull; ')
-    .replace(/
-
-/g,          '<br><br>')
-    .replace(/
-/g,            '<br>');
+    .replace(/\n\n/g,          '<br><br>')
+    .replace(/\n/g,            '<br>');
 }
 
 function appendMessage(role, html) {
