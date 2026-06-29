@@ -250,6 +250,54 @@
       flex-shrink: 0;
     }
 
+    /* ── Subscription Plan Card ── */
+    .plan-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 100px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .plan-badge.free       { background: var(--glass-dim); color: var(--text-dim); border: 1px solid var(--glass-border); }
+    .plan-badge.students   { background: rgba(99,179,237,0.15); color: #63b3ed; border: 1px solid rgba(99,179,237,0.3); }
+    .plan-badge.individuals{ background: var(--gold-dim); color: var(--gold); border: 1px solid var(--gold-border); }
+    .plan-badge.businesses { background: rgba(154,105,205,0.15); color: #c084fc; border: 1px solid rgba(154,105,205,0.3); }
+    .plan-badge.enterprise { background: rgba(248,113,113,0.12); color: #f87171; border: 1px solid rgba(248,113,113,0.3); }
+
+    .plan-features-list {
+      list-style: none;
+      padding: 0;
+      margin: 16px 0 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .plan-features-list li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.85rem;
+      color: var(--text-mid);
+    }
+    .plan-features-list li i {
+      width: 16px;
+      text-align: center;
+      font-size: 0.8rem;
+    }
+    .plan-features-list li.has    i { color: var(--gold); }
+    .plan-features-list li.locked i { color: var(--text-dim); }
+    .plan-features-list li.locked   { color: var(--text-dim); }
+
+    .plan-divider {
+      height: 1px;
+      background: var(--glass-border);
+      margin: 16px 0;
+    }
+
     /* Avatar Upload Custom Styles */
     .avatar-settings-container {
       display: flex;
@@ -299,6 +347,37 @@
     <div class="page-header">
       <h1>Settings</h1>
       <p>Customise your Klyro experience.</p>
+    </div>
+
+    <!-- Subscription Plan Card -->
+    <div class="glass-card" style="padding:28px;margin-bottom:24px;" id="plan-info-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div class="section-title" style="margin-bottom:0;"><i class="fas fa-crown"></i> Your Plan</div>
+        <span class="plan-badge" id="plan-badge-label">Free</span>
+      </div>
+
+      <div class="plan-divider"></div>
+
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:24px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:200px;">
+          <div style="font-size:0.8rem;color:var(--text-dim);margin-bottom:4px;">Current subscription</div>
+          <div id="plan-name-display" style="font-family:var(--font-display);font-size:1.5rem;font-weight:700;color:var(--text);"></div>
+          <div id="plan-price-display" style="font-size:0.85rem;color:var(--text-dim);margin-top:2px;"></div>
+        </div>
+        <ul class="plan-features-list" id="plan-features-list" style="flex:1;min-width:200px;"></ul>
+      </div>
+
+      <div class="plan-divider"></div>
+
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <a href="pricing.html" class="btn btn-gold btn-sm" id="plan-upgrade-btn" style="display:none;">
+          <i class="fas fa-arrow-up"></i> Upgrade Plan
+        </a>
+        <a href="pricing.html" class="btn btn-glass btn-sm">
+          <i class="fas fa-eye"></i> View All Plans
+        </a>
+        <span id="plan-status-note" style="font-size:0.8rem;color:var(--text-dim);"></span>
+      </div>
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;" id="settings-grid">
@@ -1035,9 +1114,75 @@
       }
     }
   })();
+  // ═══════════════════════════════════════════════════════════
+  // PLAN INFO CARD
+  // ═══════════════════════════════════════════════════════════
+  function renderPlanCard() {
+    const plan = PlanGate.currentPlan();
+    const level = PlanGate.planLevel(plan);
+
+    const PLAN_META = {
+      free:        { label: 'Free',        price: 'Free forever',   icon: 'fa-star' },
+      students:    { label: 'Students',    price: '$8 / month',     icon: 'fa-graduation-cap' },
+      individuals: { label: 'Individuals', price: '$10 / month',    icon: 'fa-user' },
+      businesses:  { label: 'Businesses',  price: '$20 / month',    icon: 'fa-briefcase' },
+      enterprise:  { label: 'Enterprise',  price: '$40 / month',    icon: 'fa-building' },
+    };
+
+    const meta = PLAN_META[plan] || PLAN_META.free;
+
+    // Badge
+    const badge = document.getElementById('plan-badge-label');
+    badge.textContent = meta.label;
+    badge.className = `plan-badge ${plan}`;
+
+    // Name + price
+    document.getElementById('plan-name-display').textContent = meta.label + ' Plan';
+    document.getElementById('plan-price-display').textContent = meta.price;
+
+    // Features checklist — show what's included vs locked
+    const featureDefs = [
+      { key: 'csv_export',          label: 'CSV Export' },
+      { key: 'ai_chat',             label: 'Klyro AI Chat' },
+      { key: 'analysis',            label: 'Analysis & Charts' },
+      { key: 'savings_goals',       label: 'Savings Goals' },
+      { key: 'currency_conversion', label: 'Currency Conversion' },
+      { key: 'invoices',            label: 'Invoices & Receipts' },
+      { key: 'wealth_forecast',     label: 'Wealth Forecasting' },
+      { key: 'api_access',          label: 'API Access' },
+    ];
+
+    const ul = document.getElementById('plan-features-list');
+    ul.innerHTML = featureDefs.map(f => {
+      const has = PlanGate.can(f.key);
+      return `<li class="${has ? 'has' : 'locked'}">
+        <i class="fas ${has ? 'fa-check-circle' : 'fa-lock'}"></i>
+        ${f.label}
+      </li>`;
+    }).join('');
+
+    // Upgrade button — only show if not on top tier
+    const upgradeBtn = document.getElementById('plan-upgrade-btn');
+    if (plan !== 'enterprise') {
+      upgradeBtn.style.display = 'inline-flex';
+    }
+
+    // Status note
+    const note = document.getElementById('plan-status-note');
+    if (plan === 'free') {
+      note.textContent = 'Upgrade to unlock AI, charts, goals & more.';
+    } else if (plan === 'enterprise') {
+      note.textContent = '✦ You\'re on our highest tier — thank you!';
+      note.style.color = 'var(--gold)';
+    } else {
+      note.textContent = `Active since your last billing cycle.`;
+    }
+  }
+
   loadSettings();
   renderGoalsList();
   renderDataStats();
+  renderPlanCard();
 </script>
 
 <nav class="bottom-nav">

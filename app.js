@@ -32,6 +32,46 @@ const _cache = {
   userId:       null,
 };
 
+/* ── Cross-tab data sync (BroadcastChannel) ─────────────────────────────────
+   When any tab calls a Store mutation (addTransaction, deleteTransaction, etc.)
+   it broadcasts a lightweight message.  Every other open Klyro tab receives it,
+   re-fetches the affected table from Supabase, then fires 'klyro:data-changed'
+   on the DOM so the page can re-render — giving the dashboard instant updates
+   whenever the user adds a transaction on the Transactions page (and vice-versa).
+   Falls back silently where BroadcastChannel is unavailable (e.g. some iframes).
+────────────────────────────────────────────────────────────────────────────── */
+const _klyroChannel = (typeof BroadcastChannel !== 'undefined')
+  ? new BroadcastChannel('klyro_data_sync')
+  : null;
+
+function _broadcastChange(type) {
+  try { _klyroChannel?.postMessage({ type: type || 'transactions', ts: Date.now() }); } catch {}
+}
+
+function _initDataSync() {
+  if (!_klyroChannel) return;
+  _klyroChannel.onmessage = async (evt) => {
+    if (!_cache.ready || !_cache.userId || !_sb) return;
+    try {
+      const uid = _cache.userId;
+      const t   = evt.data?.type || 'transactions';
+      if (t === 'transactions' || t === 'all') {
+        const { data } = await _sb.from('transactions').select('*').eq('user_id', uid).order('date', { ascending: false });
+        if (data) _cache.transactions = data;
+      }
+      if (t === 'goals' || t === 'all') {
+        const { data } = await _sb.from('goals').select('*').eq('user_id', uid);
+        if (data) _cache.goals = data;
+      }
+      if (t === 'settings' || t === 'all') {
+        const { data } = await _sb.from('settings').select('*').eq('user_id', uid).maybeSingle();
+        if (data) { const raw = { ...data }; delete raw.user_id; _cache.settings = raw; }
+      }
+    } catch {}
+    document.dispatchEvent(new CustomEvent('klyro:data-changed', { detail: evt.data }));
+  };
+}
+
 /* ── Session cache for synchronous Auth.getUser() calls ────────────── */
 let _sessionCache = null;
 if (_sb) {
@@ -76,8 +116,6 @@ async function _sbDelete(table, id) {
 /* ── Load all user data into cache (called after auth) ─────────────── */
 async function _initData() {
   if (!_cache.userId || !_sb) return;
-  if (_cache._loading) return;   // prevent concurrent double-loads
-  _cache._loading = true;
   const uid = _cache.userId;
   const [txRes, stRes, goRes, invRes, recRes] = await Promise.all([
     _sb.from('transactions').select('*').eq('user_id', uid).order('date', { ascending: false }),
@@ -101,7 +139,7 @@ async function _initData() {
     if (plan) localStorage.setItem('klyro_plan', plan);
   } catch {}
   _cache.ready = true;
-  _cache._loading = false;
+  _initDataSync();   // start listening for cross-tab data changes
   document.dispatchEvent(new Event('klyro:ready'));
 }
 
@@ -827,12 +865,9 @@ const PlanGate = {
   },
 
   // ── Get current plan ──────────────────────────────────────────────────────
-  // Reads from in-memory cache first; falls back to localStorage mirror so
-  // synchronous gate checks (before klyro:ready fires) return the right plan.
   currentPlan() {
     const s = Store ? Store.getSettings() : {};
-    if (s.plan) return s.plan.toLowerCase();
-    try { return (localStorage.getItem('klyro_plan') || 'free').toLowerCase(); } catch { return 'free'; }
+    return (s.plan || 'free').toLowerCase();
   },
 
   planLevel(plan) {
@@ -1057,6 +1092,7 @@ const Store = {
     if (_cache.transactions === null) _cache.transactions = [];
     _cache.transactions.unshift(txn);
     if (_cache.userId) _upsert('transactions', { ...txn, user_id: _cache.userId });
+    _broadcastChange('transactions');
     MakeWebhook.send('transaction.added', {
       type: txn.type, amount: txn.amount, description: txn.description,
       category: txn.category, date: txn.date, currency: txn.originalCurrency
@@ -1067,6 +1103,7 @@ const Store = {
   deleteTransaction(id) {
     _cache.transactions = (_cache.transactions || []).filter(t => t.id !== id);
     _sbDelete('transactions', id);
+    _broadcastChange('transactions');
   },
 
   updateTransaction(id, fields) {
@@ -1075,6 +1112,7 @@ const Store = {
     if (idx === -1) return null;
     txns[idx] = { ...txns[idx], ...fields };
     _upsert('transactions', { ...txns[idx], user_id: _cache.userId });
+    _broadcastChange('transactions');
     return txns[idx];
   },
 
@@ -1083,15 +1121,15 @@ const Store = {
 
   saveSettings(s) {
     _cache.settings = { ...s };
-    // Mirror theme + plan to localStorage for pre-render flash fix and sync PlanGate checks
+    // Mirror theme to localStorage for the pre-render flash fix
     if (s.darkMode !== undefined) localStorage.setItem('klyro_theme', s.darkMode ? 'dark' : 'light');
     if (s.accentTheme !== undefined) localStorage.setItem('klyro_accent', s.accentTheme);
-    if (s.plan !== undefined) localStorage.setItem('klyro_plan', s.plan);
     if (!_cache.userId) return;
     _upsert('settings', { ...s, user_id: _cache.userId });
     if (s.onboarded !== undefined && _sb) {
       _sb.auth.updateUser({ data: { onboarded: s.onboarded } }).catch(() => {});
     }
+    _broadcastChange('settings');
   },
 
   /* ── Goals ────────────────────────────────────────────────────────── */
@@ -1109,6 +1147,7 @@ const Store = {
     if (_cache.goals === null) _cache.goals = [];
     _cache.goals.push(goal);
     if (_cache.userId) _upsert('goals', { ...goal, user_id: _cache.userId });
+    _broadcastChange('goals');
     MakeWebhook.send('goal.created', {
       name: goal.name, target: goal.target, saved: goal.saved || 0,
       deadline: goal.deadline || null, emoji: goal.emoji || '🎯'
@@ -1119,6 +1158,7 @@ const Store = {
   deleteGoal(id) {
     _cache.goals = (_cache.goals || []).filter(g => g.id !== id);
     _sbDelete('goals', id);
+    _broadcastChange('goals');
   },
 
   updateGoal(id, fields) {
@@ -1127,6 +1167,7 @@ const Store = {
     if (idx === -1) return null;
     goals[idx] = { ...goals[idx], ...fields };
     _upsert('goals', { ...goals[idx], user_id: _cache.userId });
+    _broadcastChange('goals');
     return goals[idx];
   },
 
@@ -1136,6 +1177,7 @@ const Store = {
     if (!g) return;
     g.saved = Math.min(parseFloat(g.target), (parseFloat(g.saved) || 0) + parseFloat(amount));
     _upsert('goals', { ...g, user_id: _cache.userId });
+    _broadcastChange('goals');
   },
 
   /* ── Invoices ─────────────────────────────────────────────────────── */
