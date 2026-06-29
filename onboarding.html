@@ -9,16 +9,51 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="app.css">
   <style>
-    .onboard-root {
+    /* ── Layout ── */
+    .ob-root {
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 40px 20px;
+      padding: 32px 20px;
       position: relative;
-      z-index: 1;
+      overflow: hidden;
     }
-    .onboard-card {
+
+    /* Animated background blobs */
+    .ob-blob {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.18;
+      pointer-events: none;
+      animation: blob-drift 12s ease-in-out infinite alternate;
+    }
+    .ob-blob-1 {
+      width: 480px; height: 480px;
+      background: radial-gradient(circle, var(--gold-light), transparent);
+      top: -120px; left: -100px;
+      animation-delay: 0s;
+    }
+    .ob-blob-2 {
+      width: 360px; height: 360px;
+      background: radial-gradient(circle, #a78bfa, transparent);
+      bottom: -80px; right: -80px;
+      animation-delay: -4s;
+    }
+    .ob-blob-3 {
+      width: 280px; height: 280px;
+      background: radial-gradient(circle, #34d399, transparent);
+      top: 50%; left: 60%;
+      animation-delay: -8s;
+    }
+    @keyframes blob-drift {
+      from { transform: translate(0, 0) scale(1); }
+      to   { transform: translate(30px, 20px) scale(1.08); }
+    }
+
+    /* ── Card ── */
+    .ob-card {
       background: var(--glass-heavy);
       backdrop-filter: var(--blur);
       -webkit-backdrop-filter: var(--blur);
@@ -28,368 +63,811 @@
       padding: 48px;
       width: 100%;
       max-width: 560px;
-      animation: card-in 0.5s cubic-bezier(0.16,1,0.3,1);
+      position: relative;
+      z-index: 1;
     }
-    @keyframes card-in {
-      from { opacity:0; transform:translateY(24px) scale(0.98); }
-      to   { opacity:1; transform:translateY(0) scale(1); }
-    }
-    .step { display: none; }
-    .step.active { display: block; }
 
-    /* Progress bar */
-    .progress-bar-wrap {
-      height: 4px;
+    /* ── Step dots ── */
+    .ob-dots {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 36px;
+    }
+    .ob-dot {
+      height: 6px;
+      border-radius: 3px;
       background: var(--glass-dim);
-      border-radius: 2px;
-      margin-bottom: 40px;
-      overflow: hidden;
+      border: 1px solid var(--glass-border);
+      transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
     }
-    .progress-bar-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--gold), var(--gold-light));
-      border-radius: 2px;
-      transition: width 0.5s cubic-bezier(0.16,1,0.3,1);
+    .ob-dot.active {
+      background: var(--gold);
+      border-color: var(--gold);
+      width: 28px !important;
     }
-    .step-label {
-      font-size: 0.72rem;
+    .ob-dot.done {
+      background: var(--gold-dim);
+      border-color: var(--gold-border);
+    }
+
+    /* ── Step transitions ── */
+    .ob-step { display: none; }
+    .ob-step.active {
+      display: block;
+      animation: step-in 0.42s cubic-bezier(0.16,1,0.3,1);
+    }
+    .ob-step.leaving {
+      animation: step-out 0.28s cubic-bezier(0.4,0,1,1) forwards;
+    }
+    @keyframes step-in {
+      from { opacity: 0; transform: translateX(28px) scale(0.98); }
+      to   { opacity: 1; transform: translateX(0) scale(1); }
+    }
+    @keyframes step-out {
+      from { opacity: 1; transform: translateX(0); }
+      to   { opacity: 0; transform: translateX(-24px); }
+    }
+    .ob-step.active.going-back {
+      animation: step-in-back 0.42s cubic-bezier(0.16,1,0.3,1);
+    }
+    @keyframes step-in-back {
+      from { opacity: 0; transform: translateX(-28px) scale(0.98); }
+      to   { opacity: 1; transform: translateX(0) scale(1); }
+    }
+
+    /* ── Typography ── */
+    .ob-eyebrow {
+      font-size: 0.7rem;
       font-weight: 700;
-      letter-spacing: 0.14em;
+      letter-spacing: 0.16em;
       text-transform: uppercase;
       color: var(--gold);
       margin-bottom: 10px;
     }
-    .step-title {
+    .ob-title {
       font-family: var(--font-display);
-      font-size: clamp(1.6rem, 4vw, 2.2rem);
+      font-size: clamp(1.7rem, 4.5vw, 2.3rem);
       font-weight: 700;
       color: var(--text);
-      line-height: 1.15;
-      margin-bottom: 8px;
+      line-height: 1.1;
+      margin-bottom: 10px;
     }
-    .step-sub {
+    .ob-sub {
       font-size: 0.9rem;
       color: var(--text-dim);
-      margin-bottom: 32px;
-      line-height: 1.6;
-    }
-
-    /* Option cards */
-    .option-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
+      line-height: 1.65;
       margin-bottom: 28px;
     }
-    .option-grid.single-col { grid-template-columns: 1fr; }
-    .option-card {
-      padding: 16px 18px;
+
+    /* ── Big emoji ── */
+    .ob-emoji {
+      font-size: 3.8rem;
+      display: block;
+      margin-bottom: 18px;
+      animation: emoji-pop 0.5s cubic-bezier(0.16,1,0.3,1);
+    }
+    @keyframes emoji-pop {
+      from { transform: scale(0.4) rotate(-15deg); opacity: 0; }
+      to   { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+
+    /* ── Option cards ── */
+    .ob-options {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+    .ob-options.two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .ob-opt {
+      padding: 14px 16px;
       background: var(--glass-dim);
       border: 1.5px solid var(--glass-border);
       border-radius: var(--radius-sm);
       cursor: pointer;
-      transition: all var(--transition);
+      transition: all 0.22s cubic-bezier(0.16,1,0.3,1);
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 13px;
       font-family: var(--font-body);
       font-size: 0.88rem;
       font-weight: 500;
       color: var(--text-mid);
       text-align: left;
+      position: relative;
+      overflow: hidden;
     }
-    .option-card:hover {
-      background: var(--glass);
+    .ob-opt::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, var(--gold-dim), transparent);
+      opacity: 0;
+      transition: opacity 0.22s ease;
+    }
+    .ob-opt:hover {
       border-color: var(--gold-border);
       color: var(--text);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(212,160,23,0.12);
     }
-    .option-card.selected {
+    .ob-opt:hover::before { opacity: 1; }
+    .ob-opt.selected {
       background: var(--gold-dim);
       border-color: var(--gold);
       color: var(--text);
       font-weight: 600;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px rgba(212,160,23,0.2);
     }
-    .option-card .opt-icon {
-      width: 36px; height: 36px;
+    .ob-opt.selected::before { opacity: 1; }
+    .ob-opt-icon {
+      width: 38px; height: 38px;
       border-radius: 10px;
       background: var(--glass);
+      border: 1px solid var(--glass-border);
       display: flex; align-items: center; justify-content: center;
       font-size: 1rem;
       flex-shrink: 0;
-      transition: background var(--transition);
+      transition: all 0.22s ease;
     }
-    .option-card.selected .opt-icon {
+    .ob-opt.selected .ob-opt-icon {
       background: var(--gold);
+      border-color: var(--gold);
+      color: white;
+      box-shadow: 0 2px 8px rgba(212,160,23,0.35);
+    }
+    .ob-opt-check {
+      margin-left: auto;
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      border: 2px solid var(--glass-border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem;
+      color: transparent;
+      flex-shrink: 0;
+      transition: all 0.22s ease;
+    }
+    .ob-opt.selected .ob-opt-check {
+      background: var(--gold);
+      border-color: var(--gold);
       color: white;
     }
 
-    /* Slider input */
-    .range-wrap { margin-bottom: 28px; }
-    .range-display {
+    /* ── Income slider ── */
+    .ob-slider-wrap { margin-bottom: 28px; }
+    .ob-slider-display {
       font-family: var(--font-display);
-      font-size: 2.4rem;
+      font-size: 3rem;
       font-weight: 700;
       color: var(--gold);
-      margin-bottom: 12px;
+      margin-bottom: 8px;
+      transition: all 0.15s ease;
+      line-height: 1;
     }
-    input[type=range] {
-      width: 100%;
+    .ob-slider-label {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      margin-bottom: 18px;
+    }
+    .ob-range {
       -webkit-appearance: none;
-      height: 6px;
-      border-radius: 3px;
+      width: 100%;
+      height: 8px;
+      border-radius: 4px;
       background: var(--glass-dim);
       outline: none;
       cursor: pointer;
+      border: 1px solid var(--glass-border);
     }
-    input[type=range]::-webkit-slider-thumb {
+    .ob-range::-webkit-slider-thumb {
       -webkit-appearance: none;
-      width: 20px; height: 20px;
+      width: 24px; height: 24px;
       border-radius: 50%;
       background: var(--gold);
-      box-shadow: 0 0 8px rgba(212,160,23,0.4);
+      box-shadow: 0 0 0 4px var(--gold-dim), 0 2px 8px rgba(212,160,23,0.4);
       cursor: pointer;
-      transition: transform 0.2s ease;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
-    input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
-
-    /* Nav buttons */
-    .step-nav {
+    .ob-range::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+      box-shadow: 0 0 0 6px var(--gold-dim), 0 4px 14px rgba(212,160,23,0.5);
+    }
+    .ob-range-labels {
       display: flex;
-      gap: 12px;
       justify-content: space-between;
-      align-items: center;
+      font-size: 0.73rem;
+      color: var(--text-dim);
       margin-top: 8px;
     }
-    .btn-skip {
+
+    /* ── Currency search ── */
+    .ob-currency-search {
+      position: relative;
+      margin-bottom: 10px;
+    }
+    .ob-currency-search i {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-dim);
+      font-size: 0.85rem;
+      pointer-events: none;
+    }
+    .ob-currency-search input {
+      width: 100%;
+      padding: 11px 14px 11px 38px;
+      background: var(--glass-dim);
+      border: 1.5px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      font-family: var(--font-body);
+      font-size: 0.88rem;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s ease;
+      box-sizing: border-box;
+    }
+    .ob-currency-search input:focus {
+      border-color: var(--gold-border);
+    }
+    .ob-currency-list {
+      max-height: 220px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 20px;
+      padding-right: 2px;
+    }
+    .ob-currency-list::-webkit-scrollbar { width: 4px; }
+    .ob-currency-list::-webkit-scrollbar-track { background: transparent; }
+    .ob-currency-list::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 2px; }
+    .ob-currency-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      background: var(--glass-dim);
+      border: 1.5px solid var(--glass-border);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: var(--font-body);
+      font-size: 0.85rem;
+    }
+    .ob-currency-item:hover {
+      border-color: var(--gold-border);
+      background: var(--glass);
+    }
+    .ob-currency-item.selected {
+      border-color: var(--gold);
+      background: var(--gold-dim);
+    }
+    .ob-currency-sym {
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--gold);
+      width: 28px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .ob-currency-info { flex: 1; }
+    .ob-currency-code { font-weight: 600; color: var(--text); font-size: 0.85rem; }
+    .ob-currency-name { font-size: 0.75rem; color: var(--text-dim); }
+    .ob-currency-tick {
+      color: var(--gold);
+      font-size: 0.8rem;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .ob-currency-item.selected .ob-currency-tick { opacity: 1; }
+
+    /* ── Nav ── */
+    .ob-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 4px;
+      gap: 12px;
+    }
+    .ob-back {
       background: none;
       border: none;
       color: var(--text-dim);
       font-family: var(--font-body);
       font-size: 0.85rem;
       cursor: pointer;
-      text-decoration: underline;
-      padding: 4px 0;
+      padding: 8px 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: color 0.2s;
     }
-    .btn-skip:hover { color: var(--text); }
+    .ob-back:hover { color: var(--text); }
 
-    /* Emoji greeting */
-    .welcome-emoji {
-      font-size: 3.5rem;
-      margin-bottom: 16px;
+    /* ── Finish screen ── */
+    .ob-confetti-wrap {
+      text-align: center;
+      padding: 8px 0 4px;
+    }
+    .ob-big-emoji {
+      font-size: 5rem;
       display: block;
+      margin-bottom: 16px;
+      animation: bounce-in 0.6s cubic-bezier(0.16,1,0.3,1);
+    }
+    @keyframes bounce-in {
+      0%   { transform: scale(0) rotate(-20deg); opacity: 0; }
+      60%  { transform: scale(1.15) rotate(4deg); }
+      100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+    .ob-summary {
+      background: var(--glass-dim);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      padding: 16px 20px;
+      margin: 20px 0 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .ob-summary-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.85rem;
+      color: var(--text-mid);
+    }
+    .ob-summary-row i {
+      width: 16px;
+      color: var(--gold);
+      flex-shrink: 0;
+    }
+    .ob-summary-val {
+      font-weight: 600;
+      color: var(--text);
+      margin-left: auto;
+    }
+
+    /* ── Floating particles (finish screen) ── */
+    .ob-particle {
+      position: fixed;
+      pointer-events: none;
+      animation: particle-fall linear forwards;
+      z-index: 0;
+      font-size: 1.2rem;
+    }
+    @keyframes particle-fall {
+      0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
     }
 
     @media (max-width: 520px) {
-      .onboard-card { padding: 32px 24px; }
-      .option-grid { grid-template-columns: 1fr; }
+      .ob-card { padding: 32px 22px; }
+      .ob-options.two-col { grid-template-columns: 1fr; }
+      .ob-slider-display { font-size: 2.3rem; }
     }
   </style>
 </head>
 <body>
-<div class="onboard-root">
-  <div class="onboard-card">
-    <div class="progress-bar-wrap">
-      <div class="progress-bar-fill" id="progress" style="width:0%"></div>
-    </div>
+<div class="ob-root">
+  <!-- Animated blobs -->
+  <div class="ob-blob ob-blob-1"></div>
+  <div class="ob-blob ob-blob-2"></div>
+  <div class="ob-blob ob-blob-3"></div>
 
-    <!-- Step 1: Welcome -->
-    <div class="step active" id="step-1">
-      <span class="welcome-emoji">👋</span>
-      <div class="step-label">Step 1 of 5</div>
-      <div class="step-title" id="welcome-name">Welcome to Klyro!</div>
-      <div class="step-sub">Let's take 60 seconds to personalise your experience. This helps Klyro AI give you advice that actually fits your life.</div>
-      <div class="step-nav">
+  <div class="ob-card">
+
+    <!-- Step dots -->
+    <div class="ob-dots" id="ob-dots"></div>
+
+    <!-- ══ Step 1: Welcome ══ -->
+    <div class="ob-step active" id="ob-step-1">
+      <span class="ob-emoji" id="ob-wave">👋</span>
+      <div class="ob-eyebrow">Let's get started</div>
+      <div class="ob-title" id="welcome-name">Welcome to Klyro!</div>
+      <div class="ob-sub">It'll take about 60 seconds to personalise your experience. Klyro AI uses these answers to give you advice that actually fits your life — not generic tips.</div>
+      <div class="ob-nav">
         <span></span>
-        <button class="btn btn-gold" onclick="nextStep()">
+        <button class="btn btn-gold" onclick="goNext()">
           Let's go <i class="fas fa-arrow-right"></i>
         </button>
       </div>
     </div>
 
-    <!-- Step 2: Primary goal -->
-    <div class="step" id="step-2">
-      <div class="step-label">Step 2 of 5</div>
-      <div class="step-title">What's your #1 financial goal right now?</div>
-      <div class="step-sub">This shapes the advice Klyro AI gives you every day.</div>
-      <div class="option-grid single-col" id="goal-options">
-        <button class="option-card" data-val="save_more" onclick="selectOption(this, 'primaryGoal')">
-          <div class="opt-icon"><i class="fas fa-piggy-bank"></i></div> Save more each month
+    <!-- ══ Step 2: Primary goal ══ -->
+    <div class="ob-step" id="ob-step-2">
+      <span class="ob-emoji">🎯</span>
+      <div class="ob-eyebrow">Step 1 of 4 — Your Goal</div>
+      <div class="ob-title">What's your #1 financial goal?</div>
+      <div class="ob-sub">This shapes the daily tips Klyro AI sends your way.</div>
+      <div class="ob-options" id="goal-options">
+        <button class="ob-opt" data-val="save_more" onclick="pickOption(this,'primaryGoal')">
+          <div class="ob-opt-icon"><i class="fas fa-piggy-bank"></i></div>
+          Save more each month
+          <div class="ob-opt-check"><i class="fas fa-check"></i></div>
         </button>
-        <button class="option-card" data-val="track_spending" onclick="selectOption(this, 'primaryGoal')">
-          <div class="opt-icon"><i class="fas fa-receipt"></i></div> Understand where my money goes
+        <button class="ob-opt" data-val="track_spending" onclick="pickOption(this,'primaryGoal')">
+          <div class="ob-opt-icon"><i class="fas fa-receipt"></i></div>
+          Understand where my money goes
+          <div class="ob-opt-check"><i class="fas fa-check"></i></div>
         </button>
-        <button class="option-card" data-val="pay_debt" onclick="selectOption(this, 'primaryGoal')">
-          <div class="opt-icon"><i class="fas fa-credit-card"></i></div> Pay off debt faster
+        <button class="ob-opt" data-val="pay_debt" onclick="pickOption(this,'primaryGoal')">
+          <div class="ob-opt-icon"><i class="fas fa-credit-card"></i></div>
+          Pay off debt faster
+          <div class="ob-opt-check"><i class="fas fa-check"></i></div>
         </button>
-        <button class="option-card" data-val="build_wealth" onclick="selectOption(this, 'primaryGoal')">
-          <div class="opt-icon"><i class="fas fa-chart-line"></i></div> Build long-term wealth
+        <button class="ob-opt" data-val="build_wealth" onclick="pickOption(this,'primaryGoal')">
+          <div class="ob-opt-icon"><i class="fas fa-chart-line"></i></div>
+          Build long-term wealth
+          <div class="ob-opt-check"><i class="fas fa-check"></i></div>
         </button>
-        <button class="option-card" data-val="big_purchase" onclick="selectOption(this, 'primaryGoal')">
-          <div class="opt-icon"><i class="fas fa-house"></i></div> Save for a big purchase
+        <button class="ob-opt" data-val="big_purchase" onclick="pickOption(this,'primaryGoal')">
+          <div class="ob-opt-icon"><i class="fas fa-house"></i></div>
+          Save for a big purchase
+          <div class="ob-opt-check"><i class="fas fa-check"></i></div>
         </button>
-        <button class="option-card" data-val="emergency_fund" onclick="selectOption(this, 'primaryGoal')">
-          <div class="opt-icon"><i class="fas fa-shield-halved"></i></div> Build an emergency fund
+        <button class="ob-opt" data-val="emergency_fund" onclick="pickOption(this,'primaryGoal')">
+          <div class="ob-opt-icon"><i class="fas fa-shield-halved"></i></div>
+          Build an emergency fund
+          <div class="ob-opt-check"><i class="fas fa-check"></i></div>
         </button>
       </div>
-      <div class="step-nav">
-        <button class="btn-skip" onclick="prevStep()"><i class="fas fa-arrow-left"></i> Back</button>
-        <button class="btn btn-gold" onclick="nextStep()">Continue <i class="fas fa-arrow-right"></i></button>
+      <div class="ob-nav">
+        <button class="ob-back" onclick="goPrev()"><i class="fas fa-arrow-left"></i> Back</button>
+        <button class="btn btn-gold" onclick="goNext()">Continue <i class="fas fa-arrow-right"></i></button>
       </div>
     </div>
 
-    <!-- Step 3: Income range -->
-    <div class="step" id="step-3">
-      <div class="step-label">Step 3 of 5</div>
-      <div class="step-title">What's your approximate monthly income?</div>
-      <div class="step-sub">Used only to personalise your budget targets. We never store or share this.</div>
-      <div class="range-wrap">
-        <div class="range-display" id="income-display">$3,000</div>
-        <input type="range" id="income-slider" min="0" max="50000" step="500" value="3000"
-          oninput="updateIncomeDisplay(this.value)">
-        <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--text-dim);margin-top:6px;">
-          <span>$0</span><span>$25,000</span><span>$50,000+</span>
+    <!-- ══ Step 3: Monthly income ══ -->
+    <div class="ob-step" id="ob-step-3">
+      <span class="ob-emoji">💰</span>
+      <div class="ob-eyebrow">Step 2 of 4 — Income</div>
+      <div class="ob-title">What's your monthly income?</div>
+      <div class="ob-sub">Just a rough figure — used only to calibrate your budget targets. We never share this.</div>
+      <div class="ob-slider-wrap">
+        <div class="ob-slider-display" id="income-display">GH₵ 3,000</div>
+        <div class="ob-slider-label">Drag to set your approximate monthly take-home</div>
+        <input type="range" class="ob-range" id="income-slider" min="0" max="50000" step="500" value="3000"
+          oninput="onSliderMove(this.value)">
+        <div class="ob-range-labels">
+          <span>₵ 0</span><span>₵ 25,000</span><span>₵ 50,000+</span>
         </div>
       </div>
-      <div class="step-nav">
-        <button class="btn-skip" onclick="prevStep()"><i class="fas fa-arrow-left"></i> Back</button>
-        <button class="btn btn-gold" onclick="nextStep()">Continue <i class="fas fa-arrow-right"></i></button>
+      <div class="ob-nav">
+        <button class="ob-back" onclick="goPrev()"><i class="fas fa-arrow-left"></i> Back</button>
+        <button class="btn btn-gold" onclick="goNext()">Continue <i class="fas fa-arrow-right"></i></button>
       </div>
     </div>
 
-    <!-- Step 4: Spending habits -->
-    <div class="step" id="step-4">
-      <div class="step-label">Step 4 of 5</div>
-      <div class="step-title">How would you describe your spending habits?</div>
-      <div class="step-sub">Be honest — Klyro works best when it knows the real picture.</div>
-      <div class="option-grid single-col">
-        <button class="option-card" data-val="very_careful" onclick="selectOption(this, 'spendingHabit')">
-          <div class="opt-icon"><i class="fas fa-lock"></i></div> Very careful — I track everything
+    <!-- ══ Step 4: Spending habit ══ -->
+    <div class="ob-step" id="ob-step-4">
+      <span class="ob-emoji">🧠</span>
+      <div class="ob-eyebrow">Step 3 of 4 — Spending Style</div>
+      <div class="ob-title">How would you describe your spending?</div>
+      <div class="ob-sub">Be real with us — Klyro works better when it knows the honest picture. No judgment here.</div>
+      <div class="ob-options" id="habit-options">
+        <button class="ob-opt" data-val="very_careful" onclick="pickOption(this,'spendingHabit')">
+          <div class="ob-opt-icon"><i class="fas fa-lock"></i></div>
+          Very careful — I track everything
+          <div class="ob-opt-check"><i class="fas fa-check"></i></div>
         </button>
-        <button class="option-card" data-val="mostly_good" onclick="selectOption(this, 'spendingHabit')">
-          <div class="opt-icon"><i class="fas fa-thumbs-up"></i></div> Mostly good — I have a loose budget
+        <button class="ob-opt" data-val="mostly_good" onclick="pickOption(this,'spendingHabit')">
+          <div class="ob-opt-icon"><i class="fas fa-thumbs-up"></i></div>
+          Mostly good — loose budget
+          <div class="ob-opt-check"><i class="fas fa-check"></i></div>
         </button>
-        <button class="option-card" data-val="impulsive" onclick="selectOption(this, 'spendingHabit')">
-          <div class="opt-icon"><i class="fas fa-fire"></i></div> Impulsive — I spend first, think later
+        <button class="ob-opt" data-val="impulsive" onclick="pickOption(this,'spendingHabit')">
+          <div class="ob-opt-icon"><i class="fas fa-fire"></i></div>
+          Impulsive — spend first, think later
+          <div class="ob-opt-check"><i class="fas fa-check"></i></div>
         </button>
-        <button class="option-card" data-val="no_idea" onclick="selectOption(this, 'spendingHabit')">
-          <div class="opt-icon"><i class="fas fa-question"></i></div> Honestly, I have no idea
+        <button class="ob-opt" data-val="no_idea" onclick="pickOption(this,'spendingHabit')">
+          <div class="ob-opt-icon"><i class="fas fa-question"></i></div>
+          Honestly, I have no idea
+          <div class="ob-opt-check"><i class="fas fa-check"></i></div>
         </button>
       </div>
-      <div class="step-nav">
-        <button class="btn-skip" onclick="prevStep()"><i class="fas fa-arrow-left"></i> Back</button>
-        <button class="btn btn-gold" onclick="nextStep()">Continue <i class="fas fa-arrow-right"></i></button>
+      <div class="ob-nav">
+        <button class="ob-back" onclick="goPrev()"><i class="fas fa-arrow-left"></i> Back</button>
+        <button class="btn btn-gold" onclick="goNext()">Continue <i class="fas fa-arrow-right"></i></button>
       </div>
     </div>
 
-    <!-- Step 5: Currency -->
-    <div class="step" id="step-5">
-      <div class="step-label">Step 5 of 5</div>
-      <div class="step-title">Choose your currency</div>
-      <div class="step-sub">This will be used across the entire app. You can change it any time in Settings.</div>
-      <div class="form-group" style="margin-bottom:28px;">
-        <select class="form-input" id="ob-currency" style="font-size:1rem;">
-        </select>
+    <!-- ══ Step 5: Currency ══ -->
+    <div class="ob-step" id="ob-step-5">
+      <span class="ob-emoji">🌍</span>
+      <div class="ob-eyebrow">Step 4 of 4 — Currency</div>
+      <div class="ob-title">Pick your currency</div>
+      <div class="ob-sub">Used everywhere in the app. You can always change it in Settings later.</div>
+      <div class="ob-currency-search">
+        <i class="fas fa-search"></i>
+        <input type="text" id="currency-search" placeholder="Search currency…" oninput="filterCurrencies(this.value)" autocomplete="off">
       </div>
-      <div class="step-nav">
-        <button class="btn-skip" onclick="prevStep()"><i class="fas fa-arrow-left"></i> Back</button>
-        <button class="btn btn-gold" onclick="finishOnboarding()">
+      <div class="ob-currency-list" id="currency-list"></div>
+      <div class="ob-nav">
+        <button class="ob-back" onclick="goPrev()"><i class="fas fa-arrow-left"></i> Back</button>
+        <button class="btn btn-gold" onclick="goNext()">
+          Almost there <i class="fas fa-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- ══ Step 6: Done ══ -->
+    <div class="ob-step" id="ob-step-6">
+      <div class="ob-confetti-wrap">
+        <span class="ob-big-emoji" id="finish-emoji">🎉</span>
+        <div class="ob-eyebrow" style="justify-content:center;display:flex;">You're all set!</div>
+        <div class="ob-title" style="text-align:center;" id="finish-title">Let's build your future, together.</div>
+        <div class="ob-sub" style="text-align:center;">Here's a quick look at what you told us — Klyro will use this to power your dashboard.</div>
+        <div class="ob-summary" id="ob-summary"></div>
+        <button class="btn btn-gold" style="width:100%;justify-content:center;" onclick="finishOnboarding()" id="finish-btn">
           <i class="fas fa-rocket"></i> Take me to my dashboard
         </button>
       </div>
     </div>
 
-  </div>
-</div>
+  </div><!-- /ob-card -->
+</div><!-- /ob-root -->
 
 <div id="toast" class="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="app.js"></script>
 <script>
-  Auth.require();
+// ─── DO NOT call Auth.require() here — it redirects unboarded users to
+// onboarding.html, which would create an infinite reload loop.
+// Instead we do a lightweight session check just to redirect if not logged
+// in at all, and personalise the welcome copy once the session resolves. ───
 
-  const TOTAL_STEPS = 5;
-  let currentStep = 1;
-  const answers = {};
+const TOTAL_STEPS = 6;          // welcome + 4 real steps + finish
+let currentStep = 1;
+let goingBack   = false;
+const answers   = { currencyCode: 'GHS' };   // default to Ghana Cedi
 
-  // Populate currency select
-  (function() {
-    const sel = document.getElementById('ob-currency');
-    CURRENCIES.forEach(c => {
-      const opt = document.createElement('option');
-      opt.value = c.code;
-      opt.textContent = `${c.symbol}  ${c.code} — ${c.name}`;
-      if (c.code === 'USD') opt.selected = true;
-      sel.appendChild(opt);
+// ── Dots ────────────────────────────────────────────────────────────────────
+function renderDots() {
+  const dots = document.getElementById('ob-dots');
+  // 4 real data steps (steps 2-5); welcome and finish don't count
+  const dataSteps = 4;
+  const activeIdx = Math.min(Math.max(currentStep - 2, 0), dataSteps - 1);
+  dots.innerHTML = Array.from({ length: dataSteps }, (_, i) => {
+    const cls = currentStep <= 1 ? '' :
+                i < activeIdx  ? 'done' :
+                i === activeIdx ? 'active' : '';
+    const w = cls === 'active' ? '28px' : '10px';
+    return `<div class="ob-dot ${cls}" style="width:${w};"></div>`;
+  }).join('');
+}
+
+// ── Navigation ───────────────────────────────────────────────────────────────
+function goNext() {
+  if (currentStep >= TOTAL_STEPS) return;
+  if (currentStep === TOTAL_STEPS - 1) buildSummary(); // before showing finish
+  goingBack = false;
+  animateTransition(currentStep, currentStep + 1);
+}
+function goPrev() {
+  if (currentStep <= 1) return;
+  goingBack = true;
+  animateTransition(currentStep, currentStep - 1);
+}
+
+function animateTransition(from, to) {
+  const fromEl = document.getElementById('ob-step-' + from);
+  const toEl   = document.getElementById('ob-step-' + to);
+  fromEl.style.animation = 'none';
+  fromEl.style.opacity = '0';
+  fromEl.style.transform = goingBack ? 'translateX(28px)' : 'translateX(-24px)';
+  fromEl.style.transition = 'opacity 0.22s ease, transform 0.22s ease';
+  setTimeout(() => {
+    fromEl.classList.remove('active');
+    fromEl.style.cssText = '';
+    currentStep = to;
+    toEl.classList.add('active');
+    if (goingBack) toEl.classList.add('going-back');
+    else toEl.classList.remove('going-back');
+    renderDots();
+  }, 220);
+}
+
+// ── Option picking ───────────────────────────────────────────────────────────
+function pickOption(el, key) {
+  el.closest('.ob-options').querySelectorAll('.ob-opt').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  answers[key] = el.dataset.val;
+}
+
+// ── Income slider ────────────────────────────────────────────────────────────
+function onSliderMove(val) {
+  const cur = CURRENCIES.find(c => c.code === answers.currencyCode) || { symbol: '₵', code: 'GHS' };
+  const n   = parseInt(val);
+  answers.monthlyIncome = n;
+  const display = n >= 50000
+    ? `${cur.symbol} 50,000+`
+    : `${cur.symbol} ${n.toLocaleString()}`;
+  document.getElementById('income-display').textContent = display;
+}
+
+// ── Currency list ────────────────────────────────────────────────────────────
+// Prioritise West African + popular currencies at the top
+const PRIORITY_CODES = ['GHS','NGN','XOF','KES','ZAR','USD','EUR','GBP','CAD','AUD'];
+
+function buildCurrencyList(filter) {
+  const q = (filter || '').toLowerCase();
+  const list = document.getElementById('currency-list');
+  const sorted = [
+    ...CURRENCIES.filter(c => PRIORITY_CODES.includes(c.code)),
+    ...CURRENCIES.filter(c => !PRIORITY_CODES.includes(c.code)),
+  ];
+  const filtered = q
+    ? sorted.filter(c => c.code.toLowerCase().includes(q) || c.name.toLowerCase().includes(q) || c.symbol.toLowerCase().includes(q))
+    : sorted;
+
+  list.innerHTML = filtered.map(c => `
+    <div class="ob-currency-item ${c.code === answers.currencyCode ? 'selected' : ''}"
+         data-code="${c.code}" onclick="selectCurrency('${c.code}')">
+      <div class="ob-currency-sym">${c.symbol}</div>
+      <div class="ob-currency-info">
+        <div class="ob-currency-code">${c.code}</div>
+        <div class="ob-currency-name">${c.name}</div>
+      </div>
+      <i class="fas fa-check ob-currency-tick"></i>
+    </div>`).join('');
+}
+
+function filterCurrencies(q) { buildCurrencyList(q); }
+
+function selectCurrency(code) {
+  answers.currencyCode = code;
+  document.querySelectorAll('.ob-currency-item').forEach(el => {
+    el.classList.toggle('selected', el.dataset.code === code);
+  });
+  // Update slider display to use new currency symbol
+  onSliderMove(document.getElementById('income-slider').value);
+}
+
+// ── Summary card ─────────────────────────────────────────────────────────────
+const GOAL_LABELS = {
+  save_more:       '💰 Save more each month',
+  track_spending:  '📊 Track my spending',
+  pay_debt:        '💳 Pay off debt',
+  build_wealth:    '📈 Build long-term wealth',
+  big_purchase:    '🏠 Save for a big purchase',
+  emergency_fund:  '🛡️ Build an emergency fund',
+};
+const HABIT_LABELS = {
+  very_careful: '🔒 Very careful tracker',
+  mostly_good:  '👍 Mostly on budget',
+  impulsive:    '🔥 Impulsive spender',
+  no_idea:      '❓ Not sure yet',
+};
+
+function buildSummary() {
+  const cur = CURRENCIES.find(c => c.code === answers.currencyCode) || { symbol: '₵', code: 'GHS', name: 'Ghana Cedi' };
+  const income = answers.monthlyIncome >= 50000
+    ? `${cur.symbol} 50,000+`
+    : `${cur.symbol} ${(answers.monthlyIncome || 0).toLocaleString()}`;
+
+  document.getElementById('ob-summary').innerHTML = `
+    <div class="ob-summary-row">
+      <i class="fas fa-bullseye"></i> Primary Goal
+      <span class="ob-summary-val">${GOAL_LABELS[answers.primaryGoal] || '—'}</span>
+    </div>
+    <div class="ob-summary-row">
+      <i class="fas fa-wallet"></i> Monthly Income
+      <span class="ob-summary-val">${income} / mo</span>
+    </div>
+    <div class="ob-summary-row">
+      <i class="fas fa-brain"></i> Spending Style
+      <span class="ob-summary-val">${HABIT_LABELS[answers.spendingHabit] || '—'}</span>
+    </div>
+    <div class="ob-summary-row">
+      <i class="fas fa-globe"></i> Currency
+      <span class="ob-summary-val">${cur.symbol} ${cur.code} — ${cur.name}</span>
+    </div>`;
+
+  // Personalise finish title
+  const firstName = (_sessionCache?.user_metadata?.name || '').split(' ')[0];
+  if (firstName) {
+    document.getElementById('finish-title').textContent = `Let's build your future, ${firstName}.`;
+  }
+
+  launchConfetti();
+}
+
+// ── Confetti burst ────────────────────────────────────────────────────────────
+function launchConfetti() {
+  const emojis = ['🎉','✨','💰','🌟','🎊','💎','🚀','⭐'];
+  for (let i = 0; i < 18; i++) {
+    setTimeout(() => {
+      const p = document.createElement('div');
+      p.className = 'ob-particle';
+      p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      p.style.cssText = `
+        left: ${Math.random() * 100}vw;
+        top: -30px;
+        animation-duration: ${2.2 + Math.random() * 2.5}s;
+        animation-delay: ${Math.random() * 0.6}s;
+        font-size: ${0.9 + Math.random() * 0.9}rem;
+        opacity: ${0.7 + Math.random() * 0.3};
+      `;
+      document.body.appendChild(p);
+      p.addEventListener('animationend', () => p.remove());
+    }, i * 60);
+  }
+}
+
+// ── Finish ───────────────────────────────────────────────────────────────────
+async function finishOnboarding() {
+  const btn = document.getElementById('finish-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
+
+  // Wait for _initData to have run (session may have resolved by now)
+  if (!_cache.ready) {
+    await new Promise(r => document.addEventListener('klyro:ready', r, { once: true }));
+  }
+
+  const s = Store.getSettings();
+  s.currencyCode  = answers.currencyCode;
+  s.primaryGoal   = answers.primaryGoal   || null;
+  s.spendingHabit = answers.spendingHabit || null;
+  s.monthlyIncome = answers.monthlyIncome || null;
+  s.incomeTarget  = answers.monthlyIncome || null;
+  s.onboarded     = true;
+  Store.saveSettings(s);
+
+  if (_sb) {
+    await _sb.auth.updateUser({ data: { onboarded: true } });
+    if (_sessionCache?.user_metadata) _sessionCache.user_metadata.onboarded = true;
+  }
+
+  showToast('All set! Welcome to Klyro 🎉');
+  setTimeout(() => { window.location.href = 'pricing.html'; }, 900);
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+(function boot() {
+  // 1. Lightweight session guard — redirect to login if no session at all,
+  //    but NEVER redirect to onboarding (that would cause the refresh loop).
+  if (typeof _sb !== 'undefined' && _sb) {
+    _sb.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        window.location.href = 'login.html';
+        return;
+      }
+      // Cache session so Auth.getUser() works
+      _sessionCache = session.user;
+      _cache.userId = session.user.id;
+
+      // Personalise greeting
+      const name = session.user.user_metadata?.name;
+      if (name) {
+        const first = name.split(' ')[0];
+        document.getElementById('welcome-name').textContent = `Hey, ${first}! 👋`;
+        document.getElementById('ob-wave').textContent = '🎊';
+      }
+
+      // Kick off _initData in the background so Store is ready for finishOnboarding.
+      // We intentionally do NOT await it here — the user has 4 steps to fill
+      // before finishOnboarding runs, so it'll be done long before then.
+      _initData();
     });
-  })();
-
-  // Personalise welcome
-  (function() {
-    const user = Auth.getUser();
-    if (user?.name) {
-      document.getElementById('welcome-name').textContent =
-        `Welcome, ${user.name.split(' ')[0]}! 🎉`;
-    }
-  })();
-
-  function updateProgress() {
-    const pct = ((currentStep - 1) / TOTAL_STEPS) * 100;
-    document.getElementById('progress').style.width = pct + '%';
   }
 
-  function selectOption(el, key) {
-    el.closest('.option-grid').querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
-    el.classList.add('selected');
-    answers[key] = el.dataset.val;
-  }
-
-  function updateIncomeDisplay(val) {
-    const cur = CURRENCIES.find(c => c.code === (Store.getSettings().currencyCode || 'GHS')) || CURRENCIES[0];
-    const n = parseInt(val);
-    document.getElementById('income-display').textContent =
-      n >= 50000 ? `${cur.symbol}50,000+` : `${cur.symbol}${n.toLocaleString()}`;
-    answers.monthlyIncome = n;
-  }
-
-  function nextStep() {
-    if (currentStep < TOTAL_STEPS) {
-      document.getElementById('step-' + currentStep).classList.remove('active');
-      currentStep++;
-      document.getElementById('step-' + currentStep).classList.add('active');
-      updateProgress();
-    }
-  }
-
-  function prevStep() {
-    if (currentStep > 1) {
-      document.getElementById('step-' + currentStep).classList.remove('active');
-      currentStep--;
-      document.getElementById('step-' + currentStep).classList.add('active');
-      updateProgress();
-    }
-  }
-
-  async function finishOnboarding() {
-    // Save answers into user settings
-    const s = Store.getSettings();
-    s.currencyCode   = document.getElementById('ob-currency').value;
-    s.primaryGoal    = answers.primaryGoal    || null;
-    s.spendingHabit  = answers.spendingHabit  || null;
-    s.monthlyIncome  = answers.monthlyIncome  || null;
-    s.incomeTarget   = answers.monthlyIncome  || null;
-    s.onboarded      = true;
-    Store.saveSettings(s);
-
-    // Mark user as onboarded in Supabase metadata
-    if (_sb) {
-      await _sb.auth.updateUser({ data: { onboarded: true } });
-      if (_sessionCache?.user_metadata) _sessionCache.user_metadata.onboarded = true;
-    }
-
-    showToast('All set! Welcome to Klyro 🎉');
-    setTimeout(() => window.location.href = 'pricing.html', 900);
-  }
+  // 2. Render initial dots + currency list
+  renderDots();
+  buildCurrencyList();
+  // Initialise slider display with default GHS
+  onSliderMove(document.getElementById('income-slider').value);
+})();
 </script>
 </body>
 </html>
