@@ -32,6 +32,31 @@ const _cache = {
   userId:       null,
 };
 
+/* ── Write queue — captures upserts/deletes that fire before _initData
+   completes (i.e. before _cache.userId is populated) and replays them
+   once the user id is known. This ensures no user data is silently lost
+   when a write happens during the auth/data-load window. ────────────── */
+const _writeQueue = [];
+let   _writeQueueFlushing = false;
+
+async function _flushWriteQueue() {
+  if (_writeQueueFlushing || !_cache.userId || !_sb) return;
+  _writeQueueFlushing = true;
+  while (_writeQueue.length) {
+    const op = _writeQueue.shift();
+    try {
+      if (op.type === 'upsert') {
+        await _sb.from(op.table).upsert({ ...op.row, user_id: _cache.userId }, { onConflict: 'id' });
+      } else if (op.type === 'delete') {
+        await _sb.from(op.table).delete().eq('id', op.id);
+      }
+    } catch (e) {
+      console.error('[Klyro] write-queue replay', op.table, e.message);
+    }
+  }
+  _writeQueueFlushing = false;
+}
+
 /* ── Cross-tab data sync (BroadcastChannel) ─────────────────────────────────
    When any tab calls a Store mutation (addTransaction, deleteTransaction, etc.)
    it broadcasts a lightweight message.  Every other open Klyro tab receives it,
@@ -89,7 +114,7 @@ if (_sb) {
       _initData().then(() => {
         // Route new OAuth users (not yet onboarded) to onboarding.
         const page = window.location.pathname.split('/').pop() || '';
-        const onProtectedPage = !['login.html','signup.html','index.html','onboarding.html','pricing.html',''].includes(page);
+        const onProtectedPage = !['login.html','signup.html','index.html',''].includes(page);
         if (onProtectedPage && !session.user.user_metadata?.onboarded) {
           window.location.replace('onboarding.html');
         }
@@ -104,11 +129,20 @@ function _genId() {
 }
 async function _upsert(table, row) {
   if (!_sb) return;
-  const { error } = await _sb.from(table).upsert(row, { onConflict: 'id' });
+  if (!_cache.userId) {
+    // Auth hasn't resolved yet — queue for replay once userId is set
+    _writeQueue.push({ type: 'upsert', table, row: { ...row } });
+    return;
+  }
+  const { error } = await _sb.from(table).upsert({ ...row, user_id: _cache.userId }, { onConflict: 'id' });
   if (error) console.error('[Klyro] upsert', table, error.message);
 }
 async function _sbDelete(table, id) {
   if (!_sb) return;
+  if (!_cache.userId) {
+    _writeQueue.push({ type: 'delete', table, id });
+    return;
+  }
   const { error } = await _sb.from(table).delete().eq('id', id);
   if (error) console.error('[Klyro] delete', table, error.message);
 }
@@ -140,6 +174,8 @@ async function _initData() {
   } catch {}
   _cache.ready = true;
   _initDataSync();   // start listening for cross-tab data changes
+  await _flushWriteQueue();  // replay any writes that arrived before userId was set
+  migrateFromLocalStorage(); // one-shot: move any old localStorage data to Supabase
   document.dispatchEvent(new Event('klyro:ready'));
 }
 
@@ -1072,10 +1108,8 @@ const Store = {
   saveTransactions(txns) {
     _cache.transactions = txns;
     if (!_cache.userId) return;
-    txns.forEach(t => {
-      if (!t.user_id) t.user_id = _cache.userId;
-      _upsert('transactions', t);
-    });
+    const uid = _cache.userId;
+    txns.forEach(t => _upsert('transactions', { ...t, user_id: uid }));
   },
 
   addTransaction(txn) {
@@ -1138,7 +1172,8 @@ const Store = {
   saveGoals(goals) {
     _cache.goals = goals;
     if (!_cache.userId) return;
-    goals.forEach(g => { if (!g.user_id) g.user_id = _cache.userId; _upsert('goals', g); });
+    const uid = _cache.userId;
+    goals.forEach(g => _upsert('goals', { ...g, user_id: uid }));
   },
 
   addGoal(goal) {
