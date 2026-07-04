@@ -38,22 +38,230 @@ const _cache = {
    when a write happens during the auth/data-load window. ────────────── */
 const _writeQueue = [];
 let   _writeQueueFlushing = false;
+let   _remoteSyncTimer = null;
+
+const _PERSISTED_TABLES = ['transactions', 'settings', 'goals', 'invoices', 'receipts'];
+
+function _storageUserId() {
+  const authUser = (typeof Auth !== 'undefined') ? Auth.getUser?.() : null;
+  return _cache.userId || authUser?.id || 'anonymous';
+}
+
+function _localKey(table) {
+  return `klyro_backup_${_storageUserId()}_${table}`;
+}
+
+function _pendingKey() {
+  return `klyro_pending_sync_${_storageUserId()}`;
+}
+
+function _readLocal(table, fallback) {
+  try {
+    const raw = localStorage.getItem(_localKey(table));
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function _writeLocal(table, value) {
+  try {
+    localStorage.setItem(_localKey(table), JSON.stringify(value));
+  } catch (e) {
+    console.warn('[Klyro] local backup failed', table, e.message);
+  }
+}
+
+function _readPendingSync() {
+  try {
+    return JSON.parse(localStorage.getItem(_pendingKey()) || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function _writePendingSync(list) {
+  try {
+    localStorage.setItem(_pendingKey(), JSON.stringify(list));
+  } catch (e) {
+    console.warn('[Klyro] pending sync backup failed', e.message);
+  }
+}
+
+function _queuePendingSync(op) {
+  const list = _readPendingSync();
+  const id = op.row?.id || op.id || 'settings';
+  const deduped = list.filter(x => !(x.table === op.table && (x.row?.id || x.id || 'settings') === id));
+  deduped.push({ ...op, queuedAt: new Date().toISOString() });
+  _writePendingSync(deduped);
+}
+
+function _pendingIds(table, type) {
+  return new Set(_readPendingSync()
+    .filter(op => op.table === table && op.type === type)
+    .map(op => op.row?.id || op.id || 'settings'));
+}
+
+function _mergeRows(remoteRows, localRows, table) {
+  const remote = Array.isArray(remoteRows) ? remoteRows : [];
+  const local = Array.isArray(localRows) ? localRows : [];
+  const pendingUpserts = _pendingIds(table, 'upsert');
+  const pendingDeletes = _pendingIds(table, 'delete');
+  const byId = new Map();
+
+  local.forEach(row => {
+    if (row?.id && !pendingDeletes.has(row.id)) byId.set(row.id, row);
+  });
+  remote.forEach(row => {
+    if (!row?.id || pendingDeletes.has(row.id)) return;
+    if (!pendingUpserts.has(row.id)) byId.set(row.id, row);
+  });
+
+  return Array.from(byId.values());
+}
+
+function _mergeSettings(remoteSettings, localSettings) {
+  if (_pendingIds('settings', 'upsert').has('settings')) {
+    return { ...(remoteSettings || {}), ...(localSettings || {}) };
+  }
+  return { ...(localSettings || {}), ...(remoteSettings || {}) };
+}
+
+function _stripUserId(row) {
+  if (!row || typeof row !== 'object') return row;
+  const clean = { ...row };
+  delete clean.user_id;
+  return clean;
+}
+
+function _stripUserIds(rows) {
+  return Array.isArray(rows) ? rows.map(_stripUserId) : [];
+}
+
+function _persistCache(table) {
+  if (!_PERSISTED_TABLES.includes(table)) return;
+  _writeLocal(table, _cache[table] || (table === 'settings' ? {} : []));
+}
+
+function _persistAllCache() {
+  _PERSISTED_TABLES.forEach(_persistCache);
+}
+
+function _adoptAnonymousLocalData() {
+  if (!_cache.userId || _cache.userId === 'anonymous') return;
+  const currentUid = _cache.userId;
+  const oldUid = 'anonymous';
+
+  _PERSISTED_TABLES.forEach(table => {
+    try {
+      const oldRaw = localStorage.getItem(`klyro_backup_${oldUid}_${table}`);
+      if (!oldRaw) return;
+      const oldData = JSON.parse(oldRaw);
+      const newRaw = localStorage.getItem(`klyro_backup_${currentUid}_${table}`);
+      const newData = newRaw ? JSON.parse(newRaw) : (table === 'settings' ? {} : []);
+      const merged = table === 'settings'
+        ? _mergeSettings(newData, oldData)
+        : _mergeRows(newData, oldData, table);
+      localStorage.setItem(`klyro_backup_${currentUid}_${table}`, JSON.stringify(merged));
+      localStorage.removeItem(`klyro_backup_${oldUid}_${table}`);
+    } catch {}
+  });
+
+  try {
+    const oldRaw = localStorage.getItem(`klyro_pending_sync_${oldUid}`);
+    if (oldRaw) {
+      const oldOps = JSON.parse(oldRaw);
+      const newOps = _readPendingSync();
+      _writePendingSync([...newOps, ...oldOps]);
+      localStorage.removeItem(`klyro_pending_sync_${oldUid}`);
+    }
+  } catch {}
+}
+
+async function _syncCacheToSupabase() {
+  if (!_cache.userId || !_sb) return;
+  const uid = _cache.userId;
+  const ops = [
+    ...(_cache.transactions || []).map(row => ({ table: 'transactions', row })),
+    ...(_cache.goals || []).map(row => ({ table: 'goals', row })),
+    ...(_cache.invoices || []).map(row => ({ table: 'invoices', row })),
+    ...(_cache.receipts || []).map(row => ({ table: 'receipts', row })),
+  ];
+  if (_cache.settings && Object.keys(_cache.settings).length) {
+    ops.push({ table: 'settings', row: _cache.settings });
+  }
+
+  for (const op of ops) {
+    await _upsert(op.table, { ...op.row, user_id: uid });
+  }
+}
+
+async function _loadRemoteData(uid) {
+  const [txRes, stRes, goRes, invRes, recRes] = await Promise.all([
+    _sb.from('transactions').select('*').eq('user_id', uid).order('date', { ascending: false }),
+    _sb.from('settings').select('*').eq('user_id', uid).maybeSingle(),
+    _sb.from('goals').select('*').eq('user_id', uid),
+    _sb.from('invoices').select('*').eq('user_id', uid).order('created_at', { ascending: false }),
+    _sb.from('receipts').select('*').eq('user_id', uid).order('created_at', { ascending: false }),
+  ]);
+
+  return {
+    transactions: _stripUserIds(txRes.data || []),
+    settings: _stripUserId(stRes.data || {}) || {},
+    goals: _stripUserIds(goRes.data || []),
+    invoices: _stripUserIds(invRes.data || []),
+    receipts: _stripUserIds(recRes.data || []),
+  };
+}
+
+async function _refreshCacheFromSupabase({ notify = true } = {}) {
+  if (!_cache.userId || !_sb) return false;
+  const uid = _cache.userId;
+  try {
+    const remote = await _loadRemoteData(uid);
+    _cache.transactions = _mergeRows(remote.transactions, _readLocal('transactions', _cache.transactions || []), 'transactions');
+    _cache.goals        = _mergeRows(remote.goals, _readLocal('goals', _cache.goals || []), 'goals');
+    _cache.invoices     = _mergeRows(remote.invoices, _readLocal('invoices', _cache.invoices || []), 'invoices');
+    _cache.receipts     = _mergeRows(remote.receipts, _readLocal('receipts', _cache.receipts || []), 'receipts');
+    _cache.settings     = _mergeSettings(remote.settings, _readLocal('settings', _cache.settings || {}));
+    _persistAllCache();
+    if (notify) document.dispatchEvent(new CustomEvent('klyro:data-changed', { detail: { type: 'all', source: 'remote-sync' } }));
+    return true;
+  } catch (e) {
+    console.warn('[Klyro] remote sync failed', e.message);
+    return false;
+  }
+}
+
+function _startRemoteSync() {
+  if (_remoteSyncTimer || !_cache.userId || !_sb) return;
+  _remoteSyncTimer = setInterval(() => {
+    if (!document.hidden) _refreshCacheFromSupabase().then(() => _flushWriteQueue()).catch(() => {});
+  }, 30000);
+}
 
 async function _flushWriteQueue() {
   if (_writeQueueFlushing || !_cache.userId || !_sb) return;
   _writeQueueFlushing = true;
+  const pending = _readPendingSync();
+  _writePendingSync([]);
+  _writeQueue.push(...pending);
+  const failed = [];
+
   while (_writeQueue.length) {
     const op = _writeQueue.shift();
     try {
-      if (op.type === 'upsert') {
-        await _sb.from(op.table).upsert({ ...op.row, user_id: _cache.userId }, { onConflict: 'id' });
-      } else if (op.type === 'delete') {
-        await _sb.from(op.table).delete().eq('id', op.id);
-      }
+	      if (op.type === 'upsert') {
+	        await _sb.from(op.table).upsert({ ...op.row, user_id: _cache.userId }, { onConflict: 'id' });
+	      } else if (op.type === 'delete') {
+	        await _sb.from(op.table).delete().eq('id', op.id).eq('user_id', _cache.userId);
+	      }
     } catch (e) {
       console.error('[Klyro] write-queue replay', op.table, e.message);
+      failed.push(op);
     }
   }
+  if (failed.length) _writePendingSync(failed);
   _writeQueueFlushing = false;
 }
 
@@ -92,9 +300,27 @@ function _initDataSync() {
         const { data } = await _sb.from('settings').select('*').eq('user_id', uid).maybeSingle();
         if (data) { const raw = { ...data }; delete raw.user_id; _cache.settings = raw; }
       }
+      if (t === 'invoices' || t === 'all') {
+        const { data } = await _sb.from('invoices').select('*').eq('user_id', uid).order('created_at', { ascending: false });
+        if (data) _cache.invoices = data;
+      }
+      if (t === 'receipts' || t === 'all') {
+        const { data } = await _sb.from('receipts').select('*').eq('user_id', uid).order('created_at', { ascending: false });
+        if (data) _cache.receipts = data;
+      }
+      _persistAllCache();
     } catch {}
     document.dispatchEvent(new CustomEvent('klyro:data-changed', { detail: evt.data }));
   };
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => {
+    _flushWriteQueue().then(() => _refreshCacheFromSupabase()).then(() => _syncCacheToSupabase()).catch(() => {});
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) _refreshCacheFromSupabase().then(() => _flushWriteQueue()).catch(() => {});
+  });
 }
 
 /* ── Session cache for synchronous Auth.getUser() calls ────────────── */
@@ -103,9 +329,13 @@ if (_sb) {
   _sb.auth.getSession().then(({ data: { session } }) => {
     if (session) { _sessionCache = session.user; _cache.userId = session.user.id; }
   });
-  _sb.auth.onAuthStateChange((event, session) => {
-    _sessionCache = session?.user || null;
-    _cache.userId = session?.user?.id || null;
+	  _sb.auth.onAuthStateChange((event, session) => {
+	    _sessionCache = session?.user || null;
+	    _cache.userId = session?.user?.id || null;
+	    if (!session?.user && _remoteSyncTimer) {
+	      clearInterval(_remoteSyncTimer);
+	      _remoteSyncTimer = null;
+	    }
 
     // SIGNED_IN fires when an OAuth callback lands (detectSessionInUrl picks it up).
     // We need to boot _initData here so protected pages get their data even when
@@ -128,44 +358,52 @@ function _genId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 async function _upsert(table, row) {
-  if (!_sb) return;
+  if (!_sb) {
+    _queuePendingSync({ type: 'upsert', table, row: { ...row } });
+    return;
+  }
   if (!_cache.userId) {
     // Auth hasn't resolved yet — queue for replay once userId is set
     _writeQueue.push({ type: 'upsert', table, row: { ...row } });
+    _queuePendingSync({ type: 'upsert', table, row: { ...row } });
     return;
   }
   const { error } = await _sb.from(table).upsert({ ...row, user_id: _cache.userId }, { onConflict: 'id' });
-  if (error) console.error('[Klyro] upsert', table, error.message);
+  if (error) {
+    console.error('[Klyro] upsert', table, error.message);
+    _queuePendingSync({ type: 'upsert', table, row: { ...row } });
+  }
 }
 async function _sbDelete(table, id) {
-  if (!_sb) return;
-  if (!_cache.userId) {
-    _writeQueue.push({ type: 'delete', table, id });
+  if (!_sb) {
+    _queuePendingSync({ type: 'delete', table, id });
     return;
   }
-  const { error } = await _sb.from(table).delete().eq('id', id);
-  if (error) console.error('[Klyro] delete', table, error.message);
+  if (!_cache.userId) {
+    _writeQueue.push({ type: 'delete', table, id });
+    _queuePendingSync({ type: 'delete', table, id });
+    return;
+  }
+  const { error } = await _sb.from(table).delete().eq('id', id).eq('user_id', _cache.userId);
+  if (error) {
+    console.error('[Klyro] delete', table, error.message);
+    _queuePendingSync({ type: 'delete', table, id });
+  }
 }
 
 /* ── Load all user data into cache (called after auth) ─────────────── */
 async function _initData() {
   if (!_cache.userId || !_sb) return;
-  const uid = _cache.userId;
-  const [txRes, stRes, goRes, invRes, recRes] = await Promise.all([
-    _sb.from('transactions').select('*').eq('user_id', uid).order('date', { ascending: false }),
-    _sb.from('settings').select('*').eq('user_id', uid).maybeSingle(),
-    _sb.from('goals').select('*').eq('user_id', uid),
-    _sb.from('invoices').select('*').eq('user_id', uid).order('created_at', { ascending: false }),
-    _sb.from('receipts').select('*').eq('user_id', uid).order('created_at', { ascending: false }),
-  ]);
-  _cache.transactions = txRes.data  || [];
-  _cache.goals        = goRes.data  || [];
-  _cache.invoices     = invRes.data || [];
-  _cache.receipts     = recRes.data || [];
-  // Expose settings without internal user_id field
-  const raw = stRes.data || {};
-  delete raw.user_id;
-  _cache.settings = raw;
+  _adoptAnonymousLocalData();
+  const loaded = await _refreshCacheFromSupabase({ notify: false });
+  if (!loaded) {
+    _cache.transactions = _readLocal('transactions', []);
+    _cache.settings     = _readLocal('settings', {});
+    _cache.goals        = _readLocal('goals', []);
+    _cache.invoices     = _readLocal('invoices', []);
+    _cache.receipts     = _readLocal('receipts', []);
+  }
+  _persistAllCache();
   // Mirror plan to localStorage so PlanGate.currentPlan() works synchronously
   // on the next page load (before klyro:ready fires).
   try {
@@ -174,7 +412,9 @@ async function _initData() {
   } catch {}
   _cache.ready = true;
   _initDataSync();   // start listening for cross-tab data changes
+  _startRemoteSync(); // keep multiple logged-in devices converged
   await _flushWriteQueue();  // replay any writes that arrived before userId was set
+  await _syncCacheToSupabase(); // upload device-only records for same-account sync
   migrateFromLocalStorage(); // one-shot: move any old localStorage data to Supabase
   document.dispatchEvent(new Event('klyro:ready'));
 }
@@ -1105,12 +1345,12 @@ const Store = {
   /* ── Transactions ─────────────────────────────────────────────────── */
   getTransactions() { return _cache.transactions || []; },
 
-  saveTransactions(txns) {
-    _cache.transactions = txns;
-    if (!_cache.userId) return;
-    const uid = _cache.userId;
-    txns.forEach(t => _upsert('transactions', { ...t, user_id: uid }));
-  },
+	  saveTransactions(txns) {
+	    _cache.transactions = txns;
+	    _persistCache('transactions');
+	    const uid = _cache.userId;
+	    txns.forEach(t => _upsert('transactions', { ...t, user_id: uid }));
+	  },
 
   addTransaction(txn) {
     const limitCheck = PlanGate.canAddTransaction();
@@ -1123,9 +1363,10 @@ const Store = {
     txn.date             = txn.date || new Date().toISOString().split('T')[0];
     txn.originalCurrency = txn.originalCurrency || getCurrency().code;
     txn.created_at       = new Date().toISOString();
-    if (_cache.transactions === null) _cache.transactions = [];
-    _cache.transactions.unshift(txn);
-    if (_cache.userId) _upsert('transactions', { ...txn, user_id: _cache.userId });
+	    if (_cache.transactions === null) _cache.transactions = [];
+	    _cache.transactions.unshift(txn);
+	    _persistCache('transactions');
+	    _upsert('transactions', { ...txn, user_id: _cache.userId });
     _broadcastChange('transactions');
     MakeWebhook.send('transaction.added', {
       type: txn.type, amount: txn.amount, description: txn.description,
@@ -1134,18 +1375,21 @@ const Store = {
     return txn;
   },
 
-  deleteTransaction(id) {
-    _cache.transactions = (_cache.transactions || []).filter(t => t.id !== id);
-    _sbDelete('transactions', id);
+	  deleteTransaction(id) {
+	    _cache.transactions = (_cache.transactions || []).filter(t => t.id !== id);
+	    _persistCache('transactions');
+	    _sbDelete('transactions', id);
     _broadcastChange('transactions');
   },
 
   updateTransaction(id, fields) {
     const txns = _cache.transactions || [];
     const idx  = txns.findIndex(t => t.id === id);
-    if (idx === -1) return null;
-    txns[idx] = { ...txns[idx], ...fields };
-    _upsert('transactions', { ...txns[idx], user_id: _cache.userId });
+	    if (idx === -1) return null;
+	    txns[idx] = { ...txns[idx], ...fields };
+	    _cache.transactions = txns;
+	    _persistCache('transactions');
+	    _upsert('transactions', { ...txns[idx], user_id: _cache.userId });
     _broadcastChange('transactions');
     return txns[idx];
   },
@@ -1153,13 +1397,13 @@ const Store = {
   /* ── Settings ─────────────────────────────────────────────────────── */
   getSettings() { return { ...(_cache.settings || {}) }; },
 
-  saveSettings(s) {
-    _cache.settings = { ...s };
-    // Mirror theme to localStorage for the pre-render flash fix
+	  saveSettings(s) {
+	    _cache.settings = { ...s };
+	    _persistCache('settings');
+	    // Mirror theme to localStorage for the pre-render flash fix
     if (s.darkMode !== undefined) localStorage.setItem('klyro_theme', s.darkMode ? 'dark' : 'light');
     if (s.accentTheme !== undefined) localStorage.setItem('klyro_accent', s.accentTheme);
-    if (!_cache.userId) return;
-    _upsert('settings', { ...s, user_id: _cache.userId });
+	    _upsert('settings', { ...s, user_id: _cache.userId });
     if (s.onboarded !== undefined && _sb) {
       _sb.auth.updateUser({ data: { onboarded: s.onboarded } }).catch(() => {});
     }
@@ -1169,19 +1413,20 @@ const Store = {
   /* ── Goals ────────────────────────────────────────────────────────── */
   getGoals() { return _cache.goals || []; },
 
-  saveGoals(goals) {
-    _cache.goals = goals;
-    if (!_cache.userId) return;
-    const uid = _cache.userId;
-    goals.forEach(g => _upsert('goals', { ...g, user_id: uid }));
+	  saveGoals(goals) {
+	    _cache.goals = goals;
+	    _persistCache('goals');
+	    const uid = _cache.userId;
+	    goals.forEach(g => _upsert('goals', { ...g, user_id: uid }));
   },
 
   addGoal(goal) {
     goal.id               = _genId();
     goal.originalCurrency = goal.originalCurrency || getCurrency().code;
-    if (_cache.goals === null) _cache.goals = [];
-    _cache.goals.push(goal);
-    if (_cache.userId) _upsert('goals', { ...goal, user_id: _cache.userId });
+	    if (_cache.goals === null) _cache.goals = [];
+	    _cache.goals.push(goal);
+	    _persistCache('goals');
+	    _upsert('goals', { ...goal, user_id: _cache.userId });
     _broadcastChange('goals');
     MakeWebhook.send('goal.created', {
       name: goal.name, target: goal.target, saved: goal.saved || 0,
@@ -1190,18 +1435,21 @@ const Store = {
     return goal;
   },
 
-  deleteGoal(id) {
-    _cache.goals = (_cache.goals || []).filter(g => g.id !== id);
-    _sbDelete('goals', id);
+	  deleteGoal(id) {
+	    _cache.goals = (_cache.goals || []).filter(g => g.id !== id);
+	    _persistCache('goals');
+	    _sbDelete('goals', id);
     _broadcastChange('goals');
   },
 
   updateGoal(id, fields) {
     const goals = _cache.goals || [];
     const idx   = goals.findIndex(g => g.id === id);
-    if (idx === -1) return null;
-    goals[idx] = { ...goals[idx], ...fields };
-    _upsert('goals', { ...goals[idx], user_id: _cache.userId });
+	    if (idx === -1) return null;
+	    goals[idx] = { ...goals[idx], ...fields };
+	    _cache.goals = goals;
+	    _persistCache('goals');
+	    _upsert('goals', { ...goals[idx], user_id: _cache.userId });
     _broadcastChange('goals');
     return goals[idx];
   },
@@ -1209,64 +1457,76 @@ const Store = {
   updateGoalSaved(id, amount) {
     const goals = _cache.goals || [];
     const g     = goals.find(g => g.id === id);
-    if (!g) return;
-    g.saved = Math.min(parseFloat(g.target), (parseFloat(g.saved) || 0) + parseFloat(amount));
-    _upsert('goals', { ...g, user_id: _cache.userId });
+	    if (!g) return;
+	    g.saved = Math.min(parseFloat(g.target), (parseFloat(g.saved) || 0) + parseFloat(amount));
+	    _persistCache('goals');
+	    _upsert('goals', { ...g, user_id: _cache.userId });
     _broadcastChange('goals');
   },
 
   /* ── Invoices ─────────────────────────────────────────────────────── */
   getInvoices() { return _cache.invoices || []; },
 
-  saveInvoices(list) {
-    _cache.invoices = list;
-    if (!_cache.userId) return;
-    list.forEach(i => { if (!i.user_id) i.user_id = _cache.userId; _upsert('invoices', i); });
-  },
+	  saveInvoices(list) {
+	    _cache.invoices = list;
+	    _persistCache('invoices');
+	    list.forEach(i => { if (!i.user_id) i.user_id = _cache.userId; _upsert('invoices', i); });
+	    _broadcastChange('invoices');
+	  },
 
   addInvoice(inv) {
     inv.id        = 'INV-' + _genId();
     inv.createdAt = new Date().toISOString();
-    inv.status    = inv.status || 'draft';
-    if (_cache.invoices === null) _cache.invoices = [];
-    _cache.invoices.unshift(inv);
-    if (_cache.userId) _upsert('invoices', { ...inv, user_id: _cache.userId });
-    return inv;
-  },
+	    inv.status    = inv.status || 'draft';
+	    if (_cache.invoices === null) _cache.invoices = [];
+	    _cache.invoices.unshift(inv);
+	    _persistCache('invoices');
+	    _upsert('invoices', { ...inv, user_id: _cache.userId });
+	    _broadcastChange('invoices');
+	    return inv;
+	  },
 
   updateInvoice(id, fields) {
     const list = _cache.invoices || [];
     const idx  = list.findIndex(i => i.id === id);
-    if (idx === -1) return null;
-    list[idx] = { ...list[idx], ...fields };
-    _upsert('invoices', { ...list[idx], user_id: _cache.userId });
-    return list[idx];
-  },
+	    if (idx === -1) return null;
+	    list[idx] = { ...list[idx], ...fields };
+	    _cache.invoices = list;
+	    _persistCache('invoices');
+	    _upsert('invoices', { ...list[idx], user_id: _cache.userId });
+	    _broadcastChange('invoices');
+	    return list[idx];
+	  },
 
-  deleteInvoice(id) {
-    _cache.invoices = (_cache.invoices || []).filter(i => i.id !== id);
-    _sbDelete('invoices', id);
-  },
+	  deleteInvoice(id) {
+	    _cache.invoices = (_cache.invoices || []).filter(i => i.id !== id);
+	    _persistCache('invoices');
+	    _sbDelete('invoices', id);
+	    _broadcastChange('invoices');
+	  },
 
   getInvoice(id) { return (_cache.invoices || []).find(i => i.id === id) || null; },
 
   /* ── Receipts ─────────────────────────────────────────────────────── */
   getReceipts() { return _cache.receipts || []; },
 
-  saveReceipts(list) {
-    _cache.receipts = list;
-    if (!_cache.userId) return;
-    list.forEach(r => { if (!r.user_id) r.user_id = _cache.userId; _upsert('receipts', r); });
-  },
+	  saveReceipts(list) {
+	    _cache.receipts = list;
+	    _persistCache('receipts');
+	    list.forEach(r => { if (!r.user_id) r.user_id = _cache.userId; _upsert('receipts', r); });
+	    _broadcastChange('receipts');
+	  },
 
   addReceipt(receipt) {
     receipt.id        = 'REC-' + _genId();
-    receipt.createdAt = new Date().toISOString();
-    if (_cache.receipts === null) _cache.receipts = [];
-    _cache.receipts.unshift(receipt);
-    if (_cache.userId) _upsert('receipts', { ...receipt, user_id: _cache.userId });
-    return receipt;
-  },
+	    receipt.createdAt = new Date().toISOString();
+	    if (_cache.receipts === null) _cache.receipts = [];
+	    _cache.receipts.unshift(receipt);
+	    _persistCache('receipts');
+	    _upsert('receipts', { ...receipt, user_id: _cache.userId });
+	    _broadcastChange('receipts');
+	    return receipt;
+	  },
 };
 
 /* ══════════════════════════════════════
@@ -1564,18 +1824,18 @@ function handleLogout() {
 ══════════════════════════════════════ */
 async function migrateFromLocalStorage() {
   if (!_cache.userId || !_sb) return;
-  const MIGRATED_KEY = 'klyro_migrated_v2';
+  const MIGRATED_KEY = `klyro_migrated_v3_${_cache.userId}`;
   if (localStorage.getItem(MIGRATED_KEY)) return;
 
   // Read old namespaced keys (both 'exmo_' and 'klyro_' prefixes)
   const uid = _cache.userId;
-  const oldKeys = {
-    transactions: ['exmo_transactions_' + uid, 'klyro_transactions_' + uid],
-    goals:        ['exmo_goals_' + uid,        'klyro_goals_' + uid],
-    settings:     ['exmo_settings_' + uid,     'klyro_settings_' + uid],
-    invoices:     ['klyro_invoices_' + uid],
-    receipts:     ['klyro_receipts_' + uid],
-  };
+	  const oldKeys = {
+	    transactions: ['exmo_transactions_' + uid, 'klyro_transactions_' + uid],
+	    goals:        ['exmo_goals_' + uid,        'klyro_goals_' + uid],
+	    settings:     ['exmo_settings_' + uid,     'klyro_settings_' + uid],
+	    invoices:     ['klyro_invoices_' + uid],
+	    receipts:     ['klyro_receipts_' + uid],
+	  };
   const read = (keys) => {
     for (const k of keys) {
       try { const v = localStorage.getItem(k); if (v) return JSON.parse(v); } catch {}
