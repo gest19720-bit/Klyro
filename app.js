@@ -468,9 +468,13 @@ const Theme = {
   current() {
     const s = (typeof Store !== 'undefined') ? Store.getSettings() : {};
     return s.accentTheme || localStorage.getItem('klyro_accent') || 'gold';
-  },
-  apply(id) {
-    const t = _applyAccentTheme(id);
+	  },
+	  apply(id) {
+	    if (typeof PlanGate !== 'undefined' && !PlanGate.can('theme_customization')) {
+	      if (typeof showToast === 'function') showToast('Theme customization requires the Personal plan.', 'error');
+	      return THEMES.find(x => x.id === Theme.current()) || THEMES[0];
+	    }
+	    const t = _applyAccentTheme(id);
     try { localStorage.setItem('klyro_accent', t.id); } catch {}
     if (typeof Store !== 'undefined') {
       const s = Store.getSettings();
@@ -1111,39 +1115,47 @@ const Auth = {
 const PlanGate = {
 
   // ── Plan hierarchy ────────────────────────────────────────────────────────
-  LEVELS: { free: 0, students: 1, individuals: 2, businesses: 3, enterprise: 4 },
+	  LEVELS: { free: 0, personal: 1, cooperate: 2 },
+
+	  PLAN_ALIASES: {
+	    students: 'personal',
+	    individuals: 'personal',
+	    businesses: 'cooperate',
+	    enterprise: 'cooperate',
+	    corporate: 'cooperate',
+	  },
 
   // ── Feature matrix ────────────────────────────────────────────────────────
   FEATURES: {
-    ai_chat:              { minPlan: 'students',     label: 'Klyro AI Chat' },
-    ai_web_search:        { minPlan: 'individuals',  label: 'Klyro AI Web Search' },
-    analysis:             { minPlan: 'students',     label: 'Analysis & Charts' },
-    savings_goals:        { minPlan: 'students',     label: 'Savings Goals' },
-    currency_conversion:  { minPlan: 'individuals',  label: 'Currency Conversion' },
-    pdf_export:           { minPlan: 'students',     label: 'PDF Export' },
-    csv_export:           { minPlan: 'free',         label: 'CSV Export' },
-    advanced_analysis:    { minPlan: 'individuals',  label: 'Advanced Analysis' },
-    team_features:        { minPlan: 'businesses',   label: 'Team Features' },
-    invoices:             { minPlan: 'businesses',   label: 'Invoices & Receipts' },
-    wealth_forecast:      { minPlan: 'businesses',   label: 'Wealth Forecasting' },
-    automated_invoicing:  { minPlan: 'enterprise',   label: 'Automated Invoicing' },
-    api_access:           { minPlan: 'enterprise',   label: 'API Access' },
-    transaction_limit:    { free: 20 },  // monthly limit for free plan only
+	    ai_chat:              { minPlan: 'cooperate',    label: 'Klyro AI Coach' },
+	    ai_web_search:        { minPlan: 'cooperate',    label: 'Klyro AI Web Search' },
+	    analysis:             { minPlan: 'free',         label: 'Bar Chart Analysis' },
+	    savings_goals:        { minPlan: 'personal',     label: 'Savings Goals' },
+	    currency_conversion:  { minPlan: 'personal',     label: 'Currency Conversion' },
+	    pdf_export:           { minPlan: 'personal',     label: 'PDF Export' },
+	    csv_export:           { minPlan: 'free',         label: 'CSV Export' },
+	    advanced_analysis:    { minPlan: 'personal',     label: 'Advanced Analysis' },
+	    theme_customization:  { minPlan: 'personal',     label: 'Theme Customization' },
+	    team_features:        { minPlan: 'personal',     label: 'Team Features' },
+	    invoices:             { minPlan: 'cooperate',    label: 'Invoices & Receipts' },
+	    wealth_forecast:      { minPlan: 'personal',     label: 'Wealth Forecasting' },
+	    automated_invoicing:  { minPlan: 'cooperate',    label: 'Automated Invoicing' },
+	    api_access:           { minPlan: 'cooperate',    label: 'API Access' },
+	    transaction_limit:    { free: 30 },  // monthly limit for free plan only
     category_limit:       { free: 3 },   // category limit for free plan only
   },
 
   // ── Upgrade copy per plan ─────────────────────────────────────────────────
   UPGRADE_COPY: {
-    students:    { price: '$8/mo', cta: 'Upgrade to Students' },
-    individuals: { price: '$10/mo', cta: 'Upgrade to Individuals' },
-    businesses:  { price: '$20/mo', cta: 'Upgrade to Businesses' },
-    enterprise:  { price: '$40/mo', cta: 'Upgrade to Enterprise' },
+	    personal:  { price: '$20/mo', cta: 'Upgrade to Personal' },
+	    cooperate: { price: '$80/mo', cta: 'Upgrade to Cooperate' },
   },
 
   // ── Get current plan ──────────────────────────────────────────────────────
   currentPlan() {
     const s = Store ? Store.getSettings() : {};
-    return (s.plan || 'free').toLowerCase();
+	    const raw = (s.plan || 'free').toLowerCase();
+	    return this.PLAN_ALIASES[raw] || raw;
   },
 
   planLevel(plan) {
@@ -1159,7 +1171,7 @@ const PlanGate = {
 
   // ── Is business plan or higher ────────────────────────────────────────────
   isBusiness() {
-    return this.planLevel(this.currentPlan()) >= this.planLevel('businesses');
+	    return this.planLevel(this.currentPlan()) >= this.planLevel('cooperate');
   },
 
   // ── Check free-tier numeric limits ───────────────────────────────────────
@@ -1182,9 +1194,9 @@ const PlanGate = {
     if (count >= limit) {
       return {
         allowed: false,
-        message: `Free plan limit reached (${limit} transactions/month). Upgrade to Students for unlimited tracking.`,
-        upgradeFeature: 'ai_chat', // students is the next level
-        upgradePlan: 'students'
+	        message: `Free plan limit reached (${limit} transactions/month). Upgrade to Personal for unlimited tracking.`,
+	        upgradeFeature: 'savings_goals',
+	        upgradePlan: 'personal'
       };
     }
     return { allowed: true, remaining: limit - count };
@@ -1465,17 +1477,26 @@ const Store = {
   },
 
   /* ── Invoices ─────────────────────────────────────────────────────── */
-  getInvoices() { return _cache.invoices || []; },
+	  getInvoices() { return _cache.invoices || []; },
 
-	  saveInvoices(list) {
-	    _cache.invoices = list;
+		  saveInvoices(list) {
+		    if (!PlanGate.can('invoices')) {
+		      if (typeof showToast === 'function') showToast('Invoices and receipts require the Cooperate plan.', 'error');
+		      return;
+		    }
+		    _cache.invoices = list;
 	    _persistCache('invoices');
 	    list.forEach(i => { if (!i.user_id) i.user_id = _cache.userId; _upsert('invoices', i); });
 	    _broadcastChange('invoices');
 	  },
 
-  addInvoice(inv) {
-    inv.id        = 'INV-' + _genId();
+	  addInvoice(inv) {
+	    if (!PlanGate.can('invoices')) {
+	      if (typeof showToast === 'function') showToast('Invoices and receipts require the Cooperate plan.', 'error');
+	      PlanGate.showUpgradeModal('invoices');
+	      return null;
+	    }
+	    inv.id        = 'INV-' + _genId();
     inv.createdAt = new Date().toISOString();
 	    inv.status    = inv.status || 'draft';
 	    if (_cache.invoices === null) _cache.invoices = [];
@@ -1508,17 +1529,26 @@ const Store = {
   getInvoice(id) { return (_cache.invoices || []).find(i => i.id === id) || null; },
 
   /* ── Receipts ─────────────────────────────────────────────────────── */
-  getReceipts() { return _cache.receipts || []; },
+	  getReceipts() { return _cache.receipts || []; },
 
-	  saveReceipts(list) {
-	    _cache.receipts = list;
+		  saveReceipts(list) {
+		    if (!PlanGate.can('invoices')) {
+		      if (typeof showToast === 'function') showToast('Invoices and receipts require the Cooperate plan.', 'error');
+		      return;
+		    }
+		    _cache.receipts = list;
 	    _persistCache('receipts');
 	    list.forEach(r => { if (!r.user_id) r.user_id = _cache.userId; _upsert('receipts', r); });
 	    _broadcastChange('receipts');
 	  },
 
-  addReceipt(receipt) {
-    receipt.id        = 'REC-' + _genId();
+	  addReceipt(receipt) {
+	    if (!PlanGate.can('invoices')) {
+	      if (typeof showToast === 'function') showToast('Invoices and receipts require the Cooperate plan.', 'error');
+	      PlanGate.showUpgradeModal('invoices');
+	      return null;
+	    }
+	    receipt.id        = 'REC-' + _genId();
 	    receipt.createdAt = new Date().toISOString();
 	    if (_cache.receipts === null) _cache.receipts = [];
 	    _cache.receipts.unshift(receipt);

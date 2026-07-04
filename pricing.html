@@ -115,7 +115,7 @@
     /* ── Plans grid ── */
     .plans-grid {
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 20px;
       width: 100%;
       max-width: 1200px;
@@ -141,7 +141,7 @@
       box-shadow: var(--shadow-lg);
     }
 
-    /* Featured (Individuals) */
+    /* Featured (Personal) */
     .plan-card.featured {
       border: 2px solid var(--gold);
       background: linear-gradient(160deg, rgba(212,160,23,0.08), var(--glass));
@@ -411,7 +411,7 @@
       Invest in your<br><em>financial future</em>
     </div>
     <p class="pricing-sub">
-      Start free. Upgrade as you grow. Every plan includes Klyro AI, smart analysis, and real-time insights. No hidden fees. Cancel any time.
+      Start free. Upgrade when you need more room, customization, AI coaching, invoices, and receipts. No hidden fees. Cancel any time.
     </p>
   </div>
 
@@ -437,127 +437,71 @@
       <div class="plan-yearly-note"></div>
       <div class="plan-divider"></div>
       <ul class="plan-features">
-        <li><i class="fas fa-check"></i> Up to 20 transactions/month</li>
-        <li><i class="fas fa-check"></i> Basic dashboard & stats</li>
-        <li><i class="fas fa-check"></i> 3 spending categories</li>
-        <li><i class="fas fa-check"></i> Manual CSV export</li>
-        <li><i class="fas fa-times"></i> Klyro AI chat</li>
-        <li><i class="fas fa-times"></i> Analysis & charts</li>
-        <li><i class="fas fa-times"></i> Savings goals</li>
-        <li><i class="fas fa-times"></i> Currency conversion</li>
-        <li><i class="fas fa-times"></i> Team features</li>
-        <li><i class="fas fa-times"></i> Invoices & receipts</li>
+	        <li><i class="fas fa-check"></i> Up to 30 transactions/month</li>
+	        <li><i class="fas fa-check"></i> Basic dashboard & stats</li>
+	        <li><i class="fas fa-check"></i> 3 spending categories</li>
+	        <li><i class="fas fa-check"></i> Bar chart analysis</li>
+	        <li><i class="fas fa-check"></i> Manual CSV export</li>
+	        <li><i class="fas fa-times"></i> AI coach</li>
+	        <li><i class="fas fa-times"></i> Theme customization</li>
+	        <li><i class="fas fa-times"></i> Savings goals</li>
+	        <li><i class="fas fa-times"></i> Currency conversion</li>
+	        <li><i class="fas fa-times"></i> Invoices & receipts</li>
       </ul>
       <button class="btn btn-glass plan-cta" onclick="selectPlan('free', 0)">
         Get Started Free
       </button>
     </div>
 
-    <!-- STUDENTS -->
-    <div class="plan-card">
-      <div class="plan-name">Students</div>
+    <!-- PERSONAL (featured) -->
+    <div class="plan-card featured">
+      <div class="plan-badge-top">Most Popular</div>
+      <div class="plan-name">Personal</div>
       <div class="plan-price-wrap">
-        <div class="plan-price" id="price-students"><sup>$</sup>8</div>
+        <div class="plan-price" id="price-personal"><sup>$</sup>20</div>
       </div>
-      <div class="plan-period" id="period-students">per month</div>
-      <div class="plan-yearly-note" id="note-students"></div>
+      <div class="plan-period" id="period-personal">per month</div>
+      <div class="plan-yearly-note" id="note-personal"></div>
       <div class="plan-divider"></div>
       <ul class="plan-features">
         <li><i class="fas fa-check"></i> Unlimited transactions</li>
         <li><i class="fas fa-check"></i> Full dashboard & stats</li>
-        <li><i class="fas fa-check"></i> All spending categories</li>
-        <li><i class="fas fa-check"></i> Klyro AI chat</li>
-        <li><i class="fas fa-check"></i> Analysis & charts</li>
-        <li><i class="fas fa-check"></i> Savings goals</li>
-        <li><i class="fas fa-check"></i> CSV & PDF export</li>
-        <li><i class="fas fa-times"></i> Currency conversion</li>
-        <li><i class="fas fa-times"></i> Team features</li>
-        <li><i class="fas fa-times"></i> Invoices & receipts</li>
-      </ul>
-      <button class="btn btn-glass plan-cta" onclick="selectPlan('students', 8)">
-        Get Students
-      </button>
-    </div>
-
-    <!-- INDIVIDUALS (featured) -->
-    <div class="plan-card featured">
-      <div class="plan-badge-top">Most Popular</div>
-      <div class="plan-name">Individuals</div>
-      <div class="plan-price-wrap">
-        <div class="plan-price" id="price-individuals"><sup>$</sup>10</div>
-      </div>
-      <div class="plan-period" id="period-individuals">per month</div>
-      <div class="plan-yearly-note" id="note-individuals"></div>
-      <div class="plan-divider"></div>
-      <ul class="plan-features">
-        <li><i class="fas fa-check"></i> Everything in Students</li>
-        <li><i class="fas fa-check"></i> Currency conversion (50+)</li>
-        <li><i class="fas fa-check"></i> Weekly & monthly reports</li>
-        <li><i class="fas fa-check"></i> Klyro AI (web search)</li>
+        <li><i class="fas fa-check"></i> Bar chart analysis</li>
         <li><i class="fas fa-check"></i> Advanced analysis</li>
-        <li><i class="fas fa-check"></i> Priority email support</li>
-        <li><i class="fas fa-times"></i> Team features</li>
+        <li><i class="fas fa-check"></i> Savings goals</li>
+        <li><i class="fas fa-check"></i> Currency conversion</li>
+        <li><i class="fas fa-check"></i> Theme customization</li>
+        <li><i class="fas fa-check"></i> CSV & PDF export</li>
+        <li><i class="fas fa-times"></i> AI coach</li>
         <li><i class="fas fa-times"></i> Invoices & receipts</li>
-        <li><i class="fas fa-times"></i> Automated invoicing</li>
-        <li><i class="fas fa-times"></i> Dedicated manager</li>
       </ul>
-      <button class="btn btn-gold plan-cta" onclick="selectPlan('individuals', 10)">
-        <i class="fas fa-rocket"></i> Get Individuals
+      <button class="btn btn-gold plan-cta" onclick="selectPlan('personal', 20)">
+        <i class="fas fa-rocket"></i> Get Personal
       </button>
     </div>
-
-    <!-- BUSINESSES -->
+	
+    <!-- COOPERATE -->
     <div class="plan-card">
-      <div class="plan-name">Businesses</div>
+      <div class="plan-name">Cooperate</div>
       <div class="plan-price-wrap">
-        <div class="plan-price" id="price-businesses"><sup>$</sup>20</div>
+        <div class="plan-price" id="price-cooperate"><sup>$</sup>80</div>
       </div>
-      <div class="plan-period" id="period-businesses">per month</div>
-      <div class="plan-yearly-note" id="note-businesses"></div>
+      <div class="plan-period" id="period-cooperate">per month</div>
+      <div class="plan-yearly-note" id="note-cooperate"></div>
       <div class="plan-divider"></div>
       <ul class="plan-features">
-        <li><i class="fas fa-check"></i> Everything in Individuals</li>
-        <li><i class="fas fa-check"></i> Team features (up to 10)</li>
+        <li><i class="fas fa-check"></i> Everything in Personal</li>
+        <li><i class="fas fa-check"></i> AI coach</li>
+        <li><i class="fas fa-check"></i> AI web search</li>
         <li><i class="fas fa-check"></i> Invoices & receipts</li>
-        <li><i class="fas fa-check"></i> Expense approvals</li>
-        <li><i class="fas fa-check"></i> Shared dashboards</li>
-        <li><i class="fas fa-check"></i> Role-based access</li>
-        <li><i class="fas fa-check"></i> Improved Analysis</li>
-        <li><i class="fas fa-check"></i> Financial work section connected to transactions</li>
-        <li><i class="fas fa-check"></i> Improved Analysis</li>
-        <li><i class="fas fa-times"></i> Automated invoicing</li>
-        <li><i class="fas fa-times"></i> API access</li>
-        <li><i class="fas fa-times"></i> Dedicated manager</li>
-        <li><i class="fas fa-times"></i> Custom integrations</li>
-      </ul>
-      <button class="btn btn-glass plan-cta" onclick="selectPlan('businesses', 20)">
-        Get Businesses
-      </button>
-    </div>
-
-    <!-- COMPANIES & ENTERPRISES -->
-    <div class="plan-card">
-      <div class="plan-name">Companies &amp; Enterprises</div>
-      <div class="plan-price-wrap">
-        <div class="plan-price" id="price-enterprise"><sup>$</sup>40</div>
-      </div>
-      <div class="plan-period" id="period-enterprise">per month</div>
-      <div class="plan-yearly-note" id="note-enterprise"></div>
-      <div class="plan-divider"></div>
-      <ul class="plan-features">
-        <li><i class="fas fa-check"></i> Everything in Businesses</li>
-        <li><i class="fas fa-check"></i> Unlimited team members</li>
         <li><i class="fas fa-check"></i> Automated invoicing</li>
+        <li><i class="fas fa-check"></i> Business workspace</li>
+        <li><i class="fas fa-check"></i> Shared dashboards</li>
         <li><i class="fas fa-check"></i> API access</li>
-        <li><i class="fas fa-check"></i> Custom integrations</li>
-        <li><i class="fas fa-check"></i> Dedicated account manager</li>
-        <li><i class="fas fa-check"></i> Priority 24/7 support</li>
-        <li><i class="fas fa-check"></i> SLA guarantee</li>
-        <li><i class="fas fa-check"></i> Onboarding & training</li>
-        <li><i class="fas fa-check"></i> Early beta access</li>
+        <li><i class="fas fa-check"></i> Priority support</li>
       </ul>
-      <button class="btn btn-glass plan-cta" onclick="selectPlan('enterprise', 40)">
-        Get Enterprise
+      <button class="btn btn-glass plan-cta" onclick="selectPlan('cooperate', 80)">
+        Get Cooperate
       </button>
     </div>
 
@@ -584,12 +528,12 @@
     <button class="payment-modal-close" onclick="closePaymentModal()"><i class="fas fa-times"></i></button>
 
     <div class="payment-plan-badge" id="modal-plan-badge">
-      <i class="fas fa-star"></i> <span id="modal-plan-name">Individuals</span>
+	      <i class="fas fa-star"></i> <span id="modal-plan-name">Personal</span>
     </div>
 
     <div class="payment-modal-title">Complete your upgrade</div>
     <div class="payment-modal-sub" id="modal-sub">
-      You're one step away from unlocking all Klyro features.
+	      You're one step away from unlocking more Klyro features.
     </div>
 
     <div class="payment-amount-display">
@@ -634,23 +578,20 @@
   const PRICES = {
     monthly: {
       free:        0,
-      students:    8,
-      individuals: 10,
-      businesses:  20,
-      enterprise:  40,
+	      personal:    20,
+	      cooperate:   80,
     },
     yearly: {
       free:        0,
-      students:    parseFloat((8  * 12 * 0.8).toFixed(2)),   // $76.80
-      individuals: parseFloat((10 * 12 * 0.8).toFixed(2)),   // $96.00
-      businesses:  parseFloat((20 * 12 * 0.8).toFixed(2)),   // $192.00
-      enterprise:  parseFloat((40 * 12 * 0.8).toFixed(2)),   // $384.00
+	      personal:    parseFloat((20 * 12 * 0.8).toFixed(2)),   // $192.00
+	      cooperate:   parseFloat((80 * 12 * 0.8).toFixed(2)),   // $768.00
     }
   };
 
   const PLAN_LABELS = {
-    free: 'Free', students: 'Students',
-    individuals: 'Individuals', businesses: 'Businesses', enterprise: 'Companies & Enterprises'
+	    free: 'Free',
+	    personal: 'Personal',
+	    cooperate: 'Cooperate'
   };
 
   let currentBilling = 'monthly';
@@ -665,7 +606,7 @@
     const p = PRICES[type];
 
     // Update each paid plan
-    ['students','individuals','businesses','enterprise'].forEach(plan => {
+	    ['personal','cooperate'].forEach(plan => {
       const monthly = PRICES.monthly[plan];
       const price   = p[plan];
       const isYearly = type === 'yearly';

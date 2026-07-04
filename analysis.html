@@ -36,7 +36,7 @@
     <!-- Charts row -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;" id="charts-row">
       <!-- Income vs Expense Bar -->
-      <div class="glass-card" style="padding:28px;">
+	      <div class="glass-card" id="doughnut-card" style="padding:28px;">
         <div class="section-title" style="margin-bottom:20px;"><i class="fas fa-chart-column"></i> Income vs Expenses</div>
         <div class="chart-container" style="height:240px;">
           <canvas id="bar-chart"></canvas>
@@ -407,15 +407,22 @@
     }
   });
 
-  function renderPage() {
-    const txns = Utils.filterByPeriod(Store.getTransactions(), currentPeriod);
-    renderStats(txns);
-    renderBarChart(txns);
-    renderDoughnutChart(txns);
-    renderCatBreakdown(txns);
-    renderAITips(txns);
-    renderWealthForecast();
-  }
+	  function renderPage() {
+	    const txns = Utils.filterByPeriod(Store.getTransactions(), currentPeriod);
+	    const hasAdvancedAnalysis = PlanGate.can('advanced_analysis');
+	    renderStats(txns);
+	    renderBarChart(txns);
+	    const doughnutCard = document.getElementById('doughnut-card');
+	    const bottomRow = document.getElementById('bottom-row');
+	    if (doughnutCard) doughnutCard.style.display = hasAdvancedAnalysis ? 'block' : 'none';
+	    if (bottomRow) bottomRow.style.display = hasAdvancedAnalysis ? 'grid' : 'none';
+	    if (hasAdvancedAnalysis) {
+	      renderDoughnutChart(txns);
+	      renderCatBreakdown(txns);
+	      renderAITips(txns);
+	    }
+	    renderWealthForecast();
+	  }
 
   document.getElementById('period-tabs').addEventListener('click', e => {
     const tab = e.target.closest('.period-tab');
@@ -428,8 +435,9 @@
 
   // Responsive grid
   function checkGrids() {
-    const narrow = window.innerWidth < 900;
-    document.getElementById('charts-row').style.gridTemplateColumns = narrow ? '1fr' : '1fr 1fr';
+	    const narrow = window.innerWidth < 900;
+	    const hasAdvancedAnalysis = typeof PlanGate !== 'undefined' && PlanGate.can('advanced_analysis');
+	    document.getElementById('charts-row').style.gridTemplateColumns = narrow || !hasAdvancedAnalysis ? '1fr' : '1fr 1fr';
     document.getElementById('bottom-row').style.gridTemplateColumns = narrow ? '1fr' : '1fr 1fr';
   }
   checkGrids();

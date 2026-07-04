@@ -323,13 +323,14 @@
           <select class="form-input" id="currency-select" style="width:auto;border-radius:var(--radius-sm);padding:8px 12px;min-width:160px;">
             </select>
         </div>
-        <div class="settings-row" style="border-bottom:none;padding-bottom:0;">
+	        <div class="settings-row" id="theme-section-row" style="border-bottom:none;padding-bottom:0;">
           <div>
             <div class="settings-label">Theme Colour</div>
             <div class="settings-desc">Pick an accent colour — applies instantly across the app</div>
           </div>
         </div>
-        <div class="theme-swatch-grid" id="theme-swatch-grid"></div>
+	        <div class="theme-swatch-grid" id="theme-swatch-grid"></div>
+	        <div id="theme-lock-banner" style="display:none;margin-top:16px;"></div>
       </div>
 
       <div class="glass-card" style="padding:28px;">
@@ -1032,18 +1033,29 @@
       if (sel) sel.style.opacity = '0.5';
     }
     // Savings goals lock banner
-    if (!PlanGate.can('savings_goals')) {
-      const banner = document.getElementById('goals-lock-banner');
-      if (banner) {
-        banner.style.display = 'block';
-        PlanGate.renderLockedBanner('savings_goals', 'goals-lock-banner');
+	    if (!PlanGate.can('savings_goals')) {
+	      const banner = document.getElementById('goals-lock-banner');
+	      if (banner) {
+	        banner.style.display = 'block';
+	        PlanGate.renderLockedBanner('savings_goals', 'goals-lock-banner');
         const addBtn = document.getElementById('goal-add-btn');
         if (addBtn) addBtn.style.display = 'none';
         const goalsList = document.getElementById('goals-list');
-        if (goalsList) goalsList.style.display = 'none';
-      }
-    }
-  })();
+	        if (goalsList) goalsList.style.display = 'none';
+	      }
+	    }
+	    if (!PlanGate.can('theme_customization')) {
+	      const row = document.getElementById('theme-section-row');
+	      const grid = document.getElementById('theme-swatch-grid');
+	      const banner = document.getElementById('theme-lock-banner');
+	      if (row) row.style.display = 'none';
+	      if (grid) grid.style.display = 'none';
+	      if (banner) {
+	        banner.style.display = 'block';
+	        PlanGate.renderLockedBanner('theme_customization', 'theme-lock-banner');
+	      }
+	    }
+	  })();
   loadSettings();
   renderGoalsList();
   renderDataStats();
