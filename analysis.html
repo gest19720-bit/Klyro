@@ -452,6 +452,12 @@
       await new Promise(resolve => document.addEventListener('klyro:ready', resolve, { once: true }));
     }
     renderPage();
+
+    document.addEventListener('klyro:data-changed', (evt) => {
+      if (evt.detail?.type === 'transactions' || evt.detail?.type === 'all') {
+        renderPage();
+      }
+    });
   }
   boot();
 </script>

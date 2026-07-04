@@ -39,6 +39,7 @@ const _cache = {
 const _writeQueue = [];
 let   _writeQueueFlushing = false;
 let   _remoteSyncTimer = null;
+let   _realtimeChannel = null;
 
 const _PERSISTED_TABLES = ['transactions', 'settings', 'goals', 'invoices', 'receipts'];
 
@@ -277,41 +278,122 @@ const _klyroChannel = (typeof BroadcastChannel !== 'undefined')
   ? new BroadcastChannel('klyro_data_sync')
   : null;
 
+async function _syncTableFromRemote(table) {
+  if (!_cache.userId || !_sb) return;
+  const uid = _cache.userId;
+  try {
+    if (table === 'transactions' || table === 'all') {
+      const { data } = await _sb.from('transactions').select('*').eq('user_id', uid).order('date', { ascending: false });
+      if (data) _cache.transactions = _stripUserIds(data);
+    }
+    if (table === 'goals' || table === 'all') {
+      const { data } = await _sb.from('goals').select('*').eq('user_id', uid);
+      if (data) _cache.goals = _stripUserIds(data);
+    }
+    if (table === 'settings' || table === 'all') {
+      const { data } = await _sb.from('settings').select('*').eq('user_id', uid).maybeSingle();
+      if (data) {
+        const raw = { ...data };
+        delete raw.user_id;
+        _cache.settings = raw;
+        
+        try {
+          const plan = raw.plan;
+          if (plan) localStorage.setItem('klyro_plan', plan);
+          if (raw.darkMode !== undefined) {
+            localStorage.setItem('klyro_theme', raw.darkMode ? 'dark' : 'light');
+            if (raw.darkMode) {
+              document.body.classList.add('dark');
+              document.documentElement.classList.add('dark-pre');
+            } else {
+              document.body.classList.remove('dark');
+              document.documentElement.classList.remove('dark-pre');
+            }
+          }
+          if (raw.accentTheme !== undefined) {
+            localStorage.setItem('klyro_accent', raw.accentTheme);
+            _applyAccentTheme(raw.accentTheme);
+          }
+        } catch {}
+      }
+    }
+    if (table === 'invoices' || table === 'all') {
+      const { data } = await _sb.from('invoices').select('*').eq('user_id', uid).order('created_at', { ascending: false });
+      if (data) _cache.invoices = _stripUserIds(data);
+    }
+    if (table === 'receipts' || table === 'all') {
+      const { data } = await _sb.from('receipts').select('*').eq('user_id', uid).order('created_at', { ascending: false });
+      if (data) _cache.receipts = _stripUserIds(data);
+    }
+    _persistAllCache();
+  } catch (e) {
+    console.warn('[Klyro Realtime] failed to sync table:', table, e.message);
+  }
+}
+
 function _broadcastChange(type) {
   try { _klyroChannel?.postMessage({ type: type || 'transactions', ts: Date.now() }); } catch {}
+  try {
+    if (_realtimeChannel) {
+      _realtimeChannel.send({
+        type: 'broadcast',
+        event: 'data_changed',
+        payload: { type: type || 'transactions' }
+      });
+    }
+  } catch (e) {
+    console.warn('[Klyro Realtime] Broadcast send failed:', e.message);
+  }
 }
 
 function _initDataSync() {
   if (!_klyroChannel) return;
   _klyroChannel.onmessage = async (evt) => {
     if (!_cache.ready || !_cache.userId || !_sb) return;
-    try {
-      const uid = _cache.userId;
-      const t   = evt.data?.type || 'transactions';
-      if (t === 'transactions' || t === 'all') {
-        const { data } = await _sb.from('transactions').select('*').eq('user_id', uid).order('date', { ascending: false });
-        if (data) _cache.transactions = data;
-      }
-      if (t === 'goals' || t === 'all') {
-        const { data } = await _sb.from('goals').select('*').eq('user_id', uid);
-        if (data) _cache.goals = data;
-      }
-      if (t === 'settings' || t === 'all') {
-        const { data } = await _sb.from('settings').select('*').eq('user_id', uid).maybeSingle();
-        if (data) { const raw = { ...data }; delete raw.user_id; _cache.settings = raw; }
-      }
-      if (t === 'invoices' || t === 'all') {
-        const { data } = await _sb.from('invoices').select('*').eq('user_id', uid).order('created_at', { ascending: false });
-        if (data) _cache.invoices = data;
-      }
-      if (t === 'receipts' || t === 'all') {
-        const { data } = await _sb.from('receipts').select('*').eq('user_id', uid).order('created_at', { ascending: false });
-        if (data) _cache.receipts = data;
-      }
-      _persistAllCache();
-    } catch {}
+    const t = evt.data?.type || 'transactions';
+    await _syncTableFromRemote(t);
     document.dispatchEvent(new CustomEvent('klyro:data-changed', { detail: evt.data }));
   };
+}
+
+async function _initRealtimeSync() {
+  if (!_cache.userId || !_sb) return;
+  const uid = _cache.userId;
+
+  if (_realtimeChannel) {
+    try {
+      _sb.removeChannel(_realtimeChannel);
+    } catch {}
+    _realtimeChannel = null;
+  }
+
+  const channelName = `klyro_user_${uid}`;
+  _realtimeChannel = _sb.channel(channelName);
+
+  _realtimeChannel.on('broadcast', { event: 'data_changed' }, async (payload) => {
+    const table = payload.payload?.type || 'transactions';
+    console.log('[Klyro Realtime] Broadcast change event received:', table);
+    await _syncTableFromRemote(table);
+    document.dispatchEvent(new CustomEvent('klyro:data-changed', { detail: { type: table, source: 'realtime-broadcast' } }));
+  });
+
+  _PERSISTED_TABLES.forEach(table => {
+    _realtimeChannel.on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: table, filter: `user_id=eq.${uid}` },
+      async (payload) => {
+        console.log('[Klyro Realtime] DB change event received for:', table, payload.eventType);
+        await _syncTableFromRemote(table);
+        document.dispatchEvent(new CustomEvent('klyro:data-changed', { detail: { type: table, source: 'postgres-changes' } }));
+      }
+    );
+  });
+
+  _realtimeChannel.subscribe((status) => {
+    if (status === 'SUBSCRIBED') {
+      console.log('[Klyro Realtime] Subscribed to realtime channel:', channelName);
+    }
+  });
 }
 
 if (typeof window !== 'undefined') {
@@ -412,6 +494,7 @@ async function _initData() {
   } catch {}
   _cache.ready = true;
   _initDataSync();   // start listening for cross-tab data changes
+  _initRealtimeSync(); // start listening for remote device data changes
   _startRemoteSync(); // keep multiple logged-in devices converged
   await _flushWriteQueue();  // replay any writes that arrived before userId was set
   await _syncCacheToSupabase(); // upload device-only records for same-account sync
@@ -958,6 +1041,7 @@ const Auth = {
           sidebarMount.innerHTML = renderSidebar();
           if (typeof initSidebar === 'function') initSidebar();
         }
+
         document.dispatchEvent(new Event('klyro:auth-ready'));
       }
     });
