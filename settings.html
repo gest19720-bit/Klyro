@@ -367,8 +367,8 @@
         </div>
       </div>
 
-      <div class="glass-card" style="padding:28px;">
-        <div class="section-title" style="margin-bottom:20px;"><i class="fas fa-user-circle"></i> Profile</div>
+	      <div class="glass-card" style="padding:28px;">
+	        <div class="section-title" style="margin-bottom:20px;"><i class="fas fa-user-circle"></i> Profile</div>
         
         <div class="avatar-settings-container">
           <div class="avatar-preview-wrapper" id="settings-avatar-container">
@@ -399,11 +399,31 @@
         </div>
         <button class="btn btn-gold" onclick="saveProfile()">
           <i class="fas fa-check"></i> Save Profile
-        </button>
-      </div>
+	        </button>
+	      </div>
 
-      <div class="glass-card" style="padding:28px;">
-        <div class="section-title" style="margin-bottom:20px;"><i class="fas fa-database"></i> Your Data</div>
+	      <div class="glass-card" style="padding:28px;">
+	        <div class="section-title" style="margin-bottom:20px;"><i class="fas fa-credit-card"></i> Current Plan</div>
+	        <div style="background:var(--glass-dim);border:1px solid var(--glass-border);border-radius:var(--radius-sm);padding:18px;margin-bottom:18px;">
+	          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+	            <div>
+	              <div class="settings-label" id="current-plan-name" style="font-size:1.15rem;color:var(--text);">Free</div>
+	              <div class="settings-desc" id="current-plan-status">You are currently on the Free plan.</div>
+	            </div>
+	            <div style="text-align:right;">
+	              <div class="stat-value" id="current-plan-price" style="font-size:1.75rem;line-height:1;color:var(--gold);">$0</div>
+	              <div class="settings-desc" id="current-plan-cycle" style="margin-top:4px;">Monthly</div>
+	            </div>
+	          </div>
+	          <div class="settings-desc" id="current-plan-activated" style="margin-top:14px;display:none;"></div>
+	        </div>
+	        <a href="pricing.html" class="btn btn-gold" style="width:100%;justify-content:center;text-decoration:none;">
+	          <i class="fas fa-arrow-up-right-from-square"></i> Choose Plan
+	        </a>
+	      </div>
+
+	      <div class="glass-card" style="padding:28px;">
+	        <div class="section-title" style="margin-bottom:20px;"><i class="fas fa-database"></i> Your Data</div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px;" id="data-stats"></div>
 
@@ -756,18 +776,56 @@
       </div>`).join('');
   }
 
-  function selectTheme(id) {
-    Theme.apply(id);                 // updates CSS vars instantly, persists to Store/localStorage
-    document.querySelectorAll('#theme-swatch-grid .theme-swatch').forEach(el => {
-      el.classList.toggle('selected', el.dataset.themeId === id);
-    });
-    const t = Theme.list().find(x => x.id === id);
-    showToast(`Theme set to ${t.name}`);
-  }
+	  function selectTheme(id) {
+	    Theme.apply(id);                 // updates CSS vars instantly, persists to Store/localStorage
+	    document.querySelectorAll('#theme-swatch-grid .theme-swatch').forEach(el => {
+	      el.classList.toggle('selected', el.dataset.themeId === id);
+	    });
+	    const t = Theme.list().find(x => x.id === id);
+	    showToast(`Theme set to ${t.name}`);
+	  }
 
-  async function loadSettings() {
-  if (!_cache.ready) {
-    await new Promise(resolve => document.addEventListener('klyro:ready', resolve, { once: true }));
+	  function renderCurrentPlan() {
+	    const s = Store.getSettings();
+	    const plan = PlanGate.currentPlan();
+	    const plans = {
+	      free: { label: 'Free', monthly: 0 },
+	      personal: { label: 'Personal', monthly: 20 },
+	      cooperate: { label: 'Cooperate', monthly: 80 },
+	    };
+	    const meta = plans[plan] || plans.free;
+	    const billing = (s.billingCycle || 'monthly').toLowerCase();
+	    const isYearly = billing === 'yearly';
+	    const price = meta.monthly === 0 ? '$0' : `$${isYearly ? (meta.monthly * 12 * 0.8).toFixed(2) : meta.monthly}`;
+	    const cycle = meta.monthly === 0 ? 'Forever' : (isYearly ? 'Yearly' : 'Monthly');
+	    const status = plan === 'free'
+	      ? 'You are currently on the Free plan.'
+	      : `Your ${meta.label} plan is active.`;
+
+	    const nameEl = document.getElementById('current-plan-name');
+	    const priceEl = document.getElementById('current-plan-price');
+	    const cycleEl = document.getElementById('current-plan-cycle');
+	    const statusEl = document.getElementById('current-plan-status');
+	    const activatedEl = document.getElementById('current-plan-activated');
+
+	    if (nameEl) nameEl.textContent = meta.label;
+	    if (priceEl) priceEl.textContent = price;
+	    if (cycleEl) cycleEl.textContent = cycle;
+	    if (statusEl) statusEl.textContent = status;
+	    if (activatedEl) {
+	      if (s.planActivated) {
+	        activatedEl.style.display = 'block';
+	        activatedEl.innerHTML = `<i class="fas fa-calendar-check"></i> Activated ${Utils.formatDate(s.planActivated.split('T')[0])}`;
+	      } else {
+	        activatedEl.style.display = 'none';
+	        activatedEl.textContent = '';
+	      }
+	    }
+	  }
+
+	  async function loadSettings() {
+	  if (!_cache.ready) {
+	    await new Promise(resolve => document.addEventListener('klyro:ready', resolve, { once: true }));
   }
     const s = Store.getSettings();
     const u = Auth.getUser(); // safe here — we've already awaited the session/cache being ready
@@ -781,10 +839,11 @@
     if (s.incomeTarget) document.getElementById('income-target').value = s.incomeTarget;
     if (s.weeklySummary    !== undefined) document.getElementById('weekly-summary').checked    = s.weeklySummary;
     if (s.overspendAlerts  !== undefined) document.getElementById('overspend-alerts').checked  = s.overspendAlerts;
-    if (s.goalAlerts       !== undefined) document.getElementById('goal-alerts').checked       = s.goalAlerts;
-    renderThemeSwatches();
-    renderAvatarView();
-  }
+	    if (s.goalAlerts       !== undefined) document.getElementById('goal-alerts').checked       = s.goalAlerts;
+	    renderThemeSwatches();
+	    renderAvatarView();
+	    renderCurrentPlan();
+	  }
 
   function renderDataStats() {
     const txns  = Store.getTransactions();
@@ -1019,11 +1078,16 @@
   checkGrid();
   window.addEventListener('resize', checkGrid);
 
-  document.getElementById('sidebar-mount').innerHTML = renderSidebar();
-  initSidebar();
-  renderThemeSwatches();
+	  document.getElementById('sidebar-mount').innerHTML = renderSidebar();
+	  initSidebar();
+	  renderThemeSwatches();
+	  renderCurrentPlan();
+	  document.addEventListener('klyro:data-changed', (evt) => {
+	    const type = evt.detail?.type;
+	    if (!type || type === 'settings' || type === 'all') renderCurrentPlan();
+	  });
 
-  // Show lock indicators based on plan
+	  // Show lock indicators based on plan
   (function applyPlanLocks() {
     // Currency conversion lock badge
     if (!PlanGate.can('currency_conversion')) {
