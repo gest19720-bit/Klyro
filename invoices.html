@@ -1256,6 +1256,16 @@ if (!window.__invGated) {
   initSidebar();
   resetForm();
 
+  document.addEventListener('klyro:data-changed', (evt) => {
+    const t = evt.detail?.type;
+    if (t === 'invoices' || t === 'all') {
+      renderList();
+    }
+    if (t === 'receipts' || t === 'all') {
+      renderReceipts();
+    }
+  });
+
 } // end if !__invGated
 </script>
 

@@ -1478,6 +1478,24 @@ if (_cache.ready) {
 } else {
   document.addEventListener('klyro:ready', restoreBusinessChatHistory, { once: true });
 }
+
+document.addEventListener('klyro:data-changed', (evt) => {
+  buildFinancialContext(); // always update the context summary card
+  
+  const t = evt.detail?.type;
+  if (t === 'invoices' || t === 'all') {
+    const panel = document.getElementById('panel-invoices');
+    if (panel && panel.classList.contains('active')) {
+      renderInvoices();
+    }
+  }
+  if (t === 'receipts' || t === 'all') {
+    const panel = document.getElementById('panel-receipts');
+    if (panel && panel.classList.contains('active')) {
+      renderReceipts();
+    }
+  }
+});
 </script>
 
 <!-- Bottom Nav (mobile only) -->

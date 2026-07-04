@@ -762,5 +762,12 @@ if (_cache.ready) {
 } else {
   document.addEventListener('klyro:ready', () => setTimeout(renderInitialGreeting, 150), { once: true });
 }
+
+document.addEventListener('klyro:data-changed', (evt) => {
+  if (evt.detail?.type === 'transactions' || evt.detail?.type === 'all') {
+    renderDeficitBanner();
+    renderAutoInsights();
+  }
+});
 </script>
 </html>

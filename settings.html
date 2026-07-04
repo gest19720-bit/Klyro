@@ -1059,6 +1059,19 @@
   loadSettings();
   renderGoalsList();
   renderDataStats();
+
+  document.addEventListener('klyro:data-changed', (evt) => {
+    const t = evt.detail?.type;
+    if (t === 'settings' || t === 'all') {
+      loadSettings();
+    }
+    if (t === 'goals' || t === 'all') {
+      renderGoalsList();
+    }
+    if (t === 'transactions' || t === 'all') {
+      renderDataStats();
+    }
+  });
 </script>
 
 <nav class="bottom-nav">
