@@ -791,10 +791,10 @@ document.getElementById('receipt-modal').addEventListener('click', function(e) {
 /* ══════════════════════════════════════════════════════════════
    STORAGE HELPERS
 ══════════════════════════════════════════════════════════════ */
-function getInvoices()  { return JSON.parse(localStorage.getItem('klyro_invoices')  || '[]'); }
-function saveInvoices(d){ localStorage.setItem('klyro_invoices', JSON.stringify(d)); }
-function getReceipts()  { return JSON.parse(localStorage.getItem('klyro_receipts')  || '[]'); }
-function saveReceipts(d){ localStorage.setItem('klyro_receipts', JSON.stringify(d)); }
+function getInvoices()  { return Store.getInvoices(); }
+function saveInvoices(d){ Store.saveInvoices(d); }
+function getReceipts()  { return Store.getReceipts(); }
+function saveReceipts(d){ Store.saveReceipts(d); }
 
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
 
@@ -856,11 +856,29 @@ function appendMsg(role, text, isTyping) {
     }</div>`;
   const container = document.getElementById('chat-messages');
   container.appendChild(el);
-  container.scrollTop = container.scrollHeight;
-  return el;
-}
+	  container.scrollTop = container.scrollHeight;
+	  return el;
+	}
 
-async function sendMessage(overrideText) {
+	function saveBusinessChatHistory() {
+	  const s = Store.getSettings();
+	  s.businessChatHistory = chatHistory.slice(-50);
+	  Store.saveSettings(s);
+	}
+
+	function restoreBusinessChatHistory() {
+	  const saved = Store.getSettings().businessChatHistory;
+	  if (!Array.isArray(saved) || !saved.length) return false;
+	  chatHistory = saved.filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string').slice(-50);
+	  if (!chatHistory.length) return false;
+
+	  const container = document.getElementById('chat-messages');
+	  container.innerHTML = '';
+	  chatHistory.forEach(m => appendMsg(m.role === 'user' ? 'user' : 'ai', m.content));
+	  return true;
+	}
+	
+	async function sendMessage(overrideText) {
   const input = document.getElementById('chat-input');
   const text  = overrideText || input.value.trim();
   if (!text) return;
@@ -869,7 +887,8 @@ async function sendMessage(overrideText) {
   document.getElementById('chat-send-btn').disabled = true;
 
   appendMsg('user', text);
-  chatHistory.push({ role: 'user', content: text });
+	  chatHistory.push({ role: 'user', content: text });
+	  saveBusinessChatHistory();
 
   const typingEl = appendMsg('ai', '', true);
 
@@ -890,7 +909,8 @@ ${buildFinancialContext()}`;
     });
     const data = await resp.json();
     const reply = data.content?.[0]?.text || 'Sorry, I had trouble responding. Please try again.';
-    chatHistory.push({ role: 'assistant', content: reply });
+	    chatHistory.push({ role: 'assistant', content: reply });
+	    saveBusinessChatHistory();
     typingEl.querySelector('.msg-bubble').innerHTML =
       reply.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
   } catch(err) {
@@ -1436,6 +1456,11 @@ document.getElementById('rec-filter-cat').addEventListener('change', renderRecei
 document.getElementById('sidebar-mount').innerHTML = renderSidebar();
 initSidebar();
 buildFinancialContext(); // populate context summary
+if (_cache.ready) {
+  restoreBusinessChatHistory();
+} else {
+  document.addEventListener('klyro:ready', restoreBusinessChatHistory, { once: true });
+}
 </script>
 
 <!-- Bottom Nav (mobile only) -->

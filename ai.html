@@ -377,6 +377,24 @@ function appendMessage(role, html) {
   return div;
 }
 
+function saveChatHistory() {
+  const s = Store.getSettings();
+  s.aiChatHistory = chatHistory.slice(-50);
+  Store.saveSettings(s);
+}
+
+function restoreChatHistory() {
+  const saved = Store.getSettings().aiChatHistory;
+  if (!Array.isArray(saved) || !saved.length) return false;
+  chatHistory = saved.filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string').slice(-50);
+  if (!chatHistory.length) return false;
+
+  const win = document.getElementById('chat-window');
+  win.innerHTML = '';
+  chatHistory.forEach(m => appendMessage(m.role === 'user' ? 'user' : 'ai', m.role === 'user' ? esc(m.content) : mdToHtml(m.content)));
+  return true;
+}
+
 function createStreamBubble() {
   const win = document.getElementById('chat-window');
   const div = document.createElement('div');
@@ -587,19 +605,22 @@ async function sendMessage() {
   isStreaming   = true;
   document.getElementById('send-btn').disabled = true;
 
-  appendMessage('user', esc(msg));
-  chatHistory.push({ role: 'user', content: msg });
-
-  try {
-    const { text, usedWeb, thinkSecs } = await runAgent(chatHistory);
-    chatHistory.push({ role: 'assistant', content: text });
-  } catch (err) {
-    console.error(err);
-    setStatus(null);
-    const fallback = localReply(msg);
-    appendMessage('ai', mdToHtml(fallback));
-    chatHistory.push({ role: 'assistant', content: fallback });
-  }
+	  appendMessage('user', esc(msg));
+	  chatHistory.push({ role: 'user', content: msg });
+	  saveChatHistory();
+	
+	  try {
+	    const { text, usedWeb, thinkSecs } = await runAgent(chatHistory);
+	    chatHistory.push({ role: 'assistant', content: text });
+	    saveChatHistory();
+	  } catch (err) {
+	    console.error(err);
+	    setStatus(null);
+	    const fallback = localReply(msg);
+	    appendMessage('ai', mdToHtml(fallback));
+	    chatHistory.push({ role: 'assistant', content: fallback });
+	    saveChatHistory();
+	  }
 
   setStatus(null);
   isStreaming  = false;
@@ -720,7 +741,8 @@ renderDeficitBanner();
 renderAutoInsights();
 renderChips();
 
-setTimeout(() => {
+function renderInitialGreeting() {
+  if (restoreChatHistory()) return;
   const user = Auth.getUser();
   const name = user?.name?.split(' ')[0] || '';
   const ctx  = Utils.buildAIContext('month');
@@ -733,6 +755,12 @@ setTimeout(() => {
      I take time to reason carefully before I respond — you'll see me thinking for at least 15 seconds to make sure my advice is accurate and personalised to <em>your</em> finances. I can also search the web live for current rates and strategies.${deficitNote}<br><br>
      What's on your mind? 💛`
   );
-}, 350);
+}
+
+if (_cache.ready) {
+  setTimeout(renderInitialGreeting, 350);
+} else {
+  document.addEventListener('klyro:ready', () => setTimeout(renderInitialGreeting, 150), { once: true });
+}
 </script>
 </html>
