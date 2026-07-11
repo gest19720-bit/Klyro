@@ -1939,7 +1939,7 @@ function initSidebar() {
 
   document.querySelectorAll('.nav-item[data-page]').forEach(item => {
     const p = item.dataset.page;
-    if (page.includes(p) || (p==='dashboard' && ['','index.html','dashboard.html'].includes(page)))
+      if (page.includes(p) || (p==='dashboard' && ['','dashboard.html'].includes(page)))
       item.classList.add('active');
   });
 
