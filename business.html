@@ -1511,7 +1511,7 @@ document.addEventListener('klyro:data-changed', (evt) => {
   var page = location.pathname.split('/').pop() || 'dashboard.html';
   document.querySelectorAll('.bottom-nav-item[data-page]').forEach(function(el){
     var p = el.dataset.page;
-    if(page.includes(p)||(p==='dashboard'&&['','index.html','dashboard.html'].includes(page)))
+    if(page.includes(p)||(p==='dashboard'&&['','dashboard.html'].includes(page)))
       el.classList.add('active');
   });
 })();
