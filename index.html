@@ -1,1889 +1,1279 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Klyro — Finance that thinks with you</title>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600&family=DM+Sans:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;1,300&display=swap">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <style>
-    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Klyro — The Financial Operating System</title>
+<meta name="description" content="Klyro is the AI-powered financial system. Track 150+ currencies, automate invoicing, and get 24/7 personalized financial coaching.">
+<link rel="icon" type="image/png" href="Klyro's Logo.png">
 
-    :root {
-      --gold:        #d4a017;
-      --gold-light:  #f0c040;
-      --gold-pale:   #fce9a3;
-      --gold-dim:    rgba(212,160,23,0.15);
-      --gold-border: rgba(212,160,23,0.35);
-      --bg:          #080709;
-      --bg2:         #0e0c10;
-      --bg3:         #131118;
-      --surface:     rgba(255,255,255,0.055);
-      --surface-b:   rgba(255,255,255,0.10);
-      --border:      rgba(255,255,255,0.09);
-      --border-b:    rgba(255,255,255,0.16);
-      --text:        #f0ece3;
-      --text-mid:    rgba(240,236,227,0.65);
-      --text-dim:    rgba(240,236,227,0.35);
-      --green:       #2ecc71;
-      --red:         #e74c3c;
-      --blue:        #5b9cf6;
-      --purple:      #a78bfa;
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=DM+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-      --blur: blur(24px) saturate(180%);
-      --radius: 20px;
-      --radius-sm: 12px;
-      --radius-pill: 9999px;
-      --shadow: 0 8px 32px rgba(0,0,0,0.5);
-      --shadow-gold: 0 0 40px rgba(212,160,23,0.2);
-      --trans: 0.35s cubic-bezier(0.16,1,0.3,1);
+<style>
+/* ============================================================
+   TOKENS — Klyro "Trading Desk" dark system
+   ============================================================ */
+:root{
+  --bg:            #070b09;
+  --bg-1:          #0b1310;
+  --bg-2:          #0e1713;
+  --surface:       rgba(255,255,255,0.035);
+  --surface-2:     rgba(255,255,255,0.06);
+  --border:        rgba(255,255,255,0.09);
+  --border-2:      rgba(255,255,255,0.16);
 
-      --font-d: 'Cormorant Garamond', Californian FB, serif;
-      --font-b: 'DM Sans', Inter Display, sans-serif;
-    }
+  --gold:          #d9a521;
+  --gold-2:        #f3ca5a;
+  --gold-dim:      rgba(217,165,33,0.14);
+  --gold-rgb:      217,165,33;
 
-    html { scroll-behavior: smooth; }
-    body {
-      font-family: var(--font-b);
-      background: var(--bg);
-      color: var(--text);
-      overflow-x: hidden;
-      -webkit-font-smoothing: antialiased;
-    }
+  --emerald:       #2fae72;
+  --emerald-2:     #6fe3a8;
+  --emerald-dim:   rgba(47,174,114,0.14);
+  --emerald-rgb:   47,174,114;
 
-    /* ─────────── NOISE GRAIN ─────────── */
-    body::after {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
-      pointer-events: none;
-      z-index: 9999;
-    }
+  --red:           #f0685c;
+  --red-dim:       rgba(240,104,92,0.14);
 
-    /* ─────────── AMBIENT GLOW ─────────── */
-    .glow-orb {
-      position: fixed;
-      border-radius: 50%;
-      filter: blur(120px);
-      pointer-events: none;
-      z-index: 0;
-    }
-    .glow-orb-1 {
-      width: 700px; height: 700px;
-      top: -200px; left: -100px;
-      background: radial-gradient(circle, rgba(212,160,23,0.08) 0%, transparent 70%);
-    }
-    .glow-orb-2 {
-      width: 500px; height: 500px;
-      bottom: 20vh; right: -100px;
-      background: radial-gradient(circle, rgba(91,156,246,0.06) 0%, transparent 70%);
-    }
+  --ink:           #f5f1e8;
+  --ink-mid:       rgba(245,241,232,0.66);
+  --ink-dim:       rgba(245,241,232,0.40);
+  --ink-faint:     rgba(245,241,232,0.14);
 
-    /* ─────────── NAV ─────────── */
-    nav {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      z-index: 1000;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 48px;
-      height: 72px;
-      border-bottom: 1px solid transparent;
-      transition: all 0.4s ease;
-    }
-    nav.scrolled {
-      background: rgba(8,7,9,0.82);
-      backdrop-filter: var(--blur);
-      -webkit-backdrop-filter: var(--blur);
-      border-bottom-color: var(--border);
-    }
-    .nav-logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      text-decoration: none;
-    }
-    .nav-logo-icon {
-      width: 36px; height: 36px;
-      background: linear-gradient(135deg, var(--gold), var(--gold-light));
-      border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.9rem;
-      color: #03071e;
-      font-weight: 800;
-      letter-spacing: -0.03em;
-    }
-    .nav-logo-text {
-      font-family: var(--font-d);
-      font-size: 1.55rem;
-      font-weight: 700;
-      color: var(--text);
-      letter-spacing: 0.01em;
-    }
-    .nav-links {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      list-style: none;
-    }
-    .nav-links a {
-      padding: 8px 16px;
-      color: var(--text-mid);
-      text-decoration: none;
-      font-size: 0.88rem;
-      font-weight: 500;
-      border-radius: var(--radius-pill);
-      transition: color 0.2s, background 0.2s;
-    }
-    .nav-links a:hover { color: var(--text); background: var(--surface); }
-    .nav-cta {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .btn-nav-ghost {
-      padding: 9px 22px;
-      background: transparent;
-      border: 4px solid var(--border-b);
-      color: var(--text-mid);
-      font-family: var(--font-b);
-      font-size: 0.85rem;
-      font-weight: 500;
-      cursor: pointer;
-      text-decoration: none;
-      transition: all 0.25s ease;
-    }
-    .btn-nav-ghost:hover { 
-      border-color: var(--gold-border); 
-      color: var(--text); 
-      background:var(--gold);
-    }
-    .btn-nav-gold {
-      padding: 9px 22px;
-      background: linear-gradient(135deg, var(--gold), var(--gold-light));
-      border: none;
-      border-radius: var(--radius-pill);
-      color: #03071e;
-      font-family: var(--font-b);
-      font-size: 0.85rem;
-      font-weight: 700;
-      cursor: pointer;
-      text-decoration: none;
-      transition: all 0.25s ease;
-      white-space: nowrap;
-    }
-    .btn-nav-gold:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(212,160,23,0.4); }
+  --radius-lg:     26px;
+  --radius:        18px;
+  --radius-sm:     11px;
+  --radius-pill:   999px;
 
-    /* ─────────── HERO ─────────── */
-    .hero {
-      position: relative;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 120px 48px 80px;
-      text-align: center;
-      overflow: hidden;
-      z-index: 1;
-    }
-    .hero-eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 18px;
-      background: var(--gold-dim);
-      border: 1px solid var(--gold-border);
-      border-radius: var(--radius-pill);
-      font-size: 0.72rem;
-      font-weight: 700;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: var(--gold);
-      margin-bottom: 28px;
-      animation: fadeUp 0.8s ease both;
-    }
-    .hero-eyebrow-dot {
-      width: 6px; height: 6px;
-      background: var(--gold);
-      border-radius: 50%;
-      animation: pulse 2s infinite;
-    }
-    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.8)} }
+  --blur:          blur(28px) saturate(160%);
+  --shadow:        0 10px 40px rgba(0,0,0,0.35);
+  --shadow-lg:     0 30px 80px rgba(0,0,0,0.5);
+  --ease:          cubic-bezier(0.16,1,0.3,1);
 
-    .hero-title {
-      font-family: var(--font-d);
-      font-size: clamp(3.2rem, 7vw, 6.5rem);
-      font-weight: 700;
-      line-height: 1.03;
-      color: var(--text);
-      margin-bottom: 24px;
-      max-width: 860px;
-      animation: fadeUp 0.8s 0.1s ease both;
-    }
-    .hero-title em {
-      font-style: italic;
-      background: linear-gradient(135deg, var(--gold), var(--gold-light) 60%, var(--gold-pale));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    .hero-sub {
-      font-size: clamp(1rem, 1.6vw, 1.18rem);
-      color: var(--text-mid);
-      max-width: 540px;
-      line-height: 1.7;
-      margin-bottom: 44px;
-      animation: fadeUp 0.8s 0.2s ease both;
-    }
-    .hero-actions {
-      display: flex;
-      gap: 14px;
-      align-items: center;
-      justify-content: center;
-      flex-wrap: wrap;
-      animation: fadeUp 0.8s 0.3s ease both;
-    }
-    .btn-hero-primary {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      padding: 16px 36px;
-      background: linear-gradient(135deg, var(--gold), var(--gold-light));
-      border: none;
-      border-radius: var(--radius-pill);
-      color: #03071e;
-      font-family: var(--font-b);
-      font-size: 0.95rem;
-      font-weight: 700;
-      cursor: pointer;
-      text-decoration: none;
-      transition: all 0.3s ease;
-      box-shadow: 0 8px 32px rgba(212,160,23,0.3);
-    }
-    .btn-hero-primary:hover { transform: translateY(-2px); box-shadow: 0 16px 48px rgba(212,160,23,0.45); }
-    .btn-hero-secondary {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      padding: 16px 32px;
-      background: var(--surface);
-      border: 1px solid var(--border-b);
-      border-radius: var(--radius-pill);
-      color: var(--text-mid);
-      font-family: var(--font-b);
-      font-size: 0.95rem;
-      font-weight: 500;
-      cursor: pointer;
-      text-decoration: none;
-      transition: all 0.3s ease;
-      backdrop-filter: blur(12px);
-    }
-    .btn-hero-secondary:hover { color: var(--text); border-color: var(--border-b); background: var(--surface-b); }
+  --font-display:  'Cormorant Garamond', Georgia, serif;
+  --font-body:     'DM Sans', -apple-system, sans-serif;
+  --font-mono:     'JetBrains Mono', ui-monospace, monospace;
+}
 
-    .hero-trust {
-      margin-top: 52px;
-      display: flex;
-      align-items: center;
-      gap: 32px;
-      justify-content: center;
-      flex-wrap: wrap;
-      animation: fadeUp 0.8s 0.4s ease both;
-    }
-    .hero-trust-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.8rem;
-      color: var(--text-dim);
-    }
-    .hero-trust-item i { color: var(--gold); font-size: 0.7rem; }
+*,*::before,*::after{ margin:0; padding:0; box-sizing:border-box; }
+html{ scroll-behavior:smooth; }
+body{
+  font-family:var(--font-body);
+  background:var(--bg);
+  color:var(--ink);
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+  line-height:1.5;
+}
+img{ max-width:100%; display:block; }
+a{ color:inherit; }
+::selection{ background:rgba(var(--gold-rgb),0.35); color:#fff; }
 
-    /* ─────────── DASHBOARD MOCKUP ─────────── */
-    .hero-visual {
-      position: relative;
-      width: 100%;
-      max-width: 1040px;
-      margin: 72px auto 0;
-      animation: fadeUp 0.8s 0.5s ease both;
-    }
-    .mockup-frame {
-      background: var(--bg2);
-      border: 1px solid var(--border-b);
-      border-radius: 24px;
-      overflow: hidden;
-      box-shadow: 0 40px 120px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.05), var(--shadow-gold);
-      position: relative;
-    }
-    .mockup-bar {
-      height: 44px;
-      background: var(--bg3);
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      padding: 0 20px;
-      gap: 8px;
-    }
-    .mockup-dot { width: 12px; height: 12px; border-radius: 50%; }
-    .mockup-dot-r { background: #ff5f57; }
-    .mockup-dot-y { background: #ffbd2e; }
-    .mockup-dot-g { background: #28ca41; }
-    .mockup-url {
-      flex: 1;
-      height: 26px;
-      background: rgba(255,255,255,0.05);
-      border-radius: 6px;
-      margin: 0 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.72rem;
-      color: var(--text-dim);
-      gap: 6px;
-    }
-    .mockup-url i { font-size: 0.6rem; color: var(--green); }
-    .mockup-body {
-      display: grid;
-      grid-template-columns: 220px 1fr;
-      min-height: 520px;
-    }
-    /* Sidebar mockup */
-    .mock-sidebar {
-      background: rgba(255,255,255,0.035);
-      border-right: 1px solid var(--border);
-      padding: 28px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .mock-logo {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 0 8px;
-      margin-bottom: 32px;
-    }
-    .mock-logo-k {
-      width: 28px; height: 28px;
-      background: linear-gradient(135deg, var(--gold), var(--gold-light));
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.7rem;
-      color: #03071e;
-      font-weight: 900;
-    }
-    .mock-logo-text { font-family: var(--font-d); font-size: 1.1rem; font-weight: 700; color: var(--text); }
-    .mock-nav-section { font-size: 0.58rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-dim); padding: 0 10px; margin: 16px 0 6px; }
-    .mock-nav-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 12px;
-      border-radius: 10px;
-      font-size: 0.78rem;
-      font-weight: 500;
-      color: var(--text-dim);
-    }
-    .mock-nav-item.active {
-      background: linear-gradient(135deg, rgba(212,160,23,0.18), rgba(212,160,23,0.08));
-      border: 1px solid var(--gold-border);
-      color: var(--gold);
-    }
-    .mock-nav-item i { width: 14px; text-align: center; font-size: 0.75rem; }
-    /* Main mockup */
-    .mock-main { padding: 28px 28px 20px; overflow: hidden; }
-    .mock-page-title { font-family: var(--font-d); font-size: 1.4rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
-    .mock-page-sub { font-size: 0.72rem; color: var(--text-dim); margin-bottom: 24px; }
-    .mock-stats {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-    .mock-stat {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 14px 16px;
-    }
-    .mock-stat-label { font-size: 0.62rem; color: var(--text-dim); margin-bottom: 6px; display: flex; align-items: center; gap: 4px; }
-    .mock-stat-val { font-family: var(--font-d); font-size: 1.2rem; font-weight: 700; }
-    .mock-stat-val.green { color: var(--green); }
-    .mock-stat-val.red { color: var(--red); }
-    .mock-stat-val.gold { color: var(--gold); }
-    .mock-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    .mock-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px;
-    }
-    .mock-card-title { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.06em; color: var(--text-mid); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
-    .mock-card-title i { color: var(--gold); }
-    .mock-txn { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-    .mock-txn-icon {
-      width: 28px; height: 28px; border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.65rem;
-    }
-    .mock-txn-icon.inc { background: rgba(46,204,113,0.15); color: var(--green); }
-    .mock-txn-icon.exp { background: rgba(231,76,60,0.15); color: var(--red); }
-    .mock-txn-info { flex: 1; }
-    .mock-txn-name { font-size: 0.7rem; font-weight: 500; color: var(--text); }
-    .mock-txn-cat { font-size: 0.6rem; color: var(--text-dim); }
-    .mock-txn-amt { font-size: 0.72rem; font-weight: 600; }
-    .mock-txn-amt.inc { color: var(--green); }
-    .mock-txn-amt.exp { color: var(--red); }
-    /* Bar chart mini */
-    .mock-bars { display: flex; align-items: flex-end; gap: 6px; height: 80px; padding-top: 8px; }
-    .mock-bar-group { flex: 1; display: flex; gap: 3px; align-items: flex-end; }
-    .mock-bar {
-      flex: 1;
-      border-radius: 4px 4px 0 0;
-      animation: barGrow 1.2s cubic-bezier(0.16,1,0.3,1) both;
-      animation-delay: var(--d);
-    }
-    @keyframes barGrow { from { transform: scaleY(0); transform-origin: bottom; } to { transform: scaleY(1); } }
-    .mock-bar.income { background: rgba(46,204,113,0.6); }
-    .mock-bar.expense { background: rgba(231,76,60,0.5); }
-    /* AI bubble */
-    .mock-ai-bubble {
-      background: linear-gradient(135deg, rgba(212,160,23,0.12), rgba(212,160,23,0.06));
-      border: 1px solid var(--gold-border);
-      border-radius: 12px;
-      padding: 12px;
-      font-size: 0.68rem;
-      line-height: 1.6;
-      color: var(--text-mid);
-    }
-    .mock-ai-header { display: flex; align-items: center; gap: 6px; font-weight: 700; color: var(--gold); font-size: 0.65rem; margin-bottom: 6px; }
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{ animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important; scroll-behavior:auto !important; }
+}
 
-    /* ─────────── SECTION SPACING ─────────── */
-    section { position: relative; z-index: 1; }
-    .section-inner {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 0 48px;
-    }
-    .section-eyebrow {
-      font-size: 0.72rem;
-      font-weight: 700;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-      color: var(--gold);
-      margin-bottom: 16px;
-    }
-    .section-title {
-      font-family: var(--font-d);
-      font-size: clamp(2.2rem, 4vw, 3.4rem);
-      font-weight: 700;
-      color: var(--text);
-      line-height: 1.1;
-      margin-bottom: 16px;
-    }
-    .section-title em { font-style: italic; color: var(--gold); }
-    .section-sub {
-      font-size: 1rem;
-      color: var(--text-mid);
-      line-height: 1.7;
-      max-width: 540px;
-    }
+/* ─── Ambient field ─── */
+.field{ position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
+.field::before{
+  content:''; position:absolute; inset:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size:64px 64px;
+  mask-image:radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 75%);
+}
+.orb{ position:absolute; border-radius:50%; filter:blur(90px); }
+.orb-1{ width:44vw; height:44vw; top:-14vw; right:-10vw; background:radial-gradient(circle, rgba(var(--gold-rgb),0.16), transparent 70%); animation:drift 22s ease-in-out infinite alternate; }
+.orb-2{ width:38vw; height:38vw; top:20vh; left:-14vw; background:radial-gradient(circle, rgba(var(--emerald-rgb),0.14), transparent 70%); animation:drift 26s ease-in-out infinite alternate-reverse; }
+.orb-3{ width:34vw; height:34vw; bottom:-10vw; right:8vw; background:radial-gradient(circle, rgba(var(--emerald-rgb),0.08), transparent 70%); animation:drift 30s ease-in-out infinite alternate; }
+@keyframes drift{ to{ transform:translate(4%,6%) scale(1.08); } }
 
-    /* ─────────── STATS STRIP ─────────── */
-    .stats-strip {
-      padding: 80px 0;
-      border-top: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
-      overflow: hidden;
-    }
-    .stats-row {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1px;
-      background: var(--border);
-    }
-    .stat-block {
-      background: var(--bg);
-      padding: 48px 40px;
-      text-align: center;
-    }
-    .stat-block-num {
-      font-family: var(--font-d);
-      font-size: clamp(2.8rem, 5vw, 4.2rem);
-      font-weight: 700;
-      color: var(--gold);
-      line-height: 1;
-      margin-bottom: 10px;
-    }
-    .stat-block-label { font-size: 0.85rem; color: var(--text-dim); }
+.wrap{ position:relative; z-index:1; }
 
-    /* ─────────── FEATURES SECTION ─────────── */
-    .features-section { padding: 120px 0; }
-    .features-header {
-      margin-bottom: 72px;
-      max-width: 620px;
-    }
-    .features-bento {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
-    }
-    .feat-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 32px 28px;
-      transition: all var(--trans);
-      position: relative;
-      overflow: hidden;
-    }
-    .feat-card::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, var(--gold-dim) 0%, transparent 60%);
-      opacity: 0;
-      transition: opacity var(--trans);
-    }
-    .feat-card:hover { border-color: var(--gold-border); transform: translateY(-4px); }
-    .feat-card:hover::before { opacity: 1; }
-    .feat-card.wide { grid-column: span 2; }
-    .feat-card.tall { display: flex; flex-direction: column; gap: 20px; }
+/* ─── Reveal-on-scroll ─── */
+.reveal{ opacity:0; transform:translateY(28px); transition:opacity 0.8s var(--ease), transform 0.8s var(--ease); }
+.reveal.in{ opacity:1; transform:translateY(0); }
+.reveal-stagger > *{ opacity:0; transform:translateY(24px); transition:opacity 0.7s var(--ease), transform 0.7s var(--ease); }
+.reveal-stagger.in > *{ opacity:1; transform:translateY(0); }
+.reveal-stagger.in > *:nth-child(1){ transition-delay:0.03s; }
+.reveal-stagger.in > *:nth-child(2){ transition-delay:0.10s; }
+.reveal-stagger.in > *:nth-child(3){ transition-delay:0.17s; }
+.reveal-stagger.in > *:nth-child(4){ transition-delay:0.24s; }
+.reveal-stagger.in > *:nth-child(5){ transition-delay:0.31s; }
+.reveal-stagger.in > *:nth-child(6){ transition-delay:0.38s; }
 
-    .feat-icon {
-      width: 52px; height: 52px;
-      background: var(--gold-dim);
-      border: 1px solid var(--gold-border);
-      border-radius: 14px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.1rem;
-      color: var(--gold);
-      margin-bottom: 20px;
-      position: relative;
-    }
-    .feat-title {
-      font-family: var(--font-d);
-      font-size: 1.35rem;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 10px;
-    }
-    .feat-desc {
-      font-size: 0.875rem;
-      color: var(--text-mid);
-      line-height: 1.7;
-    }
-    .feat-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      padding: 3px 10px;
-      background: var(--gold-dim);
-      border: 1px solid var(--gold-border);
-      border-radius: var(--radius-pill);
-      font-size: 0.65rem;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      color: var(--gold);
-      text-transform: uppercase;
-      margin-bottom: 14px;
-    }
-    /* Mini chart widget in feature card */
-    .feat-mini-chart {
-      display: flex;
-      align-items: flex-end;
-      gap: 4px;
-      height: 50px;
-      margin-top: 16px;
-    }
-    .feat-bar {
-      flex: 1;
-      border-radius: 4px 4px 0 0;
-      background: var(--gold-dim);
-      border: 1px solid var(--gold-border);
-      transition: height 0.3s ease;
-    }
-    .feat-card:hover .feat-bar { background: rgba(212,160,23,0.35); }
+/* ─── Type ─── */
+h1,h2,h3,h4{ font-family:var(--font-display); font-weight:700; color:var(--ink); letter-spacing:-0.01em; }
+.eyebrow{
+  display:inline-flex; align-items:center; gap:8px;
+  font-family:var(--font-mono); font-size:0.72rem; font-weight:500;
+  letter-spacing:0.12em; text-transform:uppercase; color:var(--gold-2);
+}
+.eyebrow::before{ content:''; width:6px; height:6px; border-radius:50%; background:var(--emerald-2); box-shadow:0 0 10px var(--emerald-2); }
 
-    /* AI chat mockup in feature card */
-    .feat-chat { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
-    .feat-chat-msg {
-      padding: 10px 14px;
-      border-radius: 12px;
-      font-size: 0.75rem;
-      line-height: 1.5;
-      color: var(--text-mid);
-    }
-    .feat-chat-msg.ai {
-      background: var(--gold-dim);
-      border: 1px solid var(--gold-border);
-      color: var(--text);
-      align-self: flex-start;
-      max-width: 90%;
-    }
-    .feat-chat-msg.user {
-      background: var(--surface-b);
-      border: 1px solid var(--border);
-      align-self: flex-end;
-      max-width: 85%;
-    }
-    .feat-chat-label {
-      font-size: 0.6rem;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      color: var(--gold);
-      text-transform: uppercase;
-      margin-bottom: 2px;
-    }
+.section{ padding:130px 6%; max-width:1280px; margin:0 auto; position:relative; }
+.section-head{ max-width:640px; margin-bottom:64px; }
+.section-head.center{ margin-left:auto; margin-right:auto; text-align:center; }
+.section-title{ font-size:clamp(2.1rem,4vw,3rem); line-height:1.12; margin:14px 0 16px; }
+.section-sub{ color:var(--ink-mid); font-size:1.05rem; line-height:1.7; }
 
-    /* Currency mini display */
-    .feat-currencies {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 16px;
-    }
-    .feat-cur-tag {
-      padding: 4px 10px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-pill);
-      font-size: 0.68rem;
-      font-weight: 600;
-      color: var(--text-mid);
-      transition: all 0.2s;
-    }
-    .feat-card:hover .feat-cur-tag { border-color: var(--gold-border); color: var(--gold-light); }
-    .feat-cur-tag.featured { background: var(--gold-dim); border-color: var(--gold-border); color: var(--gold); }
+/* ─── Buttons ─── */
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:10px;
+  padding:15px 30px; border-radius:var(--radius-pill);
+  font-family:var(--font-body); font-size:0.92rem; font-weight:700;
+  text-decoration:none; cursor:pointer; border:none;
+  transition:transform 0.4s var(--ease), box-shadow 0.4s var(--ease), background 0.4s var(--ease), border-color 0.4s var(--ease);
+  position:relative; overflow:hidden; white-space:nowrap;
+}
+.btn-gold{
+  background:linear-gradient(135deg,var(--gold),var(--gold-2));
+  color:#191204; box-shadow:0 8px 26px rgba(var(--gold-rgb),0.28);
+}
+.btn-gold:hover{ transform:translateY(-2px); box-shadow:0 14px 38px rgba(var(--gold-rgb),0.4); }
+.btn-glass{
+  background:var(--surface); border:1px solid var(--border); color:var(--ink);
+  backdrop-filter:var(--blur); -webkit-backdrop-filter:var(--blur);
+}
+.btn-glass:hover{ background:var(--surface-2); border-color:var(--border-2); transform:translateY(-2px); }
+.btn-sm{ padding:10px 20px; font-size:0.82rem; }
+.btn-block{ width:100%; }
 
-    /* ─────────── AI SECTION ─────────── */
-    .ai-section {
-      padding: 120px 0;
-      overflow: hidden;
-    }
-    .ai-inner {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 80px;
-      align-items: center;
-    }
-    .ai-chat-demo {
-      background: var(--bg2);
-      border: 1px solid var(--border-b);
-      border-radius: 24px;
-      overflow: hidden;
-      box-shadow: var(--shadow), var(--shadow-gold);
-    }
-    .ai-chat-header {
-      background: var(--bg3);
-      border-bottom: 1px solid var(--border);
-      padding: 18px 24px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .ai-avatar {
-      width: 38px; height: 38px;
-      background: linear-gradient(135deg, var(--gold), var(--gold-light));
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.9rem;
-      color: #03071e;
-    }
-    .ai-chat-name { font-weight: 700; font-size: 0.9rem; }
-    .ai-online { font-size: 0.72rem; color: var(--green); display: flex; align-items: center; gap: 4px; }
-    .ai-online::before { content: ''; width: 6px; height: 6px; background: var(--green); border-radius: 50%; }
-    .ai-messages { padding: 24px; display: flex; flex-direction: column; gap: 14px; min-height: 380px; }
-    .ai-msg {
-      display: flex;
-      gap: 10px;
-      align-items: flex-start;
-    }
-    .ai-msg.user { flex-direction: row-reverse; }
-    .ai-msg-av {
-      width: 30px; height: 30px;
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.75rem;
-      flex-shrink: 0;
-    }
-    .ai-msg.ai .ai-msg-av { background: linear-gradient(135deg,var(--gold),var(--gold-light)); color: #03071e; }
-    .ai-msg.user .ai-msg-av { background: var(--surface-b); border: 1px solid var(--border); color: var(--text-dim); }
-    .ai-msg-bubble {
-      max-width: 78%;
-      padding: 12px 16px;
-      border-radius: 16px;
-      font-size: 0.83rem;
-      line-height: 1.6;
-    }
-    .ai-msg.ai .ai-msg-bubble {
-      background: var(--surface-b);
-      border: 1px solid var(--border);
-      color: var(--text);
-      border-bottom-left-radius: 4px;
-    }
-    .ai-msg.user .ai-msg-bubble {
-      background: linear-gradient(135deg, var(--gold-dim), rgba(212,160,23,0.08));
-      border: 1px solid var(--gold-border);
-      color: var(--text-mid);
-      border-bottom-right-radius: 4px;
-    }
-    .ai-msg-bubble strong { color: var(--gold); }
-    .ai-typing {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      padding: 0 24px 16px;
-    }
-    .typing-dots { display: flex; gap: 4px; padding: 8px 12px; background: var(--surface); border-radius: 10px; }
-    .typing-dot {
-      width: 6px; height: 6px;
-      background: var(--text-dim);
-      border-radius: 50%;
-      animation: typingPulse 1.4s infinite;
-    }
-    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
-    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes typingPulse { 0%,80%,100%{transform:scale(0.8);opacity:0.5} 40%{transform:scale(1.1);opacity:1} }
-    .ai-input-row {
-      border-top: 1px solid var(--border);
-      padding: 14px 20px;
-      display: flex;
-      gap: 10px;
-    }
-    .ai-input {
-      flex: 1;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-pill);
-      padding: 10px 18px;
-      font-size: 0.82rem;
-      color: var(--text-dim);
-      font-family: var(--font-b);
-    }
-    .ai-send { width: 36px; height: 36px; background: var(--gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #03071e; font-size: 0.75rem; cursor: pointer; flex-shrink: 0; }
-    .ai-feature-list { display: flex; flex-direction: column; gap: 14px; margin-top: 36px; }
-    .ai-feature-item {
-      display: flex;
-      gap: 14px;
-      align-items: flex-start;
-    }
-    .ai-feature-icon {
-      width: 40px; height: 40px;
-      background: var(--gold-dim);
-      border: 1px solid var(--gold-border);
-      border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      color: var(--gold);
-      font-size: 0.85rem;
-      flex-shrink: 0;
-    }
-    .ai-feature-title { font-weight: 600; font-size: 0.9rem; color: var(--text); margin-bottom: 3px; }
-    .ai-feature-desc { font-size: 0.8rem; color: var(--text-dim); line-height: 1.5; }
+/* ============================================================
+   NAV
+   ============================================================ */
+.nav{
+  position:fixed; top:0; left:0; right:0; z-index:1000;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 5%; height:82px;
+  background:rgba(7,11,9,0.5);
+  backdrop-filter:var(--blur); -webkit-backdrop-filter:var(--blur);
+  border-bottom:1px solid transparent;
+  transition:all 0.4s var(--ease);
+}
+.nav.scrolled{ height:68px; background:rgba(7,11,9,0.82); border-bottom-color:var(--border); }
+.nav-logo{ display:flex; align-items:center; gap:11px; text-decoration:none; }
+.logo-img{ width:36px; height:36px; object-fit:contain; border-radius:9px; }
+.logo-fallback{
+  width:36px; height:36px; border-radius:9px;
+  background:linear-gradient(135deg,var(--emerald),var(--gold));
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-display); font-weight:700; color:#0a0d0a; font-size:1.15rem;
+}
+.nav-logo-text{ font-family:var(--font-display); font-weight:700; font-size:1.5rem; color:var(--ink); }
+.nav-menu{ display:flex; align-items:center; gap:38px; }
+.nav-link{
+  font-size:0.9rem; font-weight:500; color:var(--ink-mid); text-decoration:none;
+  position:relative; padding:4px 0; transition:color 0.3s;
+}
+.nav-link::after{
+  content:''; position:absolute; left:0; bottom:-2px; width:0; height:1px;
+  background:var(--gold-2); transition:width 0.35s var(--ease);
+}
+.nav-link:hover{ color:var(--ink); }
+.nav-link:hover::after{ width:100%; }
+.nav-right{ display:flex; align-items:center; gap:14px; }
+.menu-toggle{
+  display:none; flex-direction:column; gap:5px; width:38px; height:38px;
+  align-items:center; justify-content:center; background:var(--surface);
+  border:1px solid var(--border); border-radius:10px; cursor:pointer;
+}
+.menu-toggle span{ width:16px; height:1.5px; background:var(--ink); transition:all 0.3s var(--ease); }
+.menu-toggle.open span:nth-child(1){ transform:translateY(6.5px) rotate(45deg); }
+.menu-toggle.open span:nth-child(2){ opacity:0; }
+.menu-toggle.open span:nth-child(3){ transform:translateY(-6.5px) rotate(-45deg); }
 
-    /* ─────────── PRICING SECTION ─────────── */
-    .pricing-section { padding: 120px 0; }
-    .pricing-header { text-align: center; max-width: 640px; margin: 0 auto 64px; }
-    .billing-toggle {
-      display: inline-flex;
-      gap: 4px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      padding: 4px;
-      border-radius: var(--radius-pill);
-      margin-top: 24px;
-    }
-    .billing-btn {
-      padding: 8px 22px;
-      border: none;
-      background: transparent;
-      color: var(--text-dim);
-      font-family: var(--font-b);
-      font-size: 0.82rem;
-      font-weight: 600;
-      cursor: pointer;
-      border-radius: var(--radius-pill);
-      transition: all 0.3s;
-    }
-    .billing-btn.active { background: var(--gold); color: #03071e; }
-    .save-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      margin-left: 6px;
-      padding: 3px 8px;
-      background: rgba(46,204,113,0.15);
-      border: 1px solid rgba(46,204,113,0.3);
-      border-radius: var(--radius-pill);
-      font-size: 0.65rem;
-      font-weight: 700;
-      color: var(--green);
-      vertical-align: middle;
-    }
-    .plans-grid {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 14px;
-      align-items: end;
-    }
-    .plan-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 28px 20px 24px;
-      display: flex;
-      flex-direction: column;
-      position: relative;
-      transition: all var(--trans);
-    }
-    .plan-card:hover { transform: translateY(-4px); border-color: var(--border-b); }
-    .plan-card.featured {
-      background: linear-gradient(160deg, rgba(212,160,23,0.10), var(--surface));
-      border: 2px solid var(--gold);
-      transform: scale(1.04) translateY(-10px);
-      box-shadow: 0 0 60px rgba(212,160,23,0.15), var(--shadow);
-      z-index: 2;
-    }
-    .plan-card.featured:hover { transform: scale(1.04) translateY(-14px); }
-    .plan-top-badge {
-      position: absolute;
-      top: 0; left: 50%;
-      transform: translate(-50%,-50%);
-      background: linear-gradient(135deg, var(--gold), var(--gold-light));
-      color: #03071e;
-      font-size: 0.62rem;
-      font-weight: 800;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      padding: 5px 16px;
-      border-radius: var(--radius-pill);
-      white-space: nowrap;
-      box-shadow: 0 4px 16px rgba(212,160,23,0.4);
-    }
-    .plan-name-label {
-      font-size: 0.68rem;
-      font-weight: 700;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: var(--text-dim);
-      margin-bottom: 12px;
-    }
-    .plan-price-wrap { margin-bottom: 4px; }
-    .plan-price {
-      font-family: var(--font-d);
-      font-size: 2.4rem;
-      font-weight: 900;
-      color: var(--text);
-      line-height: 1;
-    }
-    .plan-price sup { font-size: 1rem; font-weight: 700; vertical-align: super; line-height: 0; }
-    .plan-period { font-size: 0.72rem; color: var(--text-dim); margin-bottom: 6px; }
-    .plan-yearly-note { font-size: 0.68rem; color: var(--green); min-height: 16px; margin-bottom: 16px; }
-    .plan-divider { height: 1px; background: var(--border); margin-bottom: 18px; }
-    .plan-features { list-style: none; display: flex; flex-direction: column; gap: 10px; flex: 1; }
-    .plan-features li {
-      display: flex;
-      gap: 8px;
-      align-items: flex-start;
-      font-size: 0.78rem;
-      color: var(--text-mid);
-    }
-    .plan-features li i { color: var(--gold); font-size: 0.65rem; margin-top: 3px; flex-shrink: 0; }
-    .plan-features li.dim { color: var(--text-dim); }
-    .plan-features li.dim i { color: var(--text-dim); }
-    .plan-cta {
-      margin-top: 24px;
-      width: 100%;
-      padding: 12px;
-      background: var(--surface-b);
-      border: 1px solid var(--border-b);
-      border-radius: var(--radius-sm);
-      color: var(--text-mid);
-      font-family: var(--font-b);
-      font-size: 0.82rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.25s;
-      text-align: center;
-      text-decoration: none;
-      display: block;
-    }
-    .plan-cta:hover { color: var(--text); border-color: var(--border-b); background: rgba(255,255,255,0.12); }
-    .plan-cta.featured {
-      background: linear-gradient(135deg, var(--gold), var(--gold-light));
-      border-color: transparent;
-      color: #03071e;
-      font-weight: 700;
-    }
-    .plan-cta.featured:hover { box-shadow: 0 8px 28px rgba(212,160,23,0.4); transform: translateY(-1px); }
+.mobile-sheet{
+  position:fixed; inset:82px 0 0 0; z-index:999;
+  background:rgba(7,11,9,0.97); backdrop-filter:var(--blur);
+  display:flex; flex-direction:column; gap:6px; padding:28px 6%;
+  transform:translateY(-12px); opacity:0; pointer-events:none;
+  transition:all 0.35s var(--ease);
+}
+.mobile-sheet.open{ transform:translateY(0); opacity:1; pointer-events:auto; }
+.mobile-sheet a{
+  font-family:var(--font-display); font-size:1.6rem; font-weight:600; color:var(--ink);
+  text-decoration:none; padding:14px 4px; border-bottom:1px solid var(--border);
+}
+.mobile-sheet .btn{ margin-top:18px; }
 
-    /* ─────────── TESTIMONIALS / SOCIAL PROOF ─────────── */
-    .social-section { padding: 100px 0; overflow: hidden; }
-    .social-inner { text-align: center; margin-bottom: 56px; }
-    .testimonial-track {
-      display: flex;
-      gap: 20px;
-      animation: scrollTrack 30s linear infinite;
-      width: max-content;
-    }
-    .testimonial-track-wrap { overflow: hidden; }
-    @keyframes scrollTrack { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
-    .testimonial-track-wrap:hover .testimonial-track { animation-play-state: paused; }
-    .testi-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 28px;
-      width: 320px;
-      flex-shrink: 0;
-    }
-    .testi-stars { color: var(--gold); font-size: 0.75rem; margin-bottom: 14px; display: flex; gap: 2px; }
-    .testi-text { font-size: 0.87rem; color: var(--text-mid); line-height: 1.7; margin-bottom: 18px; font-style: italic; }
-    .testi-author { display: flex; align-items: center; gap: 10px; }
-    .testi-av {
-      width: 36px; height: 36px;
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.75rem;
-      font-weight: 700;
-      color: #03071e;
-    }
-    .testi-name { font-size: 0.82rem; font-weight: 600; color: var(--text); }
-    .testi-role { font-size: 0.72rem; color: var(--text-dim); }
+/* ============================================================
+   HERO
+   ============================================================ */
+.hero{
+  padding:168px 6% 60px; max-width:1280px; margin:0 auto;
+  display:grid; grid-template-columns:1fr 0.98fr; gap:50px; align-items:center;
+}
+.hero-content{ display:flex; flex-direction:column; align-items:flex-start; }
+.hero-title{
+  font-size:clamp(2.8rem,5.4vw,4.4rem); line-height:1.04; margin:20px 0 22px;
+  letter-spacing:-0.015em;
+}
+.hero-title em{ font-style:italic; color:var(--gold-2); }
+.hero-title .swap{ position:relative; display:inline-block; }
+.hero-desc{ font-size:1.1rem; color:var(--ink-mid); max-width:490px; line-height:1.75; margin-bottom:38px; }
+.hero-btns{ display:flex; gap:16px; flex-wrap:wrap; margin-bottom:44px; }
+.hero-proof{ display:flex; align-items:center; gap:16px; }
+.proof-avatars{ display:flex; }
+.proof-avatars span{
+  width:34px; height:34px; border-radius:50%; border:2px solid var(--bg);
+  margin-left:-10px; display:flex; align-items:center; justify-content:center;
+  font-size:0.68rem; font-weight:700; color:#0c0f0c;
+  font-family:var(--font-mono);
+}
+.proof-avatars span:nth-child(1){ background:var(--gold-2); margin-left:0; }
+.proof-avatars span:nth-child(2){ background:var(--emerald-2); }
+.proof-avatars span:nth-child(3){ background:#c9c2ae; }
+.hero-proof p{ font-size:0.85rem; color:var(--ink-dim); }
+.hero-proof strong{ color:var(--ink); }
 
-    /* ─────────── CTA SECTION ─────────── */
-    .cta-section { padding: 120px 0; }
-    .cta-box {
-      background: var(--surface);
-      border: 1px solid var(--gold-border);
-      border-radius: 28px;
-      padding: 80px 60px;
-      text-align: center;
-      position: relative;
-      overflow: hidden;
-    }
-    .cta-box::before {
-      content: '';
-      position: absolute;
-      top: -40%;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 600px;
-      height: 400px;
-      background: radial-gradient(ellipse, rgba(212,160,23,0.12) 0%, transparent 70%);
-      pointer-events: none;
-    }
-    .cta-title {
-      font-family: var(--font-d);
-      font-size: clamp(2.4rem, 4vw, 3.8rem);
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 16px;
-      position: relative;
-    }
-    .cta-sub { font-size: 1rem; color: var(--text-mid); margin-bottom: 40px; position: relative; }
-    .cta-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; position: relative; }
+/* Hero visual — trading-panel style */
+.hero-visual{ position:relative; height:560px; }
+.panel{
+  position:absolute; background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius-lg); backdrop-filter:var(--blur); -webkit-backdrop-filter:var(--blur);
+  box-shadow:var(--shadow-lg);
+}
+.panel-main{
+  inset:0 0 0 0; padding:26px; display:flex; flex-direction:column;
+  transition:transform 0.15s ease-out;
+}
+.panel-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; }
+.panel-head .dots{ display:flex; gap:6px; }
+.panel-head .dots span{ width:8px; height:8px; border-radius:50%; background:var(--ink-faint); }
+.panel-tag{ font-family:var(--font-mono); font-size:0.68rem; letter-spacing:0.1em; color:var(--ink-dim); text-transform:uppercase; }
+.panel-balance-label{ font-family:var(--font-mono); font-size:0.72rem; color:var(--ink-dim); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px; }
+.panel-balance{ font-family:var(--font-mono); font-size:2.3rem; font-weight:600; color:var(--ink); display:flex; align-items:baseline; gap:12px; }
+.panel-balance .delta{ font-size:0.85rem; color:var(--emerald-2); font-weight:500; display:flex; align-items:center; gap:4px; }
+.chart-holder{ flex:1; margin:22px 0 6px; position:relative; min-height:150px; }
+.chart-holder svg{ width:100%; height:100%; overflow:visible; }
+.chart-line{ fill:none; stroke:url(#lineGrad); stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }
+.chart-area{ fill:url(#areaGrad); opacity:0.9; }
+.chart-dot{ fill:var(--emerald-2); filter:drop-shadow(0 0 6px rgba(var(--emerald-rgb),0.8)); }
+.chart-grid line{ stroke:var(--ink-faint); stroke-dasharray:2 6; }
+.panel-months{ display:flex; justify-content:space-between; font-family:var(--font-mono); font-size:0.66rem; color:var(--ink-faint); text-transform:uppercase; }
 
-    /* ─────────── FOOTER ─────────── */
-    footer {
-      border-top: 1px solid var(--border);
-      padding: 60px 0 40px;
-    }
-    .footer-inner {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 0 48px;
-      display: grid;
-      grid-template-columns: 2fr 1fr 1fr 1fr;
-      gap: 48px;
-    }
-    .footer-brand { display: flex; flex-direction: column; gap: 14px; }
-    .footer-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-    .footer-logo-k {
-      width: 32px; height: 32px;
-      background: linear-gradient(135deg, var(--gold), var(--gold-light));
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      font-family: var(--font-d);
-      font-size: 0.85rem;
-      font-weight: 700;
-      color: #03071e;
-    }
-    .footer-logo-text { font-family: var(--font-d); font-size: 1.3rem; font-weight: 700; color: var(--text); }
-    .footer-tagline { font-size: 0.82rem; color: var(--text-dim); line-height: 1.6; max-width: 280px; }
-    .footer-social { display: flex; gap: 8px; margin-top: 4px; }
-    .footer-soc-btn {
-      width: 34px; height: 34px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      color: var(--text-dim);
-      text-decoration: none;
-      font-size: 0.8rem;
-      transition: all 0.2s;
-    }
-    .footer-soc-btn:hover { border-color: var(--gold-border); color: var(--gold); }
-    .footer-col-title { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 18px; }
-    .footer-links { list-style: none; display: flex; flex-direction: column; gap: 10px; }
-    .footer-links a { color: var(--text-mid); text-decoration: none; font-size: 0.84rem; transition: color 0.2s; }
-    .footer-links a:hover { color: var(--text); }
-    .footer-bottom {
-      max-width: 1200px;
-      margin: 40px auto 0;
-      padding: 20px 48px 0;
-      border-top: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-    .footer-copy { font-size: 0.78rem; color: var(--text-dim); }
-    .footer-links-bottom { display: flex; gap: 20px; }
-    .footer-links-bottom a { font-size: 0.78rem; color: var(--text-dim); text-decoration: none; transition: color 0.2s; }
-    .footer-links-bottom a:hover { color: var(--text); }
+.chip{
+  position:absolute; padding:14px 18px; display:flex; align-items:center; gap:12px;
+  animation:bob 6s ease-in-out infinite;
+  transition:transform 0.2s ease-out;
+}
+.chip-icon{
+  width:38px; height:38px; border-radius:11px; display:flex; align-items:center; justify-content:center;
+  font-size:0.95rem; flex-shrink:0;
+}
+.chip-1{ top:6%; left:-9%; animation-delay:0s; }
+.chip-1 .chip-icon{ background:var(--emerald-dim); color:var(--emerald-2); }
+.chip-2{ bottom:9%; right:-11%; animation-delay:1.6s; }
+.chip-2 .chip-icon{ background:var(--gold-dim); color:var(--gold-2); }
+.chip-3{ top:44%; right:-15%; animation-delay:3.1s; padding:10px 16px; }
+.chip-3 .chip-icon{ width:30px; height:30px; background:var(--red-dim); color:var(--red); font-size:0.75rem; }
+.chip-label{ font-size:0.68rem; color:var(--ink-dim); text-transform:uppercase; letter-spacing:0.06em; font-family:var(--font-mono); }
+.chip-value{ font-family:var(--font-mono); font-weight:600; font-size:0.98rem; color:var(--ink); }
+@keyframes bob{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-11px); } }
 
-    /* ─────────── ANIMATIONS ─────────── */
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(28px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .reveal {
-      opacity: 0;
-      transform: translateY(32px);
-      transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.16,1,0.3,1);
-    }
-    .reveal.visible { opacity: 1; transform: translateY(0); }
-    .reveal-d1 { transition-delay: 0.1s; }
-    .reveal-d2 { transition-delay: 0.2s; }
-    .reveal-d3 { transition-delay: 0.3s; }
-    .reveal-d4 { transition-delay: 0.4s; }
+/* ============================================================
+   TICKER
+   ============================================================ */
+.ticker{
+  border-top:1px solid var(--border); border-bottom:1px solid var(--border);
+  background:var(--bg-1); overflow:hidden; padding:18px 0;
+}
+.ticker-track{ display:flex; width:max-content; animation:ticker 32s linear infinite; }
+.ticker:hover .ticker-track{ animation-play-state:paused; }
+.ticker-item{
+  display:flex; align-items:center; gap:10px; padding:0 34px;
+  font-family:var(--font-mono); font-size:0.86rem; white-space:nowrap;
+  border-right:1px solid var(--border);
+}
+.ticker-item .pair{ color:var(--ink-mid); }
+.ticker-item .rate{ color:var(--ink); font-weight:600; }
+.ticker-item .up{ color:var(--emerald-2); }
+.ticker-item .down{ color:var(--red); }
+@keyframes ticker{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
 
-    /* ─────────── MOBILE ─────────── */
-    @media (max-width: 1024px) {
-      .plans-grid { grid-template-columns: repeat(3, 1fr); }
-      .plan-card.featured { transform: none; }
-      .plan-card.featured:hover { transform: translateY(-4px); }
-    }
-    @media (max-width: 900px) {
-      nav { padding: 0 24px; }
-      .nav-links { display: none; }
-      .hero { padding: 100px 24px 60px; }
-      .mockup-body { grid-template-columns: 1fr; }
-      .mock-sidebar { display: none; }
-      .mock-stats { grid-template-columns: repeat(2, 1fr); }
-      .mock-two-col { grid-template-columns: 1fr; }
-      .section-inner { padding: 0 24px; }
-      .stats-row { grid-template-columns: repeat(2, 1fr); }
-      .features-bento { grid-template-columns: 1fr; }
-      .feat-card.wide { grid-column: span 1; }
-      .ai-inner { grid-template-columns: 1fr; gap: 48px; }
-      .plans-grid { grid-template-columns: 1fr 1fr; }
-      .footer-inner { grid-template-columns: 1fr 1fr; }
-      .footer-brand { grid-column: span 2; }
-      .cta-box { padding: 56px 32px; }
-    }
-    @media (max-width: 600px) {
-      .plans-grid { grid-template-columns: 1fr; }
-      .hero-trust { gap: 16px; }
-      .stats-row { grid-template-columns: 1fr 1fr; }
-    }
+/* ============================================================
+   FEATURES — bento grid
+   ============================================================ */
+.bento{ display:grid; grid-template-columns:repeat(6,1fr); gap:20px; }
+.f-card{
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
+  padding:32px; position:relative; overflow:hidden;
+  transition:transform 0.45s var(--ease), border-color 0.45s var(--ease), background 0.45s var(--ease);
+  grid-column:span 2;
+}
+.f-card::before{
+  content:''; position:absolute; inset:0; opacity:0; transition:opacity 0.5s;
+  background:radial-gradient(320px circle at var(--mx,50%) var(--my,50%), rgba(var(--gold-rgb),0.10), transparent 70%);
+}
+.f-card:hover{ transform:translateY(-6px); border-color:var(--border-2); background:var(--surface-2); }
+.f-card:hover::before{ opacity:1; }
+.f-card.wide{ grid-column:span 3; }
+.f-card.tall{ grid-row:span 1; }
+.f-icon{
+  width:48px; height:48px; border-radius:13px; display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(135deg,var(--emerald-dim),var(--gold-dim)); color:var(--gold-2);
+  font-size:1.15rem; margin-bottom:22px; position:relative; z-index:1;
+}
+.f-card h3{ font-size:1.35rem; margin-bottom:10px; position:relative; z-index:1; }
+.f-card p{ color:var(--ink-mid); font-size:0.92rem; line-height:1.65; position:relative; z-index:1; }
 
-    /* ─────────── BADGE + PILL UTILS ─────────── */
-    .chip-green {
-      display: inline-flex; align-items: center; gap: 5px;
-      padding: 4px 12px;
-      background: rgba(46,204,113,0.12);
-      border: 1px solid rgba(46,204,113,0.3);
-      border-radius: var(--radius-pill);
-      font-size: 0.68rem; font-weight: 700; color: var(--green);
-    }
+/* ============================================================
+   INTERACTIVE DEMO
+   ============================================================ */
+.demo-shell{
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
+  padding:10px; display:grid; grid-template-columns:320px 1fr; gap:10px; overflow:hidden;
+}
+.demo-tabs{ display:flex; flex-direction:column; gap:6px; }
+.demo-tab{
+  display:flex; align-items:flex-start; gap:14px; padding:20px; border-radius:var(--radius);
+  background:transparent; border:1px solid transparent; cursor:pointer; text-align:left;
+  transition:all 0.3s var(--ease);
+}
+.demo-tab i{ font-size:1.1rem; color:var(--ink-dim); margin-top:3px; transition:color 0.3s; }
+.demo-tab h4{ font-family:var(--font-body); font-size:0.95rem; font-weight:700; color:var(--ink); margin-bottom:3px; }
+.demo-tab p{ font-size:0.8rem; color:var(--ink-dim); line-height:1.5; }
+.demo-tab.active{ background:var(--surface-2); border-color:var(--border-2); }
+.demo-tab.active i{ color:var(--gold-2); }
+.demo-panel{
+  display:none; padding:32px; background:var(--bg-1); border-radius:var(--radius);
+  min-height:420px;
+}
+.demo-panel.active{ display:block; animation:fadeIn 0.5s var(--ease); }
+@keyframes fadeIn{ from{ opacity:0; transform:translateY(8px);} to{ opacity:1; transform:translateY(0);} }
 
-    /* Mobile menu toggle */
-    .nav-mobile-btn {
-      display: none;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      width: 40px; height: 40px;
-      align-items: center;
-      justify-content: center;
-      color: var(--text-mid);
-      cursor: pointer;
-      font-size: 0.9rem;
-    }
-    @media (max-width: 900px) { .nav-mobile-btn { display: flex; } }
+.sim-grid{ display:grid; grid-template-columns:1fr 1fr; gap:34px; }
+.slider-group{ margin-bottom:26px; }
+.slider-label{ display:flex; justify-content:space-between; font-size:0.85rem; color:var(--ink-mid); margin-bottom:10px; }
+.slider-label span:last-child{ font-family:var(--font-mono); color:var(--gold-2); font-weight:600; }
+.slider-input{
+  -webkit-appearance:none; width:100%; height:4px; border-radius:2px;
+  background:var(--border-2); outline:none;
+}
+.slider-input::-webkit-slider-thumb{
+  -webkit-appearance:none; width:18px; height:18px; border-radius:50%;
+  background:var(--gold-2); cursor:pointer; box-shadow:0 0 0 5px var(--gold-dim);
+}
+.currency-select{ display:flex; gap:8px; margin-top:10px; }
+.currency-btn{
+  flex:1; padding:9px; border-radius:var(--radius-sm); background:var(--surface);
+  border:1px solid var(--border); color:var(--ink-mid); font-size:0.78rem; font-weight:600;
+  cursor:pointer; font-family:var(--font-mono); transition:all 0.25s;
+}
+.currency-btn.active{ background:var(--gold-dim); border-color:var(--gold); color:var(--gold-2); }
+.sim-display{
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+  padding:26px; display:flex; flex-direction:column; justify-content:space-between;
+}
+.sim-label{ font-family:var(--font-mono); font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-dim); margin-bottom:8px; }
+.sim-value{ font-family:var(--font-mono); font-size:2rem; font-weight:600; color:var(--emerald-2); margin-bottom:28px; }
+.sim-bars{ display:flex; gap:22px; align-items:flex-end; height:140px; }
+.sim-bar-col{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; }
+.sim-bar{ width:100%; border-radius:8px 8px 0 0; transition:height 0.4s var(--ease); }
+.sim-bar.income{ background:linear-gradient(180deg,var(--emerald-2),var(--emerald)); }
+.sim-bar.expense{ background:linear-gradient(180deg,#f0908a,var(--red)); }
+.sim-bar-col span{ margin-top:10px; font-size:0.75rem; color:var(--ink-dim); }
 
-   .footer-product {
-      padding: 9px 22px;
-      height: 55px;
-      width: 250px;
-      background: transparent;
-      border: 4px solid var(--border-b);
-      color: var(--text-mid);
-      font-family: var(--font-b);
-      font-size: 0.85rem;
-      font-weight: 500;
-      cursor: pointer;
-      text-decoration: none;
-      transition: all 0.25s ease;
-    }
-    .footer-product:hover { 
-      border-color: var(--gold-border); 
-      color: var(--text); 
-      background:var(--gold);
-    }
+.chat-box{ display:flex; flex-direction:column; height:100%; }
+.chat-msgs{ flex:1; min-height:220px; max-height:280px; overflow-y:auto; display:flex; flex-direction:column; gap:12px; margin-bottom:20px; padding-right:6px; }
+.chat-bubble{ padding:13px 17px; border-radius:16px; font-size:0.88rem; line-height:1.55; max-width:88%; }
+.chat-bubble.ai{ background:var(--surface); border:1px solid var(--border); color:var(--ink-mid); border-bottom-left-radius:4px; }
+.chat-bubble.user{ background:var(--gold-dim); border:1px solid var(--gold); color:var(--ink); align-self:flex-end; border-bottom-right-radius:4px; }
+.chat-suggest{ display:flex; flex-direction:column; gap:8px; }
+.chat-chip{
+  text-align:left; padding:12px 16px; border-radius:var(--radius-sm); background:var(--surface);
+  border:1px solid var(--border); color:var(--ink-mid); font-size:0.82rem; cursor:pointer;
+  transition:all 0.25s; font-family:var(--font-body);
+}
+.chat-chip:hover{ border-color:var(--gold); color:var(--ink); background:var(--gold-dim); }
 
-  </style>
+.inv-grid{ display:grid; grid-template-columns:1fr 1fr; gap:34px; }
+.inv-field{ margin-bottom:16px; }
+.inv-field label{ display:block; font-size:0.78rem; color:var(--ink-dim); margin-bottom:7px; }
+.inv-input{
+  width:100%; padding:12px 14px; border-radius:var(--radius-sm); background:var(--surface);
+  border:1px solid var(--border); color:var(--ink); font-family:var(--font-body); font-size:0.9rem;
+}
+.inv-input:focus{ outline:none; border-color:var(--gold); }
+.inv-check{ display:flex; align-items:center; gap:9px; margin:16px 0 20px; font-size:0.85rem; color:var(--ink-mid); }
+.inv-sheet{
+  background:#f6f2e8; color:#20190c; border-radius:var(--radius); padding:26px;
+  font-family:var(--font-body);
+}
+.inv-sheet-head{ display:flex; justify-content:space-between; padding-bottom:16px; border-bottom:1px solid #ddd4be; margin-bottom:16px; }
+.inv-sheet-head .brand{ font-family:var(--font-mono); font-weight:700; letter-spacing:0.05em; font-size:0.85rem; }
+.inv-sheet-head .meta{ text-align:right; font-size:0.72rem; color:#7a6f57; }
+.inv-sheet .billed-to{ font-size:0.68rem; text-transform:uppercase; color:#8a8069; margin-bottom:4px; }
+.inv-table{ width:100%; border-collapse:collapse; margin:16px 0; font-size:0.85rem; }
+.inv-table th{ text-align:left; font-size:0.68rem; text-transform:uppercase; color:#8a8069; padding-bottom:8px; border-bottom:1px solid #ddd4be; }
+.inv-table td{ padding:10px 0; border-bottom:1px solid #ece5d3; }
+.inv-totals-row{ display:flex; justify-content:space-between; font-size:0.85rem; padding:5px 0; color:#5a5140; }
+.inv-totals-row.grand{ font-weight:700; font-size:1rem; color:#20190c; border-top:1px solid #ddd4be; margin-top:6px; padding-top:12px; }
+
+.demo-toast{
+  position:fixed; bottom:-120px; left:50%; transform:translateX(-50%);
+  background:var(--emerald); color:#08160f; padding:14px 26px; border-radius:var(--radius-pill);
+  font-weight:700; font-size:0.88rem; box-shadow:var(--shadow-lg); z-index:2000;
+  transition:bottom 0.4s var(--ease); display:flex; align-items:center; gap:10px;
+  pointer-events:none;
+}
+.demo-toast.show{ bottom:30px; pointer-events:auto; }
+
+/* ============================================================
+   METRICS BAND
+   ============================================================ */
+.metrics{
+  display:grid; grid-template-columns:repeat(4,1fr); gap:1px;
+  background:var(--border); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden;
+}
+.metric{ background:var(--bg-1); padding:38px 28px; text-align:center; }
+.metric-num{ font-family:var(--font-mono); font-size:2.6rem; font-weight:600; color:var(--gold-2); margin-bottom:6px; }
+.metric-label{ font-size:0.85rem; color:var(--ink-dim); }
+
+/* ============================================================
+   PRICING
+   ============================================================ */
+.pricing-toggle{ display:flex; align-items:center; justify-content:center; gap:16px; margin-bottom:56px; }
+.toggle-lbl{ font-size:0.92rem; color:var(--ink-dim); font-weight:600; transition:color 0.3s; }
+.toggle-lbl.active{ color:var(--ink); }
+.toggle-switch{ position:relative; width:52px; height:28px; }
+.toggle-switch input{ opacity:0; width:0; height:0; }
+.toggle-slider{
+  position:absolute; inset:0; background:var(--surface-2); border:1px solid var(--border-2);
+  border-radius:var(--radius-pill); cursor:pointer; transition:0.3s;
+}
+.toggle-slider::before{
+  content:''; position:absolute; width:20px; height:20px; left:3px; top:3px;
+  background:var(--gold-2); border-radius:50%; transition:0.3s var(--ease);
+}
+input:checked + .toggle-slider::before{ transform:translateX(24px); }
+.save-tag{ font-family:var(--font-mono); font-size:0.7rem; color:var(--emerald-2); background:var(--emerald-dim); padding:4px 10px; border-radius:var(--radius-pill); }
+
+.pricing-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:24px; }
+.price-card{
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
+  padding:36px 30px; display:flex; flex-direction:column; transition:all 0.4s var(--ease); position:relative;
+}
+.price-card:hover{ transform:translateY(-6px); border-color:var(--border-2); }
+.price-card.featured{ background:linear-gradient(180deg,rgba(var(--gold-rgb),0.09),var(--surface)); border-color:var(--gold); transform:scale(1.03); }
+.price-card.featured:hover{ transform:scale(1.03) translateY(-6px); }
+.featured-badge{
+  position:absolute; top:-13px; left:50%; transform:translateX(-50%);
+  background:linear-gradient(135deg,var(--gold),var(--gold-2)); color:#191204;
+  font-size:0.7rem; font-weight:700; padding:6px 16px; border-radius:var(--radius-pill);
+  text-transform:uppercase; letter-spacing:0.05em;
+}
+.plan-name{ font-size:1.05rem; font-weight:700; margin-bottom:16px; color:var(--ink); }
+.price-num{ font-family:var(--font-mono); font-size:2.6rem; font-weight:600; display:flex; align-items:baseline; gap:2px; }
+.price-num span{ font-size:1.3rem; color:var(--ink-dim); }
+.price-period{ font-size:0.82rem; color:var(--ink-dim); margin-bottom:8px; }
+.price-offer{ font-size:0.75rem; color:var(--gold-2); margin-bottom:22px; display:flex; align-items:center; gap:6px; }
+.price-feats{ list-style:none; display:flex; flex-direction:column; gap:13px; margin:8px 0 30px; flex:1; }
+.price-feats li{ display:flex; align-items:flex-start; gap:10px; font-size:0.86rem; color:var(--ink-mid); }
+.price-feats i{ margin-top:3px; font-size:0.75rem; }
+.price-feats .fa-check{ color:var(--emerald-2); }
+.price-feats .fa-xmark{ color:var(--ink-faint); }
+
+/* ============================================================
+   TESTIMONIALS
+   ============================================================ */
+.testi-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:22px; }
+.testi-card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:30px; }
+.testi-stars{ color:var(--gold-2); font-size:0.8rem; margin-bottom:16px; letter-spacing:2px; }
+.testi-text{ font-size:0.92rem; color:var(--ink-mid); line-height:1.7; margin-bottom:22px; }
+.testi-profile{ display:flex; align-items:center; gap:12px; }
+.testi-avatar{
+  width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-mono); font-weight:700; font-size:0.8rem; color:#0c0f0c;
+  background:linear-gradient(135deg,var(--emerald-2),var(--gold-2));
+}
+.testi-info h5{ font-family:var(--font-body); font-size:0.88rem; color:var(--ink); }
+.testi-info p{ font-size:0.76rem; color:var(--ink-dim); }
+
+/* ============================================================
+   FAQ
+   ============================================================ */
+.faq-list{ max-width:760px; margin:0 auto; display:flex; flex-direction:column; gap:10px; }
+.faq-item{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; cursor:pointer; transition:border-color 0.3s; }
+.faq-item.active{ border-color:var(--border-2); }
+.faq-q{ display:flex; justify-content:space-between; align-items:center; padding:22px 26px; font-weight:600; font-size:0.96rem; }
+.faq-q i{ color:var(--gold-2); transition:transform 0.35s var(--ease); flex-shrink:0; margin-left:16px; }
+.faq-item.active .faq-q i{ transform:rotate(45deg); }
+.faq-a{ max-height:0; overflow:hidden; transition:max-height 0.4s var(--ease); }
+.faq-a-inner{ padding:0 26px 22px; color:var(--ink-mid); font-size:0.9rem; line-height:1.7; }
+.faq-item.active .faq-a{ max-height:220px; }
+
+/* ============================================================
+   CTA + FOOTER
+   ============================================================ */
+.cta-band{
+  margin:0 6%; max-width:1180px; margin-left:auto; margin-right:auto;
+  background:linear-gradient(135deg,rgba(var(--gold-rgb),0.1),rgba(var(--emerald-rgb),0.06));
+  border:1px solid var(--border-2); border-radius:var(--radius-lg);
+  padding:70px 40px; text-align:center; position:relative; overflow:hidden;
+}
+.cta-band::before{
+  content:''; position:absolute; inset:0;
+  background:radial-gradient(circle at 30% 20%, rgba(var(--gold-rgb),0.16), transparent 55%);
+}
+.cta-title{ font-size:clamp(2.2rem,4.6vw,3.4rem); margin-bottom:16px; position:relative; }
+.cta-desc{ color:var(--ink-mid); max-width:520px; margin:0 auto 34px; line-height:1.7; position:relative; }
+
+.footer{ border-top:1px solid var(--border); padding:80px 6% 36px; margin-top:130px; }
+.footer-top{ max-width:1180px; margin:0 auto 56px; display:grid; grid-template-columns:1.6fr 1fr 1fr; gap:50px; }
+.footer-brand{ display:flex; flex-direction:column; gap:16px; align-items:flex-start; }
+.footer-logo{ display:flex; align-items:center; gap:10px; text-decoration:none; font-family:var(--font-display); font-size:1.5rem; font-weight:700; color:var(--ink); }
+.footer-desc{ font-size:0.85rem; color:var(--ink-dim); max-width:300px; line-height:1.65; }
+.footer-col h5{ font-family:var(--font-mono); font-size:0.72rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-mid); margin-bottom:20px; }
+.footer-links{ list-style:none; display:flex; flex-direction:column; gap:12px; }
+.footer-links a{ font-size:0.86rem; color:var(--ink-dim); text-decoration:none; transition:color 0.3s; }
+.footer-links a:hover{ color:var(--gold-2); }
+.footer-bottom{
+  max-width:1180px; margin:0 auto; border-top:1px solid var(--border); padding-top:28px;
+  display:flex; justify-content:space-between; align-items:center; font-size:0.78rem; color:var(--ink-faint);
+  flex-wrap:wrap; gap:16px;
+}
+.footer-socials{ display:flex; gap:14px; }
+.footer-socials a{
+  width:36px; height:36px; border-radius:50%; background:var(--surface); border:1px solid var(--border);
+  color:var(--ink-mid); display:flex; align-items:center; justify-content:center; text-decoration:none;
+  transition:all 0.3s;
+}
+.footer-socials a:hover{ background:var(--gold-dim); color:var(--gold-2); border-color:var(--gold); }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width:1024px){
+  .hero{ grid-template-columns:1fr; text-align:center; padding-top:150px; gap:56px; }
+  .hero-content{ align-items:center; }
+  .hero-visual{ max-width:520px; margin:0 auto; width:100%; height:480px; }
+  .chip-1{ left:2%; } .chip-2{ right:2%; } .chip-3{ display:none; }
+  .bento{ grid-template-columns:repeat(2,1fr); }
+  .f-card, .f-card.wide{ grid-column:span 1; }
+  .demo-shell{ grid-template-columns:1fr; }
+  .demo-tabs{ flex-direction:row; overflow-x:auto; }
+  .demo-tab{ flex:1; min-width:180px; }
+  .sim-grid, .inv-grid{ grid-template-columns:1fr; }
+  .pricing-grid{ grid-template-columns:1fr; max-width:440px; margin:0 auto; }
+  .price-card.featured{ transform:none; }
+  .metrics{ grid-template-columns:repeat(2,1fr); }
+  .testi-grid{ grid-template-columns:1fr; }
+  .footer-top{ grid-template-columns:1fr; gap:36px; }
+}
+@media (max-width:768px){
+  .nav-menu, .nav-cta{ display:none; }
+  .menu-toggle{ display:flex; }
+  .section{ padding:90px 6%; }
+  .ticker-item{ padding:0 22px; font-size:0.78rem; }
+}
+</style>
 </head>
 <body>
 
-<!-- Ambient Glow Orbs -->
-<div class="glow-orb glow-orb-1"></div>
-<div class="glow-orb glow-orb-2"></div>
+<div class="field">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
 
-<!-- ─── NAVBAR ─── -->
-<nav id="main-nav">
-  <a href="#" class="nav-logo">
-    <div class="nav-logo-icon">K</div>
-    <span class="nav-logo-text">Klyro</span>
-  </a>
-  <ul class="nav-links">
-    <li><a href="#features">Features</a></li>
-    <li><a href="#ai">Klyro AI</a></li>
-    <li><a href="#pricing">Pricing</a></li>
-    <li><a href="dashboard.html">App</a></li>
-  </ul>
-  <div class="nav-cta">
-    <a href="login.html" class="btn-nav-ghost">SIGN IN</a>
-    <a href="signup.html" class="btn-nav-ghost">SIGN UP <i class="fas fa-arrow-right" style="font-size:0.7em;"></i></a>
-    <button class="nav-mobile-btn" aria-label="Menu"><i class="fas fa-bars"></i></button>
-  </div>
-</nav>
+<div class="wrap">
 
-<!-- ─── HERO ─── -->
-<section class="hero">
-  <div class="hero-eyebrow">
-    <span class="hero-eyebrow-dot"></span>
-    Now with AI-powered insights
-  </div>
-  <h1 class="hero-title">Finance that <em>thinks</em><br>with you</h1>
-  <p class="hero-sub">Track every coin, understand every pattern, and let Klyro AI guide you toward financial freedom — in any currency, anywhere in the world.</p>
-  <div class="hero-actions">
-    <a href="signup.html" class="btn-hero-primary">
-      <i class="fas fa-rocket"></i> Get Started
+  <!-- NAV -->
+  <nav class="nav" id="nav">
+    <a href="#" class="nav-logo">
+      <img class="logo-img" src="Klyro's Logo.png" alt="Klyro" onerror="this.outerHTML='<div class=&quot;logo-fallback&quot;>K</div>'">
+      <span class="nav-logo-text">Klyro</span>
     </a>
-    <a href="#features" class="btn-hero-secondary">
-      <i class="fas fa-play-circle"></i> See how it works
-    </a>
-  </div>
-  <div class="hero-trust">
-    <div class="hero-trust-item"><i class="fas fa-check-circle"></i> No credit card required</div>
-    <div class="hero-trust-item"><i class="fas fa-check-circle"></i> 150+ currencies supported</div>
-    <div class="hero-trust-item"><i class="fas fa-check-circle"></i> Mobile & desktop ready</div>
-    <div class="hero-trust-item"><i class="fas fa-check-circle"></i> Cancel any time</div>
+    <div class="nav-menu">
+      <a href="#features" class="nav-link">Features</a>
+      <a href="#demo" class="nav-link">Live Demo</a>
+      <a href="#pricing" class="nav-link">Pricing</a>
+      <a href="#faq" class="nav-link">FAQ</a>
+    </div>
+    <div class="nav-right">
+      <div class="nav-cta"><a href="waitlist.html" class="btn btn-gold btn-sm">Get Started</a></div>
+      <button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation"><span></span><span></span><span></span></button>
+    </div>
+  </nav>
+  <div class="mobile-sheet" id="mobileSheet">
+    <a href="#features">Features</a>
+    <a href="#demo">Live Demo</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#faq">FAQ</a>
+    <a href="waitlist.html" class="btn btn-gold">Get Started Free</a>
   </div>
 
-  <!-- Dashboard Mockup -->
-  <div class="hero-visual">
-    <div class="mockup-frame">
-      <div class="mockup-bar">
-        <div class="mockup-dot mockup-dot-r"></div>
-        <div class="mockup-dot mockup-dot-y"></div>
-        <div class="mockup-dot mockup-dot-g"></div>
-        <div class="mockup-url">
-          <i class="fas fa-lock"></i>
-          app.klyro.finance/dashboard
-        </div>
+  <!-- HERO -->
+  <header class="hero">
+    <div class="hero-content reveal">
+      <span class="eyebrow">The Financial Operating System</span>
+      <h1 class="hero-title">Your money,<br>read like a <em>chart</em>.</h1>
+      <p class="hero-desc">
+        Klyro turns income, expenses, and invoices across 150+ currencies into one live picture — with an AI coach reading the tape for you, 24/7.
+      </p>
+      <div class="hero-btns">
+        <a href="waitlist.html" class="btn btn-gold">Get Started Free</a>
+        <a href="#demo" class="btn btn-glass">Try Live Demo</a>
       </div>
-      <div class="mockup-body">
-        <!-- Sidebar -->
-        <div class="mock-sidebar">
-          <div class="mock-logo">
-            <div class="mock-logo-k">K</div>
-            <span class="mock-logo-text">Klyro</span>
-          </div>
-          <div class="mock-nav-section">Main</div>
-          <div class="mock-nav-item active"><i class="fas fa-house"></i> Home</div>
-          <div class="mock-nav-item"><i class="fas fa-right-left"></i> Transactions</div>
-          <div class="mock-nav-item"><i class="fas fa-chart-pie"></i> Analysis</div>
-          <div class="mock-nav-section">Intelligence</div>
-          <div class="mock-nav-item"><i class="fas fa-brain"></i> Klyro AI</div>
-          <div class="mock-nav-section">Business</div>
-          <div class="mock-nav-item"><i class="fas fa-file-invoice-dollar"></i> Invoices</div>
-          <div class="mock-nav-section">Account</div>
-          <div class="mock-nav-item"><i class="fas fa-gear"></i> Settings</div>
-        </div>
-        <!-- Main Content -->
-        <div class="mock-main">
-          <div class="mock-page-title">Good morning, Alex 👋</div>
-          <div class="mock-page-sub">Saturday, June 06, 2026</div>
-          <div class="mock-stats">
-            <div class="mock-stat">
-              <div class="mock-stat-label"><i class="fas fa-wallet" style="color:var(--gold);"></i> Total Balance</div>
-              <div class="mock-stat-val gold">₵ 12,480</div>
-            </div>
-            <div class="mock-stat">
-              <div class="mock-stat-label"><i class="fas fa-arrow-down" style="color:var(--green);"></i> Income</div>
-              <div class="mock-stat-val green">₵ 4,200</div>
-            </div>
-            <div class="mock-stat">
-              <div class="mock-stat-label"><i class="fas fa-arrow-up" style="color:var(--red);"></i> Expenses</div>
-              <div class="mock-stat-val red">₵ 1,840</div>
-            </div>
-            <div class="mock-stat">
-              <div class="mock-stat-label"><i class="fas fa-chart-line" style="color:var(--blue);"></i> Net This Month</div>
-              <div class="mock-stat-val" style="color:var(--blue);">₵ 2,360</div>
-            </div>
-          </div>
-          <div class="mock-two-col">
-            <!-- Recent Transactions -->
-            <div class="mock-card">
-              <div class="mock-card-title"><i class="fas fa-clock-rotate-left"></i> Recent Transactions</div>
-              <div class="mock-txn">
-                <div class="mock-txn-icon inc"><i class="fas fa-briefcase"></i></div>
-                <div class="mock-txn-info"><div class="mock-txn-name">Monthly Salary</div><div class="mock-txn-cat">salary · Jun 01</div></div>
-                <div class="mock-txn-amt inc">+₵ 3,500</div>
-              </div>
-              <div class="mock-txn">
-                <div class="mock-txn-icon exp"><i class="fas fa-cart-shopping"></i></div>
-                <div class="mock-txn-info"><div class="mock-txn-name">Melcom Groceries</div><div class="mock-txn-cat">groceries · Jun 03</div></div>
-                <div class="mock-txn-amt exp">−₵ 240</div>
-              </div>
-              <div class="mock-txn">
-                <div class="mock-txn-icon exp"><i class="fas fa-wifi"></i></div>
-                <div class="mock-txn-info"><div class="mock-txn-name">MTN Data Bundle</div><div class="mock-txn-cat">internet · Jun 04</div></div>
-                <div class="mock-txn-amt exp">−₵ 80</div>
-              </div>
-              <div class="mock-txn">
-                <div class="mock-txn-icon inc"><i class="fas fa-laptop"></i></div>
-                <div class="mock-txn-info"><div class="mock-txn-name">Freelance Project</div><div class="mock-txn-cat">freelance · Jun 05</div></div>
-                <div class="mock-txn-amt inc">+₵ 700</div>
-              </div>
-            </div>
-            <!-- AI Tip + Chart -->
-            <div style="display:flex;flex-direction:column;gap:12px;">
-              <div class="mock-card">
-                <div class="mock-card-title"><i class="fas fa-chart-column"></i> Income vs Expenses</div>
-                <div class="mock-bars">
-                  <div class="mock-bar-group">
-                    <div class="mock-bar income" style="height:62%;--d:0.1s;"></div>
-                    <div class="mock-bar expense" style="height:28%;--d:0.15s;"></div>
-                  </div>
-                  <div class="mock-bar-group">
-                    <div class="mock-bar income" style="height:72%;--d:0.2s;"></div>
-                    <div class="mock-bar expense" style="height:48%;--d:0.25s;"></div>
-                  </div>
-                  <div class="mock-bar-group">
-                    <div class="mock-bar income" style="height:55%;--d:0.3s;"></div>
-                    <div class="mock-bar expense" style="height:38%;--d:0.35s;"></div>
-                  </div>
-                  <div class="mock-bar-group">
-                    <div class="mock-bar income" style="height:80%;--d:0.4s;"></div>
-                    <div class="mock-bar expense" style="height:36%;--d:0.45s;"></div>
-                  </div>
-                </div>
-              </div>
-              <div class="mock-ai-bubble">
-                <div class="mock-ai-header"><i class="fas fa-brain"></i> Klyro AI</div>
-                🎉 Excellent! Your savings rate is <strong style="color:var(--gold);">43.8%</strong> this month — you're outperforming 92% of users. Consider investing the surplus into an index fund.
-              </div>
-            </div>
-          </div>
-        </div>
+      <div class="hero-proof">
+        <div class="proof-avatars"><span>AM</span><span>KO</span><span>EA</span></div>
+        <p><strong>2,400+</strong> on the waitlist across West Africa</p>
       </div>
     </div>
-  </div>
-</section>
 
-<!-- ─── STATS STRIP ─── -->
-<section class="stats-strip">
-  <div class="section-inner">
-    <div class="stats-row">
-      <div class="stat-block reveal">
-        <div class="stat-block-num" data-count="5" data-suffix="+">0</div>
-        <div class="stat-block-label">Cool and exciting features</div>
+    <div class="hero-visual reveal" id="heroVisual">
+      <div class="panel panel-main" id="panelMain">
+        <div class="panel-head">
+          <div class="dots"><span></span><span></span><span></span></div>
+          <span class="panel-tag">Klyro · Live Cashflow</span>
+          <i class="fas fa-expand" style="color:var(--ink-faint);font-size:0.75rem;"></i>
+        </div>
+        <div class="panel-balance-label">Total Balance · GHS</div>
+        <div class="panel-balance">
+          <span id="heroBalance">₵0</span>
+          <span class="delta"><i class="fas fa-arrow-trend-up"></i> +18.4%</span>
+        </div>
+        <div class="chart-holder">
+          <svg viewBox="0 0 460 170" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#2fae72"/>
+                <stop offset="100%" stop-color="#d9a521"/>
+              </linearGradient>
+              <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#2fae72" stop-opacity="0.32"/>
+                <stop offset="100%" stop-color="#2fae72" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <g class="chart-grid">
+              <line x1="0" y1="30" x2="460" y2="30"/>
+              <line x1="0" y1="80" x2="460" y2="80"/>
+              <line x1="0" y1="130" x2="460" y2="130"/>
+            </g>
+            <path class="chart-area" id="chartArea" d="" />
+            <path class="chart-line" id="chartLine" d="" pathLength="1" />
+            <circle class="chart-dot" id="chartDot" r="4.5" cx="0" cy="0"/>
+          </svg>
+        </div>
+        <div class="panel-months"><span>FEB</span><span>MAR</span><span>APR</span><span>MAY</span><span>JUN</span><span>JUL</span></div>
       </div>
-      <div class="stat-block reveal reveal-d1">
-        <div class="stat-block-num" data-count="150" data-suffix="+">0</div>
-        <div class="stat-block-label">Currencies supported</div>
+
+      <div class="panel chip chip-1" id="chip1">
+        <div class="chip-icon"><i class="fas fa-piggy-bank"></i></div>
+        <div><div class="chip-label">Savings Rate</div><div class="chip-value">32%</div></div>
       </div>
-      <div class="stat-block reveal reveal-d2">
-        <div class="stat-block-num" data-count="2.4" data-suffix="M+ txns">0</div>
-        <div class="stat-block-label">Transactions tracked</div>
+      <div class="panel chip chip-2" id="chip2">
+        <div class="chip-icon"><i class="fas fa-brain"></i></div>
+        <div><div class="chip-label">Klyro AI</div><div class="chip-value" style="font-size:0.78rem;font-family:var(--font-body);font-weight:600;">3 subs flagged</div></div>
       </div>
-      <div class="stat-block reveal reveal-d3">
-        <div class="stat-block-num" data-count="98" data-suffix="%">0</div>
-        <div class="stat-block-label">Customer satisfaction</div>
+      <div class="panel chip chip-3" id="chip3">
+        <div class="chip-icon"><i class="fas fa-file-invoice"></i></div>
+        <div><div class="chip-label">Invoice #004</div><div class="chip-value" style="color:var(--emerald-2);">Paid</div></div>
       </div>
     </div>
+  </header>
+
+  <!-- TICKER -->
+  <div class="ticker">
+    <div class="ticker-track" id="tickerTrack"></div>
   </div>
-</section>
 
-<!-- ─── FEATURES ─── -->
-<section class="features-section" id="features">
-  <div class="section-inner">
-    <div class="features-header reveal">
-      <div class="section-eyebrow">Everything you need</div>
-      <h2 class="section-title">Built for every<br>financial journey</h2>
-      <p class="section-sub">From students to enterprises, Klyro adapts to how you manage money — intelligently, beautifully, and securely.</p>
+  <!-- FEATURES -->
+  <section class="section" id="features">
+    <div class="section-head reveal">
+      <span class="eyebrow">Capabilities</span>
+      <h2 class="section-title">Designed for modern capital.</h2>
+      <p class="section-sub">Whether you're managing multi-currency freelance income, running a small business, or building personal wealth — Klyro adapts to how you actually earn and spend.</p>
     </div>
-    <div class="features-bento">
 
-      <!-- Smart Tracking -->
-      <div class="feat-card reveal">
-        <div class="feat-icon"><i class="fas fa-right-left"></i></div>
-        <div class="feat-title">Smart Transaction Tracking</div>
-        <p class="feat-desc">Log income and expenses with categories, dates, and instant summaries. Search, filter, edit, and export with ease.</p>
-        <div class="feat-mini-chart">
-          <div class="feat-bar" style="height:40%;"></div>
-          <div class="feat-bar" style="height:65%;"></div>
-          <div class="feat-bar" style="height:50%;background:rgba(231,76,60,0.25);border-color:rgba(231,76,60,0.3);"></div>
-          <div class="feat-bar" style="height:80%;"></div>
-          <div class="feat-bar" style="height:55%;background:rgba(231,76,60,0.25);border-color:rgba(231,76,60,0.3);"></div>
-          <div class="feat-bar" style="height:90%;"></div>
-          <div class="feat-bar" style="height:70%;"></div>
-          <div class="feat-bar" style="height:100%;"></div>
-        </div>
+    <div class="bento reveal-stagger">
+      <div class="f-card wide">
+        <div class="f-icon"><i class="fas fa-brain"></i></div>
+        <h3>AI Finance Coach</h3>
+        <p>An intelligent advisor in your pocket. Klyro reads your cashflow behavior, flags subscription spikes, and gives tailored, plain-language guidance — day or night.</p>
       </div>
-
-      <!-- AI Insights — wide -->
-      <div class="feat-card wide reveal reveal-d1">
-        <div class="feat-badge"><i class="fas fa-sparkles"></i> Powered by AI</div>
-        <div class="feat-title">Klyro AI — Your Financial Co-pilot</div>
-        <p class="feat-desc">Ask anything in plain language. Get personalised savings tips, budget forecasts, and spending analysis generated from your actual data.</p>
-        <div class="feat-chat">
-          <div style="font-size:0.62rem;font-weight:700;letter-spacing:0.1em;color:var(--gold);text-transform:uppercase;margin-bottom:2px;">Klyro AI</div>
-          <div class="feat-chat-msg ai">Your dining spend is <strong>₵480</strong> this month — 26% of income. Meal-prepping 3 nights a week could save you up to <strong>₵190</strong>.</div>
-          <div style="font-size:0.62rem;font-weight:700;letter-spacing:0.1em;color:var(--text-dim);text-transform:uppercase;margin-bottom:2px;text-align:right;">You</div>
-          <div class="feat-chat-msg user">What's my savings rate this month?</div>
-          <div class="feat-chat-msg ai">Your savings rate is <strong>43.8%</strong> 🏆 — well above the 20% benchmark. You could reach your Europe trip goal in just <strong>2 months</strong>.</div>
-        </div>
+      <div class="f-card wide">
+        <div class="f-icon"><i class="fas fa-globe"></i></div>
+        <h3>Global Currencies</h3>
+        <p>Track capital across GHS, NGN, USD, EUR, and 150+ currencies. Built for remote professionals and locally-rooted businesses alike.</p>
       </div>
-
-      <!-- Multi-Currency -->
-      <div class="feat-card reveal reveal-d2">
-        <div class="feat-icon"><i class="fas fa-earth-africa"></i></div>
-        <div class="feat-title">150+ World Currencies</div>
-        <p class="feat-desc">Built with Africa and the world in mind. Switch currencies instantly — all values update across the entire app.</p>
-        <div class="feat-currencies">
-          <span class="feat-cur-tag featured">GHS ₵</span>
-          <span class="feat-cur-tag featured">NGN ₦</span>
-          <span class="feat-cur-tag featured">USD $</span>
-          <span class="feat-cur-tag featured">CAD C$</span>
-          <span class="feat-cur-tag">GBP £</span>
-          <span class="feat-cur-tag">EUR €</span>
-          <span class="feat-cur-tag">KES KSh</span>
-          <span class="feat-cur-tag">ZAR R</span>
-          <span class="feat-cur-tag">JPY ¥</span>
-          <span class="feat-cur-tag">CAD $</span>
-          <span class="feat-cur-tag">AED د.إ</span>
-        </div>
+      <div class="f-card">
+        <div class="f-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+        <h3>Smart Invoicing</h3>
+        <p>Draft and send polished invoices in seconds, and track client payments without mixing business and personal funds.</p>
       </div>
-
-      <!-- Analysis -->
-      <div class="feat-card reveal">
-        <div class="feat-icon"><i class="fas fa-chart-pie"></i></div>
-        <div class="feat-title">Visual Analysis</div>
-        <p class="feat-desc">Interactive charts break down spending by category, time period, and trend — with actionable AI suggestions baked in.</p>
-        <div class="feat-mini-chart" style="align-items:center;height:60px;">
-          <div style="width:60px;height:60px;border-radius:50%;background:conic-gradient(rgba(212,160,23,0.7) 0% 38%,rgba(46,204,113,0.6) 38% 62%,rgba(91,156,246,0.6) 62% 80%,rgba(167,139,250,0.5) 80% 100%);flex-shrink:0;"></div>
-          <div style="display:flex;flex-direction:column;gap:4px;margin-left:14px;flex:1;">
-            <div style="display:flex;align-items:center;gap:6px;font-size:0.62rem;color:var(--text-dim);"><div style="width:8px;height:8px;border-radius:2px;background:rgba(212,160,23,0.7);"></div> Housing 38%</div>
-            <div style="display:flex;align-items:center;gap:6px;font-size:0.62rem;color:var(--text-dim);"><div style="width:8px;height:8px;border-radius:2px;background:rgba(46,204,113,0.6);"></div> Food 24%</div>
-            <div style="display:flex;align-items:center;gap:6px;font-size:0.62rem;color:var(--text-dim);"><div style="width:8px;height:8px;border-radius:2px;background:rgba(91,156,246,0.6);"></div> Transport 18%</div>
-          </div>
-        </div>
+      <div class="f-card">
+        <div class="f-icon"><i class="fas fa-chart-line"></i></div>
+        <h3>Live Analytics</h3>
+        <p>Net worth trends, category breakdowns, and savings velocity — visualized clearly, updated the moment you log a transaction.</p>
       </div>
-
-      <!-- Invoices -->
-      <div class="feat-card reveal reveal-d1">
-        <div class="feat-icon"><i class="fas fa-file-invoice-dollar"></i></div>
-        <div class="feat-title">Invoice & Business Tools</div>
-        <p class="feat-desc">Create and manage professional invoices. Track payments. Handle business finances alongside personal ones — all in one place.</p>
+      <div class="f-card">
+        <div class="f-icon"><i class="fas fa-bullseye"></i></div>
+        <h3>Goal Architecture</h3>
+        <p>Set savings targets and Klyro calculates the monthly pace to hit them — celebrating every milestone on the way.</p>
       </div>
-
-      <!-- Goals -->
-      <div class="feat-card reveal reveal-d2">
-        <div class="feat-icon"><i class="fas fa-shield"></i></div>
-        <div class="feat-title">Savings Goals</div>
-        <p class="feat-desc">Set milestones — a trip, an emergency fund, a new device. Klyro tracks your progress and nudges you when you're close.</p>
-        <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px;">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span style="font-size:0.72rem;flex:1;color:var(--text-mid);">✈️ Europe Trip</span>
-            <span style="font-size:0.68rem;color:var(--gold);">₵ 640 / 2,000</span>
-          </div>
-          <div style="height:5px;background:var(--surface-b);border-radius:3px;overflow:hidden;">
-            <div style="height:100%;width:32%;background:linear-gradient(90deg,var(--gold),var(--gold-light));border-radius:3px;"></div>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
-            <span style="font-size:0.72rem;flex:1;color:var(--text-mid);">🛡️ Emergency Fund</span>
-            <span style="font-size:0.68rem;color:var(--green);">₵ 1,800 / 5,000</span>
-          </div>
-          <div style="height:5px;background:var(--surface-b);border-radius:3px;overflow:hidden;">
-            <div style="height:100%;width:36%;background:linear-gradient(90deg,var(--green),#58d68d);border-radius:3px;"></div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</section>
-
-<!-- ─── AI SECTION ─── -->
-<section class="ai-section" id="ai" style="background: linear-gradient(180deg, transparent 0%, rgba(212,160,23,0.03) 50%, transparent 100%);">
-  <div class="section-inner">
-    <div class="ai-inner">
-      <div class="reveal">
-        <div class="section-eyebrow">Meet Klyro AI</div>
-        <h2 class="section-title">Your money,<br><em>explained</em></h2>
-        <p class="section-sub" style="margin-bottom:0;">Ask Klyro AI anything about your finances and get direct, honest answers powered by your own transaction data — not generic advice.</p>
-        <div class="ai-feature-list">
-          <div class="ai-feature-item">
-            <div class="ai-feature-icon"><i class="fas fa-chart-line"></i></div>
-            <div>
-              <div class="ai-feature-title">Spending Analysis</div>
-              <div class="ai-feature-desc">Klyro analyses your categories, identifies waste, and suggests exactly where to cut first.</div>
-            </div>
-          </div>
-          <div class="ai-feature-item">
-            <div class="ai-feature-icon"><i class="fas fa-piggy-bank"></i></div>
-            <div>
-              <div class="ai-feature-title">Goal-Aware Advice</div>
-              <div class="ai-feature-desc">Tell Klyro your goal — it tells you precisely how long it'll take and what needs to change.</div>
-            </div>
-          </div>
-          <div class="ai-feature-item">
-            <div class="ai-feature-icon"><i class="fas fa-magnifying-glass-chart"></i></div>
-            <div>
-              <div class="ai-feature-title">Web-Augmented Research</div>
-              <div class="ai-feature-desc">On Individuals+ plan, Klyro can search the web to give you up-to-date financial advice and market context.</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Chat Demo -->
-      <div class="ai-chat-demo reveal reveal-d2">
-        <div class="ai-chat-header">
-          <div class="ai-avatar"><i class="fas fa-brain"></i></div>
-          <div>
-            <div class="ai-chat-name">Klyro AI</div>
-            <div class="ai-online">Online</div>
-          </div>
-        </div>
-        <div class="ai-messages">
-          <div class="ai-msg ai">
-            <div class="ai-msg-av"><i class="fas fa-brain"></i></div>
-            <div class="ai-msg-bubble">Hi! I've analysed your finances for this month. Your savings rate is <strong>43.8%</strong> — that's exceptional. What would you like to explore today?</div>
-          </div>
-          <div class="ai-msg user">
-            <div class="ai-msg-av"><i class="fas fa-user"></i></div>
-            <div class="ai-msg-bubble">Am I on track to afford a ₵5,000 emergency fund by December?</div>
-          </div>
-          <div class="ai-msg ai">
-            <div class="ai-msg-av"><i class="fas fa-brain"></i></div>
-            <div class="ai-msg-bubble">Yes, absolutely! At your current savings pace of <strong>₵2,360/month</strong>, you'll hit ₵5,000 in about <strong>1.4 months</strong> — well before December. In fact, you could aim higher: a 6-month emergency fund would be <strong>₵11,040</strong>.</div>
-          </div>
-          <div class="ai-msg user">
-            <div class="ai-msg-av"><i class="fas fa-user"></i></div>
-            <div class="ai-msg-bubble">What's pulling my expenses the most?</div>
-          </div>
-        </div>
-        <div class="ai-typing">
-          <div class="ai-msg-av ai-msg" style="background:linear-gradient(135deg,var(--gold),var(--gold-light));color:#03071e;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.75rem;flex-shrink:0;"><i class="fas fa-brain"></i></div>
-          <div class="typing-dots">
-            <div class="typing-dot"></div>
-            <div class="typing-dot"></div>
-            <div class="typing-dot"></div>
-          </div>
-        </div>
-        <div class="ai-input-row">
-          <div class="ai-input">Ask Klyro AI anything…</div>
-          <div class="ai-send"><i class="fas fa-paper-plane"></i></div>
-        </div>
+      <div class="f-card">
+        <div class="f-icon"><i class="fas fa-lock"></i></div>
+        <h3>Absolute Integrity</h3>
+        <p>Your financial data is encrypted end-to-end. Multi-factor authentication keeps it exclusively yours.</p>
       </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<!-- ─── PRICING ─── -->
-<section class="pricing-section" id="pricing">
-  <div class="section-inner">
-    <div class="pricing-header reveal">
-      <div class="section-eyebrow">Simple pricing</div>
-      <h2 class="section-title">Start free.<br>Scale as you grow.</h2>
-      <p class="section-sub" style="margin:0 auto;">From curious beginners to fast-growing businesses — there's a Klyro plan that fits perfectly.</p>
-      <div class="billing-toggle">
-        <button class="billing-btn active" id="btn-monthly" onclick="setBilling('monthly')">Monthly</button>
-        <button class="billing-btn" id="btn-yearly" onclick="setBilling('yearly')">
-          Yearly <span class="save-chip">Save 20%</span>
+  <!-- INTERACTIVE DEMO -->
+  <section class="section" id="demo">
+    <div class="section-head reveal">
+      <span class="eyebrow">Try It Now</span>
+      <h2 class="section-title">See how Klyro works.</h2>
+      <p class="section-sub">No signup needed. Toggle between the tools below to feel how cashflow tracking, AI coaching, and invoicing behave inside Klyro.</p>
+    </div>
+
+    <div class="demo-shell reveal">
+      <div class="demo-tabs">
+        <button class="demo-tab active" data-tab="0">
+          <i class="fas fa-chart-pie"></i>
+          <div><h4>Cashflow Simulator</h4><p>Adjust income & expenses live.</p></div>
+        </button>
+        <button class="demo-tab" data-tab="1">
+          <i class="fas fa-robot"></i>
+          <div><h4>AI Advisor Chat</h4><p>Talk to the simulated coach.</p></div>
+        </button>
+        <button class="demo-tab" data-tab="2">
+          <i class="fas fa-file-invoice-dollar"></i>
+          <div><h4>Invoice Builder</h4><p>Generate a receipt instantly.</p></div>
         </button>
       </div>
+
+      <div class="demo-display">
+        <!-- Panel 0 -->
+        <div class="demo-panel active" id="panel-0">
+          <div class="sim-grid">
+            <div>
+              <div class="slider-group">
+                <div class="slider-label"><span>Monthly Income</span><span id="incomeVal">$5,000</span></div>
+                <input type="range" class="slider-input" id="incomeSlider" min="1000" max="15000" value="5000">
+              </div>
+              <div class="slider-group">
+                <div class="slider-label"><span>Monthly Expenses</span><span id="expenseVal">$2,400</span></div>
+                <input type="range" class="slider-input" id="expenseSlider" min="500" max="10000" value="2400">
+              </div>
+              <div class="slider-group">
+                <span class="slider-label" style="display:block;margin-bottom:10px;">Display Currency</span>
+                <div class="currency-select">
+                  <button class="currency-btn active" data-cur="USD" data-sym="$">USD</button>
+                  <button class="currency-btn" data-cur="GHS" data-sym="₵">GHS</button>
+                  <button class="currency-btn" data-cur="NGN" data-sym="₦">NGN</button>
+                </div>
+              </div>
+            </div>
+            <div class="sim-display">
+              <div>
+                <div class="sim-label">Projected Net Monthly Savings</div>
+                <div class="sim-value" id="netSavings">$2,600</div>
+              </div>
+              <div class="sim-bars">
+                <div class="sim-bar-col"><div class="sim-bar income" id="barInc" style="height:70%;"></div><span>Income</span></div>
+                <div class="sim-bar-col"><div class="sim-bar expense" id="barExp" style="height:33.6%;"></div><span>Expense</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel 1 -->
+        <div class="demo-panel" id="panel-1">
+          <div class="chat-box">
+            <div class="chat-msgs" id="chatMsgs">
+              <div class="chat-bubble ai">Hi — I'm your Klyro AI Coach. Pick a question below or imagine asking me anything about your budget.</div>
+            </div>
+            <div class="chat-suggest">
+              <button class="chat-chip" data-q="How can I save 20% of my income?">"How can I save 20% of my income?"</button>
+              <button class="chat-chip" data-q="Analyze my dining budget">"Analyze my dining budget"</button>
+              <button class="chat-chip" data-q="Can I afford a $800 purchase?">"Can I afford a $800 purchase?"</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel 2 -->
+        <div class="demo-panel" id="panel-2">
+          <div class="inv-grid">
+            <div>
+              <div class="inv-field"><label>Client Name</label><input class="inv-input" id="invClient" value="Acme Consulting"></div>
+              <div class="inv-field"><label>Service Description</label><input class="inv-input" id="invService" value="UI/UX Product Design"></div>
+              <div class="inv-field"><label>Amount (USD)</label><input class="inv-input" id="invAmount" type="number" value="1500"></div>
+              <div class="inv-check"><input type="checkbox" id="invTax"><label for="invTax">Apply local VAT (15%)</label></div>
+              <button class="btn btn-gold btn-block" id="sendInvoiceBtn">Send Invoice</button>
+            </div>
+            <div class="inv-sheet">
+              <div class="inv-sheet-head">
+                <div><div class="brand">KLYRO INVOICING</div><div style="color:#7a6f57;margin-top:4px;font-size:0.72rem;">#INV-2026-004</div></div>
+                <div class="meta"><div>Date: 11 Jul 2026</div><div>Due: On Receipt</div></div>
+              </div>
+              <div class="billed-to">Billed To</div>
+              <div id="pClient" style="font-weight:600;margin-bottom:12px;">Acme Consulting</div>
+              <table class="inv-table">
+                <thead><tr><th>Description</th><th style="text-align:right;">Total</th></tr></thead>
+                <tbody><tr><td id="pService">UI/UX Product Design</td><td style="text-align:right;" id="pAmount">$1,500.00</td></tr></tbody>
+              </table>
+              <div class="inv-totals-row"><span>Subtotal</span><span id="pSubtotal">$1,500.00</span></div>
+              <div class="inv-totals-row" id="pTaxRow" style="display:none;"><span>VAT (15%)</span><span id="pTax">$225.00</span></div>
+              <div class="inv-totals-row grand"><span>Grand Total</span><span id="pTotal">$1,500.00</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- METRICS -->
+  <section class="section" style="padding-top:0;">
+    <div class="metrics reveal-stagger">
+      <div class="metric"><div class="metric-num" data-count="150">0</div><div class="metric-label">Currencies supported</div></div>
+      <div class="metric"><div class="metric-num" data-count="2400">0</div><div class="metric-label">Waitlist members</div></div>
+      <div class="metric"><div class="metric-num" data-count="24">0</div><div class="metric-label">Hour AI coaching</div></div>
+      <div class="metric"><div class="metric-num" data-count="99">0</div><div class="metric-label">% Uptime target</div></div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section class="section" id="pricing">
+    <div class="section-head center reveal" style="margin-left:auto;margin-right:auto;">
+      <span class="eyebrow">Pricing</span>
+      <h2 class="section-title">Upgrade your capital.</h2>
+      <p class="section-sub">Start for free, then choose the tier that matches your personal or business needs. Rates locked in for life.</p>
     </div>
 
-    <div class="plans-grid reveal">
+    <div class="pricing-toggle reveal">
+      <span class="toggle-lbl active" id="lblMonthly">Monthly</span>
+      <label class="toggle-switch"><input type="checkbox" id="billingToggle"><span class="toggle-slider"></span></label>
+      <span class="toggle-lbl" id="lblYearly">Yearly</span>
+      <span class="save-tag">Save 20%</span>
+    </div>
 
-      <!-- Free -->
-      <div class="plan-card">
-        <div class="plan-name-label">Free</div>
-        <div class="plan-price-wrap">
-          <div class="plan-price"><sup>$</sup>0</div>
-        </div>
-        <div class="plan-period">forever</div>
-        <div class="plan-yearly-note"></div>
-        <div class="plan-divider"></div>
-        <ul class="plan-features">
-          <li><i class="fas fa-check"></i> 20 transactions/mo</li>
-          <li><i class="fas fa-check"></i> Dashboard & overview</li>
-          <li><i class="fas fa-check"></i> Basic categories</li>
-          <li><i class="fas fa-check"></i> 150+ currencies</li>
-          <li class="dim"><i class="fas fa-times"></i> AI chat</li>
-          <li class="dim"><i class="fas fa-times"></i> Analysis charts</li>
-          <li class="dim"><i class="fas fa-times"></i> Savings goals</li>
+    <div class="pricing-grid reveal-stagger">
+      <div class="price-card">
+        <div class="plan-name">Free Plan</div>
+        <div class="price-num">$0</div>
+        <div class="price-period">forever</div>
+        <ul class="price-feats">
+          <li><i class="fas fa-check"></i> Up to 30 transactions/mo</li>
+          <li><i class="fas fa-check"></i> Basic dashboard analytics</li>
+          <li><i class="fas fa-check"></i> 3 primary budget categories</li>
+          <li><i class="fas fa-check"></i> Manual CSV imports</li>
+          <li><i class="fas fa-xmark"></i> Custom theme aesthetics</li>
+          <li><i class="fas fa-xmark"></i> Smart AI financial coaching</li>
+          <li><i class="fas fa-xmark"></i> Client invoicing system</li>
         </ul>
-        <a href="signup.html" class="plan-cta">Get started</a>
+        <a href="waitlist.html" class="btn btn-glass btn-block">Get Started Free</a>
       </div>
 
-      <!-- Students -->
-      <div class="plan-card">
-        <div class="plan-name-label">Students</div>
-        <div class="plan-price-wrap">
-          <div class="plan-price" id="price-students"><sup>$</sup>8</div>
-        </div>
-        <div class="plan-period" id="period-students">per month</div>
-        <div class="plan-yearly-note" id="note-students"></div>
-        <div class="plan-divider"></div>
-        <ul class="plan-features">
-          <li><i class="fas fa-check"></i> 60 transactions/mo</li>
-          <li><i class="fas fa-check"></i> AI chat access</li>
-          <li><i class="fas fa-check"></i> Dashboard & overview</li>
-          <li><i class="fas fa-check"></i> All categories</li>
-          <li><i class="fas fa-check"></i> Mobile Money payments</li>
-          <li class="dim"><i class="fas fa-times"></i> Advanced analysis</li>
-          <li class="dim"><i class="fas fa-times"></i> CSV/PDF export</li>
-        </ul>
-        <a href="signup.html" class="plan-cta">Get started</a>
-      </div>
-
-      <!-- Individuals — FEATURED -->
-      <div class="plan-card featured">
-        <div class="plan-top-badge">Most Popular</div>
-        <div class="plan-name-label">Individuals</div>
-        <div class="plan-price-wrap">
-          <div class="plan-price" id="price-individuals"><sup>$</sup>10</div>
-        </div>
-        <div class="plan-period" id="period-individuals">per month</div>
-        <div class="plan-yearly-note" id="note-individuals"></div>
-        <div class="plan-divider"></div>
-        <ul class="plan-features">
+      <div class="price-card featured">
+        <div class="featured-badge">Launch Special</div>
+        <div class="plan-name">Personal</div>
+        <div class="price-num" id="personalPrice">$10<span style="text-decoration:line-through;font-size:1.1rem;margin-left:6px;">$20</span></div>
+        <div class="price-period" id="personalPeriod">per month</div>
+        <div class="price-offer"><i class="fas fa-bolt"></i> 50% off — lifetime member deal</div>
+        <ul class="price-feats">
           <li><i class="fas fa-check"></i> Unlimited transactions</li>
-          <li><i class="fas fa-check"></i> Full AI chat + web search</li>
-          <li><i class="fas fa-check"></i> Advanced analysis charts</li>
-          <li><i class="fas fa-check"></i> Savings goals</li>
-          <li><i class="fas fa-check"></i> CSV & PDF export</li>
-          <li><i class="fas fa-check"></i> Custom categories</li>
-          <li class="dim"><i class="fas fa-times"></i> Invoicing tools</li>
+          <li><i class="fas fa-check"></i> Full dashboards & insights</li>
+          <li><i class="fas fa-check"></i> Multi-currency tracking (150+)</li>
+          <li><i class="fas fa-check"></i> Custom color palettes</li>
+          <li><i class="fas fa-check"></i> Financial goal structures</li>
+          <li><i class="fas fa-check"></i> PDF & Excel report exports</li>
+          <li><i class="fas fa-xmark"></i> Smart AI financial coaching</li>
+          <li><i class="fas fa-xmark"></i> Client invoicing system</li>
         </ul>
-        <a href="signup.html" class="plan-cta featured">Get started</a>
+        <a href="waitlist.html" class="btn btn-gold btn-block">Get Personal Offer</a>
       </div>
 
-      <!-- Businesses -->
-      <div class="plan-card">
-        <div class="plan-name-label">Businesses</div>
-        <div class="plan-price-wrap">
-          <div class="plan-price" id="price-businesses"><sup>$</sup>20</div>
-        </div>
-        <div class="plan-period" id="period-businesses">per month</div>
-        <div class="plan-yearly-note" id="note-businesses"></div>
-        <div class="plan-divider"></div>
-        <ul class="plan-features">
-          <li><i class="fas fa-check"></i> Everything in Individuals</li>
-          <li><i class="fas fa-check"></i> Full invoicing suite</li>
-          <li><i class="fas fa-check"></i> Business analytics</li>
-          <li><i class="fas fa-check"></i> AI business coach</li>
-          <li><i class="fas fa-check"></i> Team accounts</li>
-          <li><i class="fas fa-check"></i> Priority support</li>
-          <li><i class="fas fa-check"></i> Wealth forecasting</li>
-          <li><i class="fas fa-check"></i> Improved Analysis</li>
+      <div class="price-card">
+        <div class="plan-name">Corporate</div>
+        <div class="price-num" id="corpPrice">$40<span style="text-decoration:line-through;font-size:1.1rem;margin-left:6px;">$80</span></div>
+        <div class="price-period" id="corpPeriod">per month</div>
+        <div class="price-offer"><i class="fas fa-bolt"></i> 50% off — lifetime member deal</div>
+        <ul class="price-feats">
+          <li><i class="fas fa-check"></i> Everything in Personal</li>
+          <li><i class="fas fa-check"></i> Smart AI Finance Coach 24/7</li>
+          <li><i class="fas fa-check"></i> Complete invoice & billing engine</li>
+          <li><i class="fas fa-check"></i> AI-powered web search tool</li>
+          <li><i class="fas fa-check"></i> Business workspace separation</li>
+          <li><i class="fas fa-check"></i> Team API integration</li>
+          <li><i class="fas fa-check"></i> Priority VIP support</li>
         </ul>
-        <a href="signup.html" class="plan-cta">Get started</a>
-      </div>
-
-      <!-- Enterprise -->
-      <div class="plan-card">
-        <div class="plan-name-label">Companies & Enterprise</div>
-        <div class="plan-price-wrap">
-          <div class="plan-price" id="price-enterprise"><sup>$</sup>40</div>
-        </div>
-        <div class="plan-period" id="period-enterprise">per month</div>
-        <div class="plan-yearly-note" id="note-enterprise"></div>
-        <div class="plan-divider"></div>
-        <ul class="plan-features">
-          <li><i class="fas fa-check"></i> Everything in Business</li>
-          <li><i class="fas fa-check"></i> Wealth forecasting</li>
-          <li><i class="fas fa-check"></i> Family accounts</li>
-          <li><i class="fas fa-check"></i> Dedicated AI model</li>
-          <li><i class="fas fa-check"></i> Custom integrations</li>
-          <li><i class="fas fa-check"></i> SLA + dedicated support</li>
-          <li><i class="fas fa-check"></i> White-label option</li>
-        </ul>
-        <a href="signup.html" class="plan-cta">Contact us</a>
-      </div>
-
-    </div>
-  </div>
-</section>
-
-<!-- ─── TESTIMONIALS ─── -->
-<section class="social-section">
-  <div class="section-inner">
-    <div class="social-inner reveal">
-      <div class="section-eyebrow">Loved by thousands</div>
-      <h2 class="section-title" style="max-width:460px;margin:0 auto 8px;">People who <em>trust</em><br>Klyro with their money</h2>
-    </div>
-  </div>
-  <div class="testimonial-track-wrap" style="margin-top:48px;">
-    <div class="testimonial-track" id="testi-track">
-      <!-- Duplicate set for infinite loop -->
-      <div class="testi-card">
-        <div class="testi-stars">★★★★★</div>
-        <div class="testi-text">"Klyro AI literally told me I was spending GHC 480 on food delivery every month. I had no idea. Cut it in half and now I'm actually saving."</div>
-        <div class="testi-author">
-          <div class="testi-av" style="background:linear-gradient(135deg,#d4a017,#f0c040);">AK</div>
-          <div><div class="testi-name">Ama Kofi</div><div class="testi-role">Nurse, Accra</div></div>
-        </div>
-      </div>
-      <div class="testi-card">
-        <div class="testi-stars">★★★★★</div>
-        <div class="testi-text">"The invoice module alone is worth it. I send professional invoices to clients and track every payment — all inside the same app I use for personal finance."</div>
-        <div class="testi-author">
-          <div class="testi-av" style="background:linear-gradient(135deg,#2ecc71,#27ae60);">JM</div>
-          <div><div class="testi-name">James Mensah</div><div class="testi-role">Freelancer, Kumasi</div></div>
-        </div>
-      </div>
-      <div class="testi-card">
-        <div class="testi-stars">★★★★★</div>
-        <div class="testi-text">"I've tried 6 different budget apps. Klyro is the only one that actually showed me I was earning well but saving nothing. Fixed that in 3 months."</div>
-        <div class="testi-author">
-          <div class="testi-av" style="background:linear-gradient(135deg,#5b9cf6,#3b82f6);">SO</div>
-          <div><div class="testi-name">Seun Obi</div><div class="testi-role">Software Engineer, Lagos</div></div>
-        </div>
-      </div>
-      <div class="testi-card">
-        <div class="testi-stars">★★★★★</div>
-        <div class="testi-text">"Multi-currency support is a game-changer. I earn in USD, live in Ghana, and Klyro tracks everything seamlessly. The analysis page is beautiful."</div>
-        <div class="testi-author">
-          <div class="testi-av" style="background:linear-gradient(135deg,#a78bfa,#8b5cf6);">KA</div>
-          <div><div class="testi-name">Kwame Asante</div><div class="testi-role">Startup Founder, Accra</div></div>
-        </div>
-      </div>
-      <div class="testi-card">
-        <div class="testi-stars">★★★★★</div>
-        <div class="testi-text">"The savings goals feature is so motivating. Watching that Europe trip bar fill up keeps me disciplined. Almost at 50% now!"</div>
-        <div class="testi-author">
-          <div class="testi-av" style="background:linear-gradient(135deg,#f97316,#ef4444);">FD</div>
-          <div><div class="testi-name">Fatima Diallo</div><div class="testi-role">Student, Lomé</div></div>
-        </div>
-      </div>
-      <div class="testi-card">
-        <div class="testi-stars">★★★★★</div>
-        <div class="testi-text">"Dark mode + beautiful charts + AI insights. I check Klyro every morning like I check my email. It's become part of my daily routine."</div>
-        <div class="testi-author">
-          <div class="testi-av" style="background:linear-gradient(135deg,#06b6d4,#0891b2);">RN</div>
-          <div><div class="testi-name">Remy Nkosi</div><div class="testi-role">Accountant, Cape Town</div></div>
-        </div>
-      </div>
-      <!-- Duplicates for seamless loop -->
-      <div class="testi-card">
-        <div class="testi-stars">★★★★★</div>
-        <div class="testi-text">"Klyro AI literally told me I was spending GHC 480 on food delivery every month. I had no idea. Cut it in half and now I'm actually saving."</div>
-        <div class="testi-author">
-          <div class="testi-av" style="background:linear-gradient(135deg,#d4a017,#f0c040);">AK</div>
-          <div><div class="testi-name">Ama Kofi</div><div class="testi-role">Nurse, Accra</div></div>
-        </div>
-      </div>
-      <div class="testi-card">
-        <div class="testi-stars">★★★★★</div>
-        <div class="testi-text">"The invoice module alone is worth it. I send professional invoices to clients and track every payment — all inside the same app I use for personal finance."</div>
-        <div class="testi-author">
-          <div class="testi-av" style="background:linear-gradient(135deg,#2ecc71,#27ae60);">JM</div>
-          <div><div class="testi-name">James Mensah</div><div class="testi-role">Freelancer, Kumasi</div></div>
-        </div>
-      </div>
-      <div class="testi-card">
-        <div class="testi-stars">★★★★★</div>
-        <div class="testi-text">"I've tried 6 different budget apps. Klyro is the only one that actually showed me I was earning well but saving nothing. Fixed that in 3 months."</div>
-        <div class="testi-author">
-          <div class="testi-av" style="background:linear-gradient(135deg,#5b9cf6,#3b82f6);">SO</div>
-          <div><div class="testi-name">Seun Obi</div><div class="testi-role">Software Engineer, Lagos</div></div>
-        </div>
-      </div>
-      <div class="testi-card">
-        <div class="testi-stars">★★★★★</div>
-        <div class="testi-text">"Multi-currency support is a game-changer. I earn in USD, live in Ghana, and Klyro tracks everything seamlessly. The analysis page is beautiful."</div>
-        <div class="testi-author">
-          <div class="testi-av" style="background:linear-gradient(135deg,#a78bfa,#8b5cf6);">KA</div>
-          <div><div class="testi-name">Kwame Asante</div><div class="testi-role">Startup Founder, Accra</div></div>
-        </div>
-      </div>
-      <div class="testi-card">
-        <div class="testi-stars">★★★★★</div>
-        <div class="testi-text">"The savings goals feature is so motivating. Watching that Europe trip bar fill up keeps me disciplined. Almost at 50% now!"</div>
-        <div class="testi-author">
-          <div class="testi-av" style="background:linear-gradient(135deg,#f97316,#ef4444);">FD</div>
-          <div><div class="testi-name">Fatima Diallo</div><div class="testi-role">Student, Lomé</div></div>
-        </div>
-      </div>
-      <div class="testi-card">
-        <div class="testi-stars">★★★★★</div>
-        <div class="testi-text">"Dark mode + beautiful charts + AI insights. I check Klyro every morning like I check my email. It's become part of my daily routine."</div>
-        <div class="testi-author">
-          <div class="testi-av" style="background:linear-gradient(135deg,#06b6d4,#0891b2);">RN</div>
-          <div><div class="testi-name">Remy Nkosi</div><div class="testi-role">Accountant, Cape Town</div></div>
-        </div>
+        <a href="waitlist.html" class="btn btn-glass btn-block">Get Corporate Offer</a>
       </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<!-- ─── CTA BANNER ─── -->
-<section class="cta-section">
-  <div class="section-inner">
-    <div class="cta-box reveal">
-      <div class="section-eyebrow" style="margin-bottom:20px;">Ready to start?</div>
-      <h2 class="cta-title">Take control of your<br><em>financial future</em></h2>
-      <p class="cta-sub">Join thousands of people who've already transformed how they manage money.<br>Free forever. No credit card needed.</p>
-      <div class="cta-actions">
-        <a href="signup.html" class="btn-hero-primary">
-          <i class="fas fa-rocket"></i> Get Started
+  <!-- TESTIMONIALS -->
+  <section class="section">
+    <div class="section-head center reveal" style="margin-left:auto;margin-right:auto;">
+      <span class="eyebrow">Word on the Street</span>
+      <h2 class="section-title">Valued by creators and enterprises.</h2>
+      <p class="section-sub">Freelancers and founders across our community track their cashflow with Klyro.</p>
+    </div>
+    <div class="testi-grid reveal-stagger">
+      <div class="testi-card">
+        <div class="testi-stars">★★★★★</div>
+        <p class="testi-text">"Managing client projects in GHS while paying for hosting in USD used to be a conversion nightmare. Klyro translates everything seamlessly."</p>
+        <div class="testi-profile"><div class="testi-avatar">AM</div><div class="testi-info"><h5>Ama Mensah</h5><p>Freelance Brand Designer</p></div></div>
+      </div>
+      <div class="testi-card">
+        <div class="testi-stars">★★★★★</div>
+        <p class="testi-text">"The AI Finance Coach found three redundant SaaS subscriptions within an hour. The Corporate tier paid for itself almost instantly."</p>
+        <div class="testi-profile"><div class="testi-avatar">KO</div><div class="testi-info"><h5>Kwame Osei</h5><p>Co-founder, Amply Tech</p></div></div>
+      </div>
+      <div class="testi-card">
+        <div class="testi-stars">★★★★★</div>
+        <p class="testi-text">"Sleek interface, zero clutter, and it actually feels fast. I moved off spreadsheets and I'm never going back."</p>
+        <div class="testi-profile"><div class="testi-avatar">EA</div><div class="testi-info"><h5>Effie Appiah</h5><p>Digital Creator</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="section" id="faq">
+    <div class="section-head center reveal" style="margin-left:auto;margin-right:auto;">
+      <span class="eyebrow">FAQ</span>
+      <h2 class="section-title">Questions, answered.</h2>
+      <p class="section-sub">Can't find what you're looking for? Reach us on WhatsApp any time.</p>
+    </div>
+    <div class="faq-list reveal">
+      <div class="faq-item">
+        <div class="faq-q"><span>What currencies does Klyro support?</span><i class="fas fa-plus"></i></div>
+        <div class="faq-a"><div class="faq-a-inner">Klyro supports 150+ currencies. Set a primary currency for your dashboard — GHS, NGN, USD, or EUR — and log transactions in any other. Conversion rates update in real time.</div></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q"><span>How secure is my financial data?</span><i class="fas fa-plus"></i></div>
+        <div class="faq-a"><div class="faq-a-inner">We use industry-standard encryption for data in transit and at rest, with isolated per-user storage, so your financials stay private and yours alone.</div></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q"><span>What is the Klyro AI Finance Coach?</span><i class="fas fa-plus"></i></div>
+        <div class="faq-a"><div class="faq-a-inner">A conversational financial agent trained to read spending patterns and cashflow trends inside the app — offering budgeting targets and flagging redundant charges.</div></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q"><span>Can I customize the visual interface?</span><i class="fas fa-plus"></i></div>
+        <div class="faq-a"><div class="faq-a-inner">Yes — Klyro's glass design is fully themeable. Personal and Corporate plan users can choose curated color palettes and light/dark adaptations.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="section">
+    <div class="cta-band reveal">
+      <h2 class="cta-title">Upgrade your cashflow today.</h2>
+      <p class="cta-desc">Join thousands of professionals already tracking their finances on Klyro. Secure your lifetime launch discount now.</p>
+      <a href="waitlist.html" class="btn btn-gold" style="position:relative;">Unlock Klyro Access</a>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <a href="#" class="footer-logo">
+          <img class="logo-img" src="Klyro's Logo.png" alt="Klyro" onerror="this.outerHTML='<div class=&quot;logo-fallback&quot;>K</div>'">
+          <span>Klyro</span>
         </a>
-        <a href="#pricing" class="btn-hero-secondary">
-          View all plans <i class="fas fa-arrow-right"></i>
-        </a>
+        <p class="footer-desc">Klyro is the intelligence operating system for personal assets and localized business cashflow.</p>
+      </div>
+      <div class="footer-col">
+        <h5>Product</h5>
+        <ul class="footer-links">
+          <li><a href="#features">Features</a></li>
+          <li><a href="#demo">Live Demo</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h5>Company</h5>
+        <ul class="footer-links">
+          <li><a href="waitlist.html">Get Started</a></li>
+          <li><a href="#faq">Support Center</a></li>
+          <li><a href="privacy.html">Privacy Policy</a></li>
+          <li><a href="terms.html">Terms of Service</a></li>
+        </ul>
       </div>
     </div>
-  </div>
-</section>
+    <div class="footer-bottom">
+      <span>© 2026 Klyro. All rights reserved. Built for West Africa and the world.</span>
+      <div class="footer-socials">
+        <a href="https://www.instagram.com/petit64348" aria-label="Klyro on Instagram"><i class="fab fa-instagram"></i></a>
+        <a href="https://www.tiktok.com/@petitgenie276" aria-label="Klyro on TikTok"><i class="fab fa-tiktok"></i></a>
+        <a href="https://www.youtube.com/@petitgeniecodes" aria-label="Klyro on YouTube"><i class="fab fa-youtube"></i></a>
+        <a href="https://wa.me/233559583295" aria-label="Klyro on LinkedIn"><i class="fab fa-whatsapp"></i></a>
+      </div>
+    </div>
+  </footer>
 
-<!-- ─── FOOTER ─── -->
-<footer>
-  <div class="footer-inner">
-    <div class="footer-brand">
-      <a href="#" class="footer-logo">
-        <div class="footer-logo-k">K</div>
-        <span class="footer-logo-text">Klyro</span>
-      </a>
-      <p class="footer-tagline">Finance that thinks with you. Track, understand, and grow your wealth — in any currency, anywhere.</p>
-      <div class="footer-social">
-        <a href="#" class="footer-soc-btn"><i class="fab fa-whatsapp"></i></a>
-        <a href="" class="footer-soc-btn"><i class="fab fa-tiktok"></i></a>
-        <a href="#" class="footer-soc-btn"><i class="fab fa-instagram"></i></a>
-        <a href="#" class="footer-soc-btn"><i class="fas fa-envelope"></i></a>
-      </div>
-    </div>
-    <div>
-      <div class="footer-col-title">Product</div>
-      <ul class="footer-links">
-        <li><a href="signup.html">Create an Account</a></li>
-      </ul>
-    </div>
-    <div>
-    </div>
-    <div>
-      <div class="footer-col-title">Account</div>
-      <ul class="footer-links">
-        <li><a href="signup.html">Sign up</a></li>
-        <li><a href="login.html">Sign in</a></li>
-      </ul>
-    </div>
-  </div>
-  <div class="footer-bottom">
-    <div class="footer-copy">© 2026 Klyro. All rights reserved.</div>
-    <div class="footer-links-bottom">
-      <a href="#">Privacy Policy</a>
-      <a href="#">Terms of Service</a>
-    </div>
-  </div>
-</footer>
+</div>
+
+<div class="demo-toast" id="demoToast"><i class="fas fa-check-circle"></i> Invoice sent to client inbox!</div>
 
 <script>
-  // ─── Nav scroll effect ───
-  const nav = document.getElementById('main-nav');
-  window.addEventListener('scroll', () => {
-    nav.classList.toggle('scrolled', window.scrollY > 20);
-  });
+/* ---------- Nav scroll state ---------- */
+const nav = document.getElementById('nav');
+window.addEventListener('scroll', () => nav.classList.toggle('scrolled', window.scrollY > 40), { passive:true });
 
-  // ─── Billing toggle ───
-  const PRICES = {
-    monthly:  { students: 8,  individuals: 10, businesses: 20, enterprise: 40 },
-    yearly:   { students: 77,  individuals: 96,  businesses: 192, enterprise:  384},
-  };
-  let billing = 'monthly';
+/* ---------- Mobile menu ---------- */
+const menuToggle = document.getElementById('menuToggle');
+const mobileSheet = document.getElementById('mobileSheet');
+menuToggle.addEventListener('click', () => {
+  menuToggle.classList.toggle('open');
+  mobileSheet.classList.toggle('open');
+});
+mobileSheet.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+  menuToggle.classList.remove('open'); mobileSheet.classList.remove('open');
+}));
 
-  function setBilling(mode) {
-    billing = mode;
-    document.getElementById('btn-monthly').classList.toggle('active', mode === 'monthly');
-    document.getElementById('btn-yearly').classList.toggle('active', mode === 'yearly');
-    const p = PRICES[mode];
-    const note = mode === 'yearly' ? 'Billed annually' : '';
+/* ---------- Scroll reveal ---------- */
+const revealEls = document.querySelectorAll('.reveal, .reveal-stagger');
+const io = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+}, { threshold:0.15 });
+revealEls.forEach(el => io.observe(el));
 
-    [['students', p.students], ['individuals', p.individuals], ['businesses', p.businesses], ['enterprise', p.enterprise]]
-      .forEach(([key, val]) => {
-        document.getElementById(`price-${key}`).innerHTML = `<sup>$</sup>${val}`;
-        document.getElementById(`period-${key}`).textContent = 'per month';
-        document.getElementById(`note-${key}`).textContent = note;
-      });
-  }
-
-  // ─── Scroll reveal ───
-  const revealEls = document.querySelectorAll('.reveal');
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); } });
-  }, { threshold: 0.1 });
-  revealEls.forEach(el => observer.observe(el));
-
-  // ─── Animated counters ───
-  function animateCount(el) {
-    const target = parseFloat(el.dataset.count);
-    const suffix = el.dataset.suffix || '';
-    const isFloat = target % 1 !== 0;
-    const duration = 1800;
-    let start = null;
-
-    function step(ts) {
-      if (!start) start = ts;
-      const progress = Math.min((ts - start) / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 4);
-      const val = isFloat ? (eased * target).toFixed(1) : Math.floor(eased * target).toLocaleString();
-      el.textContent = val + (suffix.startsWith('+') || suffix.startsWith('%') || suffix.startsWith('M') ? suffix : (suffix ? ' ' + suffix : ''));
-      if (progress < 1) requestAnimationFrame(step);
+/* ---------- Animated counters ---------- */
+const counters = document.querySelectorAll('.metric-num');
+const cio = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (!e.isIntersecting) return;
+    const el = e.target;
+    const target = parseInt(el.dataset.count, 10);
+    const dur = 1400; const start = performance.now();
+    function tick(now) {
+      const p = Math.min(1, (now - start) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(target * eased).toLocaleString();
+      if (p < 1) requestAnimationFrame(tick); else el.textContent = target.toLocaleString() + (target === 99 ? '' : '');
     }
-    requestAnimationFrame(step);
-  }
-
-  const countEls = document.querySelectorAll('.stat-block-num[data-count]');
-  const countObserver = new IntersectionObserver((entries) => {
-    entries.forEach(e => {
-      if (e.isIntersecting) {
-        animateCount(e.target);
-        countObserver.unobserve(e.target);
-      }
-    });
-  }, { threshold: 0.5 });
-  countEls.forEach(el => countObserver.observe(el));
-
-  // ─── Smooth scroll for anchor links ───
-  document.querySelectorAll('a[href^="#"]').forEach(a => {
-    a.addEventListener('click', e => {
-      const id = a.getAttribute('href').slice(1);
-      const el = document.getElementById(id);
-      if (el) { e.preventDefault(); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-    });
+    requestAnimationFrame(tick);
+    cio.unobserve(el);
   });
+}, { threshold:0.4 });
+counters.forEach(el => cio.observe(el));
+
+/* ---------- Hero chart: draw-in + live points ---------- */
+const chartPoints = [40,58,50,72,64,88];
+function buildPath(points, w, h, pad) {
+  const step = (w - pad*2) / (points.length - 1);
+  const max = Math.max(...points), min = Math.min(...points) - 10;
+  const coords = points.map((v,i) => [pad + i*step, h - pad - ((v-min)/(max-min))*(h-pad*2)]);
+  let d = `M ${coords[0][0]} ${coords[0][1]}`;
+  for (let i=1;i<coords.length;i++){
+    const [x0,y0] = coords[i-1], [x1,y1] = coords[i];
+    const mx = (x0+x1)/2;
+    d += ` C ${mx} ${y0}, ${mx} ${y1}, ${x1} ${y1}`;
+  }
+  return { d, last: coords[coords.length-1], area: d + ` L ${coords[coords.length-1][0]} ${h} L ${coords[0][0]} ${h} Z` };
+}
+const built = buildPath(chartPoints, 460, 170, 12);
+const lineEl = document.getElementById('chartLine');
+const areaEl = document.getElementById('chartArea');
+const dotEl  = document.getElementById('chartDot');
+lineEl.setAttribute('d', built.d);
+areaEl.setAttribute('d', built.area);
+dotEl.setAttribute('cx', built.last[0]);
+dotEl.setAttribute('cy', built.last[1]);
+const len = lineEl.getTotalLength();
+lineEl.style.strokeDasharray = len;
+lineEl.style.strokeDashoffset = len;
+areaEl.style.opacity = 0;
+
+let balanceTarget = 14248.50;
+function animateHero() {
+  lineEl.animate([{ strokeDashoffset: len }, { strokeDashoffset: 0 }], { duration: 1600, easing:'cubic-bezier(.16,1,.3,1)', fill:'forwards' });
+  areaEl.animate([{ opacity:0 }, { opacity:0.9 }], { duration: 1200, delay: 400, easing:'ease-out', fill:'forwards' });
+  const balEl = document.getElementById('heroBalance');
+  const start = performance.now(); const dur = 1400;
+  function tick(now){
+    const p = Math.min(1, (now-start)/dur);
+    const eased = 1 - Math.pow(1-p,3);
+    balEl.textContent = '₵' + (balanceTarget*eased).toLocaleString(undefined,{maximumFractionDigits:0});
+    if (p<1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+const heroIo = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) { animateHero(); heroIo.disconnect(); } });
+}, { threshold:0.3 });
+heroIo.observe(document.getElementById('heroVisual'));
+
+/* ---------- Hero parallax on mousemove ---------- */
+const heroVisual = document.getElementById('heroVisual');
+const panelMain = document.getElementById('panelMain');
+const chips = [document.getElementById('chip1'), document.getElementById('chip2'), document.getElementById('chip3')];
+heroVisual.addEventListener('mousemove', (e) => {
+  const r = heroVisual.getBoundingClientRect();
+  const mx = (e.clientX - r.left) / r.width - 0.5;
+  const my = (e.clientY - r.top) / r.height - 0.5;
+  panelMain.style.transform = `rotateY(${mx*4}deg) rotateX(${-my*4}deg)`;
+  chips.forEach((c,i) => { if(c) c.style.transform = `translate(${mx*(10+i*4)}px, ${my*(10+i*4)}px)`; });
+});
+heroVisual.addEventListener('mouseleave', () => {
+  panelMain.style.transform = 'rotateY(0) rotateX(0)';
+  chips.forEach(c => { if(c) c.style.transform = 'translate(0,0)'; });
+});
+
+/* ---------- Ticker ---------- */
+const tickerData = [
+  ['USD/GHS','15.42','up'], ['USD/NGN','1,538.10','down'], ['EUR/GHS','16.78','up'],
+  ['GBP/GHS','19.64','up'], ['USD/KES','129.30','down'], ['USD/ZAR','18.02','up'],
+  ['USD/EGP','48.15','down'], ['USD/GHS','15.42','up'],
+];
+const track = document.getElementById('tickerTrack');
+function renderTicker() {
+  const html = tickerData.map(([pair,rate,dir]) => `
+    <div class="ticker-item">
+      <span class="pair">${pair}</span>
+      <span class="rate">${rate}</span>
+      <i class="fas fa-caret-${dir === 'up' ? 'up' : 'down'} ${dir}"></i>
+    </div>`).join('');
+  track.innerHTML = html + html; // duplicate for seamless loop
+}
+renderTicker();
+
+/* ---------- Demo tabs ---------- */
+document.querySelectorAll('.demo-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.demo-tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.demo-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+/* ---------- Cashflow simulator ---------- */
+let simSymbol = '$', simRate = 1;
+const incomeSlider = document.getElementById('incomeSlider');
+const expenseSlider = document.getElementById('expenseSlider');
+function fmtSim(v){ return `${simSymbol}${Math.round(v*simRate).toLocaleString()}`; }
+function updateSim(){
+  const inc = parseInt(incomeSlider.value,10);
+  const exp = parseInt(expenseSlider.value,10);
+  document.getElementById('incomeVal').textContent = fmtSim(inc);
+  document.getElementById('expenseVal').textContent = fmtSim(exp);
+  const net = inc - exp;
+  const netEl = document.getElementById('netSavings');
+  netEl.textContent = fmtSim(net);
+  netEl.style.color = net < 0 ? 'var(--red)' : 'var(--emerald-2)';
+  const maxV = 15000;
+  document.getElementById('barInc').style.height = Math.max(8,(inc/maxV)*100) + '%';
+  document.getElementById('barExp').style.height = Math.max(8,(exp/maxV)*100) + '%';
+}
+incomeSlider.addEventListener('input', updateSim);
+expenseSlider.addEventListener('input', updateSim);
+document.querySelectorAll('.currency-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.currency-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    simSymbol = btn.dataset.sym;
+    simRate = btn.dataset.cur === 'GHS' ? 15 : btn.dataset.cur === 'NGN' ? 1500 : 1;
+    updateSim();
+  });
+});
+updateSim();
+
+/* ---------- AI advisor chat ---------- */
+const chatMsgs = document.getElementById('chatMsgs');
+const aiAnswers = {
+  'How can I save 20% of my income?': "Automate a transfer on payday, before any spending happens. Your fixed costs sit at 58% right now — trimming dining out by 15% clears the path to 20% savings.",
+  'Analyze my dining budget': "Last month: $320 across 18 transactions, about 8% of income. Four weekend visits made up 60% of that. Two more home-cooked weekends would save roughly $75.",
+  'Can I afford a $800 purchase?': "That would drop your buffer to $1,200 — below the recommended 3-month minimum of $2,500. Save $200/month toward it and you're covered in 4 months without touching your buffer."
+};
+document.querySelectorAll('.chat-chip').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const q = btn.dataset.q;
+    const userBubble = document.createElement('div');
+    userBubble.className = 'chat-bubble user';
+    userBubble.textContent = q;
+    chatMsgs.appendChild(userBubble);
+    chatMsgs.scrollTop = chatMsgs.scrollHeight;
+
+    const thinking = document.createElement('div');
+    thinking.className = 'chat-bubble ai';
+    thinking.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Klyro is analyzing…';
+    chatMsgs.appendChild(thinking);
+    chatMsgs.scrollTop = chatMsgs.scrollHeight;
+
+    setTimeout(() => {
+      thinking.textContent = '';
+      const answer = aiAnswers[q] || "I'm analyzing your cashflow now.";
+      let i = 0;
+      (function type(){
+        if (i < answer.length){ thinking.textContent += answer.charAt(i); i++; chatMsgs.scrollTop = chatMsgs.scrollHeight; setTimeout(type, 14); }
+      })();
+    }, 900);
+  });
+});
+
+/* ---------- Invoice builder ---------- */
+function fmtUSD(v){ return `$${v.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`; }
+function updateInvoice(){
+  const client = document.getElementById('invClient').value || 'Client Name';
+  const service = document.getElementById('invService').value || 'Service Rendered';
+  const amount = parseFloat(document.getElementById('invAmount').value) || 0;
+  const tax = document.getElementById('invTax').checked;
+  document.getElementById('pClient').textContent = client;
+  document.getElementById('pService').textContent = service;
+  document.getElementById('pAmount').textContent = fmtUSD(amount);
+  document.getElementById('pSubtotal').textContent = fmtUSD(amount);
+  let total = amount;
+  if (tax){
+    const taxAmt = amount * 0.15;
+    total += taxAmt;
+    document.getElementById('pTax').textContent = fmtUSD(taxAmt);
+    document.getElementById('pTaxRow').style.display = 'flex';
+  } else {
+    document.getElementById('pTaxRow').style.display = 'none';
+  }
+  document.getElementById('pTotal').textContent = fmtUSD(total);
+}
+['invClient','invService','invAmount'].forEach(id => document.getElementById(id).addEventListener('input', updateInvoice));
+document.getElementById('invTax').addEventListener('change', updateInvoice);
+updateInvoice();
+
+document.getElementById('sendInvoiceBtn').addEventListener('click', () => {
+  const toast = document.getElementById('demoToast');
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2800);
+});
+
+/* ---------- Pricing toggle ---------- */
+document.getElementById('billingToggle').addEventListener('change', (e) => {
+  const yearly = e.target.checked;
+  document.getElementById('lblMonthly').classList.toggle('active', !yearly);
+  document.getElementById('lblYearly').classList.toggle('active', yearly);
+  const personalPrice = document.getElementById('personalPrice');
+  const corpPrice = document.getElementById('corpPrice');
+  const personalPeriod = document.getElementById('personalPeriod');
+  const corpPeriod = document.getElementById('corpPeriod');
+  if (yearly){
+    personalPrice.innerHTML = '$8<span style="text-decoration:line-through;font-size:1.1rem;margin-left:6px;">$16</span>';
+    personalPeriod.textContent = 'per month, billed annually ($96)';
+    corpPrice.innerHTML = '$32<span style="text-decoration:line-through;font-size:1.1rem;margin-left:6px;">$64</span>';
+    corpPeriod.textContent = 'per month, billed annually ($384)';
+  } else {
+    personalPrice.innerHTML = '$10<span style="text-decoration:line-through;font-size:1.1rem;margin-left:6px;">$20</span>';
+    personalPeriod.textContent = 'per month';
+    corpPrice.innerHTML = '$40<span style="text-decoration:line-through;font-size:1.1rem;margin-left:6px;">$80</span>';
+    corpPeriod.textContent = 'per month';
+  }
+});
+
+/* ---------- FAQ accordion ---------- */
+document.querySelectorAll('.faq-item').forEach(item => {
+  item.addEventListener('click', () => {
+    const isActive = item.classList.contains('active');
+    document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('active'));
+    if (!isActive) item.classList.add('active');
+  });
+});
 </script>
 </body>
 </html>

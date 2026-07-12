@@ -283,7 +283,7 @@
     }
     document.querySelectorAll('.bottom-nav-item[data-page]').forEach(function(el){
       var p = el.dataset.page;
-      if(page.includes(p)||(p==='dashboard'&&['','index.html','dashboard.html'].includes(page)))
+    if(page.includes(p)||(p==='dashboard'&&['','dashboard.html'].includes(page)))
         el.classList.add('active');
     });
   }
@@ -294,7 +294,7 @@
     // Apply active state immediately so the nav looks right while waiting
     document.querySelectorAll('.bottom-nav-item[data-page]').forEach(function(el){
       var p = el.dataset.page;
-      if(page.includes(p)||(p==='dashboard'&&['','index.html','dashboard.html'].includes(page)))
+    if(page.includes(p)||(p==='dashboard'&&['','dashboard.html'].includes(page)))
         el.classList.add('active');
     });
   }
