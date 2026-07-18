@@ -137,15 +137,15 @@
     .auth-footer a { color: var(--gold); font-weight: 600; text-decoration: none; }
     .auth-footer a:hover { text-decoration: underline; }
 
-    /* Clerk OAuth modal */
-    .clerk-modal-overlay {
+    /* OAuth modal */
+    .oauth-modal-overlay {
       display: none; position: fixed; inset: 0;
       background: rgba(0,0,0,0.55);
       backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
       z-index: 1000; align-items: center; justify-content: center; padding: 20px;
     }
-    .clerk-modal-overlay.open { display: flex; }
-    .clerk-modal {
+    .oauth-modal-overlay.open { display: flex; }
+    .oauth-modal {
       background: var(--surface, #1a1612);
       border: 1px solid var(--glass-border);
       border-radius: var(--radius);
@@ -157,7 +157,7 @@
       from { opacity:0; transform: translateY(16px) scale(0.97); }
       to   { opacity:1; transform: translateY(0) scale(1); }
     }
-    .clerk-modal-close {
+    .oauth-modal-close {
       position: absolute; top: 16px; right: 16px;
       background: var(--glass-dim); border: 1px solid var(--glass-border);
       border-radius: 8px; width: 32px; height: 32px;
@@ -165,17 +165,17 @@
       cursor: pointer; color: var(--text-dim); font-size: 0.8rem;
       transition: all var(--transition);
     }
-    .clerk-modal-close:hover { background: var(--glass); color: var(--text); }
-    .clerk-modal-title { font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; color: var(--text); margin-bottom: 6px; }
-    .clerk-modal-sub { font-size: 0.82rem; color: var(--text-dim); margin-bottom: 24px; }
-    .clerk-loading { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 24px 0; }
-    .clerk-spinner {
+    .oauth-modal-close:hover { background: var(--glass); color: var(--text); }
+    .oauth-modal-title { font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .oauth-modal-sub { font-size: 0.82rem; color: var(--text-dim); margin-bottom: 24px; }
+    .oauth-loading { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 24px 0; }
+    .oauth-spinner {
       width: 32px; height: 32px;
       border: 3px solid var(--glass-border); border-top-color: var(--gold);
       border-radius: 50%; animation: spin 0.8s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .clerk-loading-text { font-size: 0.84rem; color: var(--text-dim); }
+    .oauth-loading-text { font-size: 0.84rem; color: var(--text-dim); }
 
     /* Hero */
     .auth-hero {
@@ -306,15 +306,15 @@
   </div>
 </div>
 
-<!-- Clerk OAuth modal -->
-<div class="clerk-modal-overlay" id="clerk-overlay">
-  <div class="clerk-modal">
-    <button class="clerk-modal-close" onclick="closeClerkModal()"><i class="fas fa-times"></i></button>
-    <div class="clerk-modal-title" id="clerk-modal-title">Continue with Google</div>
-    <div class="clerk-modal-sub" id="clerk-modal-sub">Connecting…</div>
-    <div class="clerk-loading">
-      <div class="clerk-spinner"></div>
-      <div class="clerk-loading-text">Loading secure sign-in…</div>
+<!-- OAuth modal -->
+<div class="oauth-modal-overlay" id="oauth-overlay">
+  <div class="oauth-modal">
+    <button class="oauth-modal-close" onclick="closeOAuthModal()"><i class="fas fa-times"></i></button>
+    <div class="oauth-modal-title" id="oauth-modal-title">Continue with Google</div>
+    <div class="oauth-modal-sub" id="oauth-modal-sub">Connecting…</div>
+    <div class="oauth-loading">
+      <div class="oauth-spinner"></div>
+      <div class="oauth-loading-text">Loading secure sign-in…</div>
     </div>
   </div>
 </div>
@@ -441,9 +441,9 @@
   async function socialLogin(provider) {
     const btn = document.getElementById('btn-' + provider);
     btn.disabled = true;
-    document.getElementById('clerk-modal-title').textContent = 'Continue with ' + (provider === 'google' ? 'Google' : 'Apple');
-    document.getElementById('clerk-modal-sub').textContent   = 'Redirecting…';
-    document.getElementById('clerk-overlay').classList.add('open');
+    document.getElementById('oauth-modal-title').textContent = 'Continue with ' + (provider === 'google' ? 'Google' : 'Apple');
+    document.getElementById('oauth-modal-sub').textContent   = 'Redirecting…';
+    document.getElementById('oauth-overlay').classList.add('open');
     try {
       const { error } = await _sb.auth.signInWithOAuth({
         provider: provider,
@@ -451,19 +451,19 @@
       });
       if (error) throw error;
     } catch (err) {
-      closeClerkModal();
+      closeOAuthModal();
       btn.disabled = false;
       showError('Could not connect to ' + (provider === 'google' ? 'Google' : 'Apple') + '. Please try again.');
     }
   }
 
-  function closeClerkModal() {
-    document.getElementById('clerk-overlay').classList.remove('open');
+  function closeOAuthModal() {
+    document.getElementById('oauth-overlay').classList.remove('open');
     document.getElementById('btn-google').disabled = false;
     document.getElementById('btn-apple').disabled  = false;
   }
-  document.getElementById('clerk-overlay').addEventListener('click', function(e) {
-    if (e.target === this) closeClerkModal();
+  document.getElementById('oauth-overlay').addEventListener('click', function(e) {
+    if (e.target === this) closeOAuthModal();
   });
 
   // Enter key support

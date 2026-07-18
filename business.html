@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Klyro — Business</title>
   <link rel="icon" type="image/png" href="klyro_logo.png">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Inter:wght@300;400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="app.css">
   <style>
@@ -777,8 +777,11 @@
         }
       }
     }
-    _checkBusinessGate();
-    document.addEventListener('klyro:ready', _checkBusinessGate, { once: true });
+    if (_cache.ready) {
+      _checkBusinessGate();
+    } else {
+      document.addEventListener('klyro:ready', _checkBusinessGate, { once: true });
+    }
   </script>
 
 <script>
@@ -789,6 +792,14 @@ if (window.__businessGated) throw new Error('Business gated');
 document.getElementById('biz-tabs').addEventListener('click', function(e) {
   const tab = e.target.closest('.biz-tab');
   if (!tab) return;
+  if (tab.dataset.panel === 'invoices') {
+    window.location.href = 'invoices.html?tab=list';
+    return;
+  }
+  if (tab.dataset.panel === 'receipts') {
+    window.location.href = 'invoices.html?tab=receipts';
+    return;
+  }
   document.querySelectorAll('.biz-tab').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.biz-panel').forEach(p => p.classList.remove('active'));
   tab.classList.add('active');
@@ -1155,12 +1166,12 @@ function printInvoiceReceipt(id) {
   const win = window.open('', '_blank');
   win.document.write(`<!DOCTYPE html><html><head><title>Receipt ${inv.number}</title>
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Inter:wght@300;400;500;600;700;800&display=swap');
       *{box-sizing:border-box;margin:0;padding:0;}
-      body{font-family:'Inter',sans-serif;color:#1a1a1a;background:#fff;padding:40px;}
+      body{font-family:'Inter Display','Inter',sans-serif;color:#1a1a1a;background:#fff;padding:40px;}
       .bar{height:5px;background:${accentColor};margin-bottom:32px;border-radius:2px;}
       .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;}
-      h1{font-size:2rem;font-weight:900;color:${accentColor};text-transform:uppercase;letter-spacing:0.06em;}
+      h1{font-family:'Fraunces',Georgia,serif;font-size:2rem;font-weight:900;color:${accentColor};text-transform:uppercase;letter-spacing:0.06em;}
       .meta{font-size:0.78rem;color:#888;margin-top:6px;line-height:1.8;}
       .paid-stamp{display:inline-flex;align-items:center;gap:8px;border:3px solid #27ae60;color:#27ae60;
         border-radius:6px;padding:6px 16px;font-size:1rem;font-weight:900;letter-spacing:0.1em;

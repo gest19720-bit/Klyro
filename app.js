@@ -41,6 +41,7 @@ let   _writeQueueFlushing = false;
 let   _remoteSyncTimer = null;
 let   _realtimeChannel = null;
 let   _remoteSyncInFlight = false;
+const _inFlightWrites = new Set();
 
 const _PERSISTED_TABLES = ['transactions', 'settings', 'goals', 'invoices', 'receipts'];
 
@@ -133,14 +134,14 @@ function _mergeRemoteRows(remoteRows, localRows, table) {
     if (row?.id && !pendingDeletes.has(row.id)) byId.set(row.id, row);
   });
   local.forEach(row => {
-    if (row?.id && pendingUpserts.has(row.id) && !pendingDeletes.has(row.id)) byId.set(row.id, row);
+    if (row?.id && (pendingUpserts.has(row.id) || _inFlightWrites.has(row.id)) && !pendingDeletes.has(row.id)) byId.set(row.id, row);
   });
 
   return Array.from(byId.values());
 }
 
 function _mergeSettings(remoteSettings, localSettings) {
-  if (_pendingIds('settings', 'upsert').has('settings')) {
+  if (_pendingIds('settings', 'upsert').has('settings') || _inFlightWrites.has('settings')) {
     return { ...(remoteSettings || {}), ...(localSettings || {}) };
   }
   return { ...(localSettings || {}), ...(remoteSettings || {}) };
@@ -241,13 +242,31 @@ async function _refreshCacheFromSupabase({ notify = true, preserveLocal = false 
   try {
     const remote = await _loadRemoteData(uid);
     const mergeRows = preserveLocal ? _mergeRows : _mergeRemoteRows;
+    
+    // Track cache state before merge to detect real changes
+    const oldTxns = JSON.stringify(_cache.transactions);
+    const oldGoals = JSON.stringify(_cache.goals);
+    const oldInvoices = JSON.stringify(_cache.invoices);
+    const oldReceipts = JSON.stringify(_cache.receipts);
+    const oldSettings = JSON.stringify(_cache.settings);
+
     _cache.transactions = mergeRows(remote.transactions, _readLocal('transactions', _cache.transactions || []), 'transactions');
     _cache.goals        = mergeRows(remote.goals, _readLocal('goals', _cache.goals || []), 'goals');
     _cache.invoices     = mergeRows(remote.invoices, _readLocal('invoices', _cache.invoices || []), 'invoices');
     _cache.receipts     = mergeRows(remote.receipts, _readLocal('receipts', _cache.receipts || []), 'receipts');
     _cache.settings     = _mergeSettings(remote.settings, _readLocal('settings', _cache.settings || {}));
+
+    const changed = 
+      oldTxns !== JSON.stringify(_cache.transactions) ||
+      oldGoals !== JSON.stringify(_cache.goals) ||
+      oldInvoices !== JSON.stringify(_cache.invoices) ||
+      oldReceipts !== JSON.stringify(_cache.receipts) ||
+      oldSettings !== JSON.stringify(_cache.settings);
+
     _persistAllCache();
-    if (notify) document.dispatchEvent(new CustomEvent('klyro:data-changed', { detail: { type: 'all', source: 'remote-sync' } }));
+    if (notify && changed) {
+      document.dispatchEvent(new CustomEvent('klyro:data-changed', { detail: { type: 'all', source: 'remote-sync' } }));
+    }
     return true;
   } catch (e) {
     console.warn('[Klyro] remote sync failed', e.message);
@@ -289,9 +308,11 @@ async function _flushWriteQueue() {
     const op = _writeQueue.shift();
     try {
 	      if (op.type === 'upsert') {
-	        await _sb.from(op.table).upsert({ ...op.row, user_id: _cache.userId }, _upsertOptions(op.table));
+	        const { error } = await _sb.from(op.table).upsert({ ...op.row, user_id: _cache.userId }, _upsertOptions(op.table));
+	        if (error) throw error;
 	      } else if (op.type === 'delete') {
-	        await _sb.from(op.table).delete().eq('id', op.id).eq('user_id', _cache.userId);
+	        const { error } = await _sb.from(op.table).delete().eq('id', op.id).eq('user_id', _cache.userId);
+	        if (error) throw error;
 	      }
     } catch (e) {
       console.error('[Klyro] write-queue replay', op.table, e.message);
@@ -314,6 +335,102 @@ const _klyroChannel = (typeof BroadcastChannel !== 'undefined')
   ? new BroadcastChannel('klyro_data_sync')
   : null;
 
+function _applySettingsSideEffects(raw) {
+  try {
+    const plan = raw.plan;
+    if (plan) localStorage.setItem('klyro_plan', plan);
+    if (raw.darkMode !== undefined) {
+      localStorage.setItem('klyro_theme', raw.darkMode ? 'dark' : 'light');
+      if (raw.darkMode) {
+        document.body.classList.add('dark');
+        document.documentElement.classList.add('dark-pre');
+      } else {
+        document.body.classList.remove('dark');
+        document.documentElement.classList.remove('dark-pre');
+      }
+    }
+    if (raw.accentTheme !== undefined) {
+      localStorage.setItem('klyro_accent', raw.accentTheme);
+      _applyAccentTheme(raw.accentTheme);
+    }
+  } catch {}
+}
+
+function _handlePostgresChange(table, payload) {
+  if (!_cache.ready || !_cache.userId) return false;
+  const eventType = payload.eventType; // 'INSERT', 'UPDATE', 'DELETE'
+  const newRow = payload.new;
+  const oldRow = payload.old;
+
+  if (table === 'settings') {
+    if (eventType === 'DELETE') {
+      if (Object.keys(_cache.settings || {}).length === 0) return false;
+      _cache.settings = {};
+    } else if (newRow) {
+      const raw = { ...newRow };
+      delete raw.user_id;
+      const oldStr = JSON.stringify(_cache.settings);
+      _cache.settings = _mergeSettings(raw, _readLocal('settings', _cache.settings || {}));
+      _applySettingsSideEffects(raw);
+      if (oldStr === JSON.stringify(_cache.settings)) return false;
+    }
+    _persistCache('settings');
+    return true;
+  }
+
+  let list = _cache[table] || [];
+  let changed = false;
+
+  if (eventType === 'INSERT') {
+    if (newRow && newRow.id) {
+      const cleanRow = _stripUserId(newRow);
+      const idx = list.findIndex(item => item.id === cleanRow.id);
+      if (idx === -1) {
+        if (['transactions', 'invoices', 'receipts'].includes(table)) {
+          list.unshift(cleanRow);
+        } else {
+          list.push(cleanRow);
+        }
+        changed = true;
+      }
+    }
+  } else if (eventType === 'UPDATE') {
+    if (newRow && newRow.id) {
+      const cleanRow = _stripUserId(newRow);
+      const idx = list.findIndex(item => item.id === cleanRow.id);
+      if (idx !== -1) {
+        const oldStr = JSON.stringify(list[idx]);
+        list[idx] = { ...list[idx], ...cleanRow };
+        if (oldStr !== JSON.stringify(list[idx])) {
+          changed = true;
+        }
+      } else {
+        if (['transactions', 'invoices', 'receipts'].includes(table)) {
+          list.unshift(cleanRow);
+        } else {
+          list.push(cleanRow);
+        }
+        changed = true;
+      }
+    }
+  } else if (eventType === 'DELETE') {
+    if (oldRow && oldRow.id) {
+      const originalLength = list.length;
+      list = list.filter(item => item.id !== oldRow.id);
+      if (list.length !== originalLength) {
+        changed = true;
+      }
+    }
+  }
+
+  if (changed) {
+    _cache[table] = list;
+    _persistCache(table);
+    return true;
+  }
+  return false;
+}
+
 async function _syncTableFromRemote(table) {
   if (!_cache.userId || !_sb) return;
   const uid = _cache.userId;
@@ -332,25 +449,7 @@ async function _syncTableFromRemote(table) {
         const raw = { ...data };
         delete raw.user_id;
 	        _cache.settings = _mergeSettings(raw, _readLocal('settings', _cache.settings || {}));
-        
-        try {
-          const plan = raw.plan;
-          if (plan) localStorage.setItem('klyro_plan', plan);
-          if (raw.darkMode !== undefined) {
-            localStorage.setItem('klyro_theme', raw.darkMode ? 'dark' : 'light');
-            if (raw.darkMode) {
-              document.body.classList.add('dark');
-              document.documentElement.classList.add('dark-pre');
-            } else {
-              document.body.classList.remove('dark');
-              document.documentElement.classList.remove('dark-pre');
-            }
-          }
-          if (raw.accentTheme !== undefined) {
-            localStorage.setItem('klyro_accent', raw.accentTheme);
-            _applyAccentTheme(raw.accentTheme);
-          }
-        } catch {}
+        _applySettingsSideEffects(raw);
       }
     }
     if (table === 'invoices' || table === 'all') {
@@ -367,19 +466,8 @@ async function _syncTableFromRemote(table) {
   }
 }
 
-function _broadcastChange(type) {
-  try { _klyroChannel?.postMessage({ type: type || 'transactions', ts: Date.now() }); } catch {}
-  try {
-    if (_realtimeChannel) {
-      _realtimeChannel.send({
-        type: 'broadcast',
-        event: 'data_changed',
-        payload: { type: type || 'transactions' }
-      });
-    }
-  } catch (e) {
-    console.warn('[Klyro Realtime] Broadcast send failed:', e.message);
-  }
+function _broadcastChange(type, op) {
+  try { _klyroChannel?.postMessage({ type: type || 'transactions', op, ts: Date.now() }); } catch {}
 }
 
 function _initDataSync() {
@@ -387,8 +475,16 @@ function _initDataSync() {
   _klyroChannel.onmessage = async (evt) => {
     if (!_cache.ready || !_cache.userId || !_sb) return;
     const t = evt.data?.type || 'transactions';
-    await _syncTableFromRemote(t);
-    document.dispatchEvent(new CustomEvent('klyro:data-changed', { detail: evt.data }));
+    const op = evt.data?.op;
+    if (op) {
+      const updated = _handlePostgresChange(t, op);
+      if (updated) {
+        document.dispatchEvent(new CustomEvent('klyro:data-changed', { detail: evt.data }));
+      }
+    } else {
+      await _syncTableFromRemote(t);
+      document.dispatchEvent(new CustomEvent('klyro:data-changed', { detail: evt.data }));
+    }
   };
 }
 
@@ -406,21 +502,16 @@ async function _initRealtimeSync() {
   const channelName = `klyro_user_${uid}`;
   _realtimeChannel = _sb.channel(channelName);
 
-  _realtimeChannel.on('broadcast', { event: 'data_changed' }, async (payload) => {
-    const table = payload.payload?.type || 'transactions';
-    console.log('[Klyro Realtime] Broadcast change event received:', table);
-    await _syncTableFromRemote(table);
-    document.dispatchEvent(new CustomEvent('klyro:data-changed', { detail: { type: table, source: 'realtime-broadcast' } }));
-  });
-
   _PERSISTED_TABLES.forEach(table => {
     _realtimeChannel.on(
       'postgres_changes',
       { event: '*', schema: 'public', table: table, filter: `user_id=eq.${uid}` },
       async (payload) => {
         console.log('[Klyro Realtime] DB change event received for:', table, payload.eventType);
-        await _syncTableFromRemote(table);
-        document.dispatchEvent(new CustomEvent('klyro:data-changed', { detail: { type: table, source: 'postgres-changes' } }));
+        const updated = _handlePostgresChange(table, payload);
+        if (updated) {
+          document.dispatchEvent(new CustomEvent('klyro:data-changed', { detail: { type: table, source: 'postgres-changes', payload } }));
+        }
       }
     );
   });
@@ -481,23 +572,64 @@ if (_sb) {
 function _genId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
-async function _upsert(table, row) {
+async function _upsert(table, rowOrRows) {
   if (!_sb) {
-    _queuePendingSync({ type: 'upsert', table, row: { ...row } });
+    if (Array.isArray(rowOrRows)) {
+      rowOrRows.forEach(row => _queuePendingSync({ type: 'upsert', table, row: { ...row } }));
+    } else {
+      _queuePendingSync({ type: 'upsert', table, row: { ...rowOrRows } });
+    }
     return;
   }
   if (!_cache.userId) {
     // Auth hasn't resolved yet — queue for replay once userId is set
-    _writeQueue.push({ type: 'upsert', table, row: { ...row } });
-    _queuePendingSync({ type: 'upsert', table, row: { ...row } });
+    if (Array.isArray(rowOrRows)) {
+      rowOrRows.forEach(row => {
+        _writeQueue.push({ type: 'upsert', table, row: { ...row } });
+        _queuePendingSync({ type: 'upsert', table, row: { ...row } });
+      });
+    } else {
+      _writeQueue.push({ type: 'upsert', table, row: { ...rowOrRows } });
+      _queuePendingSync({ type: 'upsert', table, row: { ...rowOrRows } });
+    }
     return;
   }
-  const { error } = await _sb.from(table).upsert({ ...row, user_id: _cache.userId }, _upsertOptions(table));
-  if (error) {
-    console.error('[Klyro] upsert', table, error.message);
-    _queuePendingSync({ type: 'upsert', table, row: { ...row } });
+
+  // Track in-flight writes to prevent disappearing from UI during active sync
+  let idsToTrack = [];
+  if (Array.isArray(rowOrRows)) {
+    idsToTrack = rowOrRows.map(row => row.id).filter(Boolean);
+  } else {
+    idsToTrack = [rowOrRows.id || (table === 'settings' ? 'settings' : null)].filter(Boolean);
+  }
+  idsToTrack.forEach(id => _inFlightWrites.add(id));
+
+  const payload = Array.isArray(rowOrRows)
+    ? rowOrRows.map(row => ({ ...row, user_id: _cache.userId }))
+    : { ...rowOrRows, user_id: _cache.userId };
+
+  try {
+    const { error } = await _sb.from(table).upsert(payload, _upsertOptions(table));
+    if (error) {
+      console.error('[Klyro] upsert error:', table, error.message);
+      if (Array.isArray(rowOrRows)) {
+        rowOrRows.forEach(row => _queuePendingSync({ type: 'upsert', table, row: { ...row } }));
+      } else {
+        _queuePendingSync({ type: 'upsert', table, row: { ...rowOrRows } });
+      }
+    }
+  } catch (e) {
+    console.warn('[Klyro] upsert network failure:', table, e.message);
+    if (Array.isArray(rowOrRows)) {
+      rowOrRows.forEach(row => _queuePendingSync({ type: 'upsert', table, row: { ...row } }));
+    } else {
+      _queuePendingSync({ type: 'upsert', table, row: { ...rowOrRows } });
+    }
+  } finally {
+    idsToTrack.forEach(id => _inFlightWrites.delete(id));
   }
 }
+
 async function _sbDelete(table, id) {
   if (!_sb) {
     _queuePendingSync({ type: 'delete', table, id });
@@ -508,9 +640,14 @@ async function _sbDelete(table, id) {
     _queuePendingSync({ type: 'delete', table, id });
     return;
   }
-  const { error } = await _sb.from(table).delete().eq('id', id).eq('user_id', _cache.userId);
-  if (error) {
-    console.error('[Klyro] delete', table, error.message);
+  try {
+    const { error } = await _sb.from(table).delete().eq('id', id).eq('user_id', _cache.userId);
+    if (error) {
+      console.error('[Klyro] delete error:', table, error.message);
+      _queuePendingSync({ type: 'delete', table, id });
+    }
+  } catch (e) {
+    console.warn('[Klyro] delete network failure:', table, e.message);
     _queuePendingSync({ type: 'delete', table, id });
   }
 }
@@ -1140,19 +1277,7 @@ const Auth = {
     return { success: true, user: data.user };
   },
 
-  /* Sign in with Clerk session (OAuth bridge — keeps login.html working) */
-  loginClerk(clerkUser, remember) {
-    // Clerk OAuth lands here; we build a minimal session-like object
-    // and redirect — Supabase handles the real session via detectSessionInUrl
-    _sessionCache = {
-      id:    clerkUser.id,
-      email: clerkUser.primaryEmailAddress?.emailAddress || clerkUser.email || '',
-      user_metadata: {
-        name:      (clerkUser.firstName || '') + ' ' + (clerkUser.lastName || ''),
-        onboarded: false,
-      }
-    };
-  },
+
 
   /* Update user profile metadata */
   async syncProfileDetails(name, email) {
@@ -1280,8 +1405,12 @@ const PlanGate = {
   // ── Get current plan ──────────────────────────────────────────────────────
   currentPlan() {
     const s = Store ? Store.getSettings() : {};
-	    const raw = (s.plan || 'free').toLowerCase();
-	    return this.PLAN_ALIASES[raw] || raw;
+    let raw = s.plan;
+    if (!raw) {
+      try { raw = localStorage.getItem('klyro_plan'); } catch {}
+    }
+    raw = (raw || 'free').toLowerCase();
+    return this.PLAN_ALIASES[raw] || raw;
   },
 
   planLevel(plan) {
@@ -1486,8 +1615,7 @@ const Store = {
 		  saveTransactions(txns) {
 		    _cache.transactions = txns;
 		    _persistCache('transactions');
-		    const uid = _cache.userId;
-		    txns.forEach(t => _afterRemoteWrite('transactions', _upsert('transactions', { ...t, user_id: uid })));
+		    _afterRemoteWrite('transactions', _upsert('transactions', txns));
 		    _broadcastChange('transactions');
 		  },
 
@@ -1506,7 +1634,7 @@ const Store = {
 	    _cache.transactions.unshift(txn);
 	    _persistCache('transactions');
 		    _afterRemoteWrite('transactions', _upsert('transactions', { ...txn, user_id: _cache.userId }));
-	    _broadcastChange('transactions');
+	    _broadcastChange('transactions', { eventType: 'INSERT', new: txn });
     MakeWebhook.send('transaction.added', {
       type: txn.type, amount: txn.amount, description: txn.description,
       category: txn.category, date: txn.date, currency: txn.originalCurrency
@@ -1518,7 +1646,7 @@ const Store = {
 	    _cache.transactions = (_cache.transactions || []).filter(t => t.id !== id);
 	    _persistCache('transactions');
 		    _afterRemoteWrite('transactions', _sbDelete('transactions', id));
-	    _broadcastChange('transactions');
+	    _broadcastChange('transactions', { eventType: 'DELETE', old: { id } });
   },
 
   updateTransaction(id, fields) {
@@ -1529,7 +1657,7 @@ const Store = {
 	    _cache.transactions = txns;
 	    _persistCache('transactions');
 		    _afterRemoteWrite('transactions', _upsert('transactions', { ...txns[idx], user_id: _cache.userId }));
-	    _broadcastChange('transactions');
+	    _broadcastChange('transactions', { eventType: 'UPDATE', new: txns[idx] });
     return txns[idx];
   },
 
@@ -1546,7 +1674,7 @@ const Store = {
     if (s.onboarded !== undefined && _sb) {
       _sb.auth.updateUser({ data: { onboarded: s.onboarded } }).catch(() => {});
     }
-    _broadcastChange('settings');
+    _broadcastChange('settings', { eventType: 'UPDATE', new: s });
   },
 
   /* ── Goals ────────────────────────────────────────────────────────── */
@@ -1555,8 +1683,7 @@ const Store = {
 		  saveGoals(goals) {
 		    _cache.goals = goals;
 		    _persistCache('goals');
-		    const uid = _cache.userId;
-		    goals.forEach(g => _afterRemoteWrite('goals', _upsert('goals', { ...g, user_id: uid })));
+		    _afterRemoteWrite('goals', _upsert('goals', goals));
 		    _broadcastChange('goals');
 	  },
 
@@ -1567,7 +1694,7 @@ const Store = {
 	    _cache.goals.push(goal);
 	    _persistCache('goals');
 		    _afterRemoteWrite('goals', _upsert('goals', { ...goal, user_id: _cache.userId }));
-    _broadcastChange('goals');
+    _broadcastChange('goals', { eventType: 'INSERT', new: goal });
     MakeWebhook.send('goal.created', {
       name: goal.name, target: goal.target, saved: goal.saved || 0,
       deadline: goal.deadline || null, emoji: goal.emoji || '🎯'
@@ -1579,7 +1706,7 @@ const Store = {
 	    _cache.goals = (_cache.goals || []).filter(g => g.id !== id);
 	    _persistCache('goals');
 		    _afterRemoteWrite('goals', _sbDelete('goals', id));
-    _broadcastChange('goals');
+    _broadcastChange('goals', { eventType: 'DELETE', old: { id } });
   },
 
   updateGoal(id, fields) {
@@ -1590,7 +1717,7 @@ const Store = {
 	    _cache.goals = goals;
 	    _persistCache('goals');
 		    _afterRemoteWrite('goals', _upsert('goals', { ...goals[idx], user_id: _cache.userId }));
-    _broadcastChange('goals');
+    _broadcastChange('goals', { eventType: 'UPDATE', new: goals[idx] });
     return goals[idx];
   },
 
@@ -1601,7 +1728,7 @@ const Store = {
 	    g.saved = Math.min(parseFloat(g.target), (parseFloat(g.saved) || 0) + parseFloat(amount));
 	    _persistCache('goals');
 		    _afterRemoteWrite('goals', _upsert('goals', { ...g, user_id: _cache.userId }));
-    _broadcastChange('goals');
+    _broadcastChange('goals', { eventType: 'UPDATE', new: g });
   },
 
   /* ── Invoices ─────────────────────────────────────────────────────── */
@@ -1614,7 +1741,7 @@ const Store = {
 			    }
 			    _cache.invoices = list;
 		    _persistCache('invoices');
-		    list.forEach(i => { if (!i.user_id) i.user_id = _cache.userId; _afterRemoteWrite('invoices', _upsert('invoices', i)); });
+		    _afterRemoteWrite('invoices', _upsert('invoices', list));
 		    _broadcastChange('invoices');
 		  },
 
@@ -1631,7 +1758,7 @@ const Store = {
 		    _cache.invoices.unshift(inv);
 		    _persistCache('invoices');
 		    _afterRemoteWrite('invoices', _upsert('invoices', { ...inv, user_id: _cache.userId }));
-		    _broadcastChange('invoices');
+		    _broadcastChange('invoices', { eventType: 'INSERT', new: inv });
 	    return inv;
 	  },
 
@@ -1643,7 +1770,7 @@ const Store = {
 		    _cache.invoices = list;
 		    _persistCache('invoices');
 		    _afterRemoteWrite('invoices', _upsert('invoices', { ...list[idx], user_id: _cache.userId }));
-		    _broadcastChange('invoices');
+		    _broadcastChange('invoices', { eventType: 'UPDATE', new: list[idx] });
 	    return list[idx];
 	  },
 
@@ -1651,7 +1778,7 @@ const Store = {
 		    _cache.invoices = (_cache.invoices || []).filter(i => i.id !== id);
 		    _persistCache('invoices');
 		    _afterRemoteWrite('invoices', _sbDelete('invoices', id));
-		    _broadcastChange('invoices');
+		    _broadcastChange('invoices', { eventType: 'DELETE', old: { id } });
 	  },
 
   getInvoice(id) { return (_cache.invoices || []).find(i => i.id === id) || null; },
@@ -1666,7 +1793,7 @@ const Store = {
 			    }
 			    _cache.receipts = list;
 		    _persistCache('receipts');
-		    list.forEach(r => { if (!r.user_id) r.user_id = _cache.userId; _afterRemoteWrite('receipts', _upsert('receipts', r)); });
+		    _afterRemoteWrite('receipts', _upsert('receipts', list));
 		    _broadcastChange('receipts');
 		  },
 
@@ -1682,7 +1809,7 @@ const Store = {
 		    _cache.receipts.unshift(receipt);
 		    _persistCache('receipts');
 		    _afterRemoteWrite('receipts', _upsert('receipts', { ...receipt, user_id: _cache.userId }));
-		    _broadcastChange('receipts');
+		    _broadcastChange('receipts', { eventType: 'INSERT', new: receipt });
 	    return receipt;
 	  },
 };
