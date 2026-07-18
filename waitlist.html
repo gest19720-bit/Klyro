@@ -388,55 +388,57 @@ a{ color:inherit; }
 
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 
-// Supabase project settings. This is the public browser key, which is safe to
-// use here when the table's Row Level Security policy permits inserts.
 const SUPABASE_URL = 'https://ecxjttbbesbjpisealrp.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable__qiqb1L9zW6Q4guscaGvbA_4r0daTME';
+const SUPABASE_KEY = 'sb_publishable__qiqb1L9zW6Q4guscaGvbA_4r0daTME';
+const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Email Waitlist
 async function handleEmailWaitlist() {
-     const name  = document.getElementById('wl-name').value.trim();
-     const email = document.getElementById('wl-email').value.trim();
-     if (!name) { alert('Please enter your name.'); return; }
-     if (!email || !email.includes('@')) { alert('Please enter a valid email.'); return; }
+  const name  = document.getElementById('wl-name').value.trim();
+  const email = document.getElementById('wl-email').value.trim().toLowerCase();
+  if (!name) { alert('Please enter your name.'); return; }
+  if (!email || !email.includes('@')) { alert('Please enter a valid email.'); return; }
 
-     const button = document.getElementById('waitlist-submit');
-     const originalButton = button.innerHTML;
-     button.disabled = true;
-     button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Reserving your spot…';
+  const button = document.getElementById('waitlist-submit');
+  const originalButton = button.innerHTML;
+  button.disabled = true;
+  button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Reserving your spot…';
 
-     try {
-       const response = await fetch(`${SUPABASE_URL}/rest/v1/waitlist_signups`, {
-         method: 'POST',
-         headers: {
-           'apikey': SUPABASE_ANON_KEY,
-           'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-           'Content-Type': 'application/json',
-           'Prefer': 'return=minimal'
-         },
-         body: JSON.stringify({ email })
-       });
+  try {
+    const { error } = await _sb
+      .from('waitlist_signups')
+      .insert({ email, name });
 
-       if (!response.ok) {
-         throw new Error(`Waitlist insert failed (${response.status})`);
-       }
+    if (error) {
+      if (error.code === '23505') {
+        alert('This email is already on the waitlist.');
+      } else {
+        console.error('Waitlist insert failed:', error);
+        alert('We could not reserve your spot right now. Please try again in a moment.');
+      }
+      button.disabled = false;
+      button.innerHTML = originalButton;
+      return;
+    }
 
-       showSuccess(email);
-     } catch (error) {
-       console.error('Unable to save waitlist signup:', error);
-       alert('We could not reserve your spot right now. Please check your connection and try again.');
-       button.disabled = false;
-       button.innerHTML = originalButton;
-     }
-   }
+    const { data: count, error: countError } = await _sb.rpc('get_waitlist_count');
+    showSuccess(email, countError ? null : count);
+  } catch (error) {
+    console.error('Unable to save waitlist signup:', error);
+    alert('We could not reserve your spot right now. Please check your connection and try again.');
+    button.disabled = false;
+    button.innerHTML = originalButton;
+  }
+}
 
 //Success - Shows accepted
-  function showSuccess(email) {
+  function showSuccess(email, position) {
     document.getElementById('success-email').textContent = email;
-    const pos = Math.floor(Math.random() * 80) + 120;
-    document.getElementById('success-position').textContent = `You're #${pos} on the waitlist`;
+    document.getElementById('success-position').textContent = position
+      ? `You're #${position} on the waitlist`
+      : `You're on the waitlist`;
     document.getElementById('form-view').style.display   = 'none';
     document.getElementById('success-view').style.display = 'block';
   }
