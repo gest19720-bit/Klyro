@@ -3,7 +3,7 @@
    Liquid Glass · White/Gold · Glassmorphism
 ═══════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 /* ─── Tokens ─── */
 :root {
@@ -40,8 +40,8 @@
   --shadow-lg:   0 20px 48px rgba(0,0,0,0.14);
   --transition:  0.3s cubic-bezier(0.16,1,0.3,1);
 
-  --font-display: 'Cormorant Garamond', Georgia, serif;
-  --font-body:    'DM Sans', -apple-system, sans-serif;
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body:    'Inter Display', 'Inter', -apple-system, sans-serif;
 
   /* Dark mode overrides */
   --dm-bg:          #0d0d14;
@@ -1149,4 +1149,44 @@ canvas { max-width: 100%; }
     font-size: 0.75rem;
   }
   .page-header h1 { font-size: 1.65rem; }
+}
+
+/* ─── AI Voice & Volume Sync Styles ─── */
+.chat-msg.ai {
+  position: relative;
+  padding-right: 44px !important;
+}
+.msg-speak-btn {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 6px;
+  font-size: 0.95rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.msg-speak-btn:hover {
+  color: var(--gold);
+  background: var(--glass-dim);
+}
+.msg-speak-btn.speaking {
+  color: var(--gold);
+  animation: pulseVolume 1.2s infinite;
+}
+@keyframes pulseVolume {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+@keyframes pulseVoice {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }

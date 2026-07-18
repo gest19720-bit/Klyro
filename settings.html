@@ -1010,7 +1010,7 @@
     });
   });
 
-  function saveProfile() {
+  async function saveProfile() {
     const s = Store.getSettings();
     s.name           = document.getElementById('display-name').value.trim();
     s.email          = document.getElementById('display-email').value.trim();
@@ -1018,9 +1018,14 @@
     Store.saveSettings(s);
     
     // Sync local metadata changes back up into registry bank
-    Auth.syncProfileDetails(s.name, s.email);
+    const syncSuccess = await Auth.syncProfileDetails(s.name, s.email);
     
-    showToast('Profile saved!');
+    if (syncSuccess) {
+      showToast('Profile saved and synced successfully! 🎉');
+    } else {
+      showToast('Profile saved locally, but database sync failed.', 'error');
+    }
+    
     document.getElementById('sidebar-mount').innerHTML = renderSidebar();
     initSidebar();
   }

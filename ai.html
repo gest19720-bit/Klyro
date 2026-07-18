@@ -173,6 +173,9 @@
       <div class="chat-input-row">
         <input type="text" class="form-input" id="chat-input"
           placeholder="Ask anything about your finances…" autocomplete="off">
+        <button class="btn btn-glass" id="voice-btn" onclick="toggleVoiceInput()" title="Speak to Klyro" style="padding-inline: 14px;">
+          <i class="fas fa-microphone"></i>
+        </button>
         <button class="btn btn-gold" id="send-btn" onclick="sendMessage()">
           <i class="fas fa-paper-plane"></i>
         </button>
@@ -371,7 +374,16 @@ function appendMessage(role, html) {
   const win = document.getElementById('chat-window');
   const div = document.createElement('div');
   div.className = `chat-msg ${role}`;
-  div.innerHTML  = html;
+  if (role === 'ai') {
+    div.innerHTML = `
+      <div class="msg-content">${html}</div>
+      <button class="msg-speak-btn" onclick="speakMessageBubble(this)" title="Read aloud">
+        <i class="fas fa-volume-up"></i>
+      </button>
+    `;
+  } else {
+    div.innerHTML = html;
+  }
   win.appendChild(div);
   win.scrollTop  = win.scrollHeight;
   return div;
@@ -399,7 +411,7 @@ function createStreamBubble() {
   const win = document.getElementById('chat-window');
   const div = document.createElement('div');
   div.className = 'chat-msg ai';
-  div.innerHTML  = '<span class="cursor"></span>';
+  div.innerHTML  = '<div class="msg-content"><span class="cursor"></span></div>';
   win.appendChild(div);
   win.scrollTop  = win.scrollHeight;
   return div;
@@ -411,7 +423,13 @@ function finalise(div, text, usedWeb, thinkSecs) {
   if (usedWeb) badges.push(`<span class="web-badge"><i class="fas fa-globe"></i> Live web data</span>`);
   if (thinkSecs) badges.push(`<span class="web-badge" style="background:rgba(139,92,246,0.1);border-color:rgba(139,92,246,0.3);color:#8b5cf6;"><i class="fas fa-brain"></i> Thought for ${thinkSecs}s</span>`);
   if (badges.length) html += '<br>' + badges.join(' ');
-  div.innerHTML = html;
+  
+  div.innerHTML = `
+    <div class="msg-content">${html}</div>
+    <button class="msg-speak-btn" onclick="speakMessageBubble(this)" title="Read aloud">
+      <i class="fas fa-volume-up"></i>
+    </button>
+  `;
   document.getElementById('chat-window').scrollTop = 9999;
 }
 
@@ -527,7 +545,12 @@ async function runAgent(messages) {
               turnText += evt.delta.text;
               fullText += evt.delta.text;
               if (streamDiv) {
-                streamDiv.innerHTML = mdToHtml(fullText) + '<span class="cursor"></span>';
+                const msgContent = streamDiv.querySelector('.msg-content');
+                if (msgContent) {
+                  msgContent.innerHTML = mdToHtml(fullText) + '<span class="cursor"></span>';
+                } else {
+                  streamDiv.innerHTML = `<div class="msg-content">${mdToHtml(fullText)}<span class="cursor"></span></div>`;
+                }
                 document.getElementById('chat-window').scrollTop = 9999;
               }
             }
@@ -595,37 +618,248 @@ async function runAgent(messages) {
 /* ═══════════════════════════════
    SEND MESSAGE
 ═══════════════════════════════ */
-async function sendMessage() {
+let isVoiceQuery = false;
+let recognition = null;
+let isVoiceActive = false;
+
+async function sendMessage(fromVoice = false) {
   if (isStreaming) return;
+  
+  if (isVoiceActive) {
+    stopVoiceRecognition();
+  }
+
   const input = document.getElementById('chat-input');
   const msg   = input.value.trim();
   if (!msg) return;
 
+  isVoiceQuery = fromVoice;
   input.value  = '';
   isStreaming   = true;
   document.getElementById('send-btn').disabled = true;
 
-	  appendMessage('user', esc(msg));
-	  chatHistory.push({ role: 'user', content: msg });
-	  saveChatHistory();
+  appendMessage('user', esc(msg));
+  chatHistory.push({ role: 'user', content: msg });
+  saveChatHistory();
 	
-	  try {
-	    const { text, usedWeb, thinkSecs } = await runAgent(chatHistory);
-	    chatHistory.push({ role: 'assistant', content: text });
-	    saveChatHistory();
-	  } catch (err) {
-	    console.error(err);
-	    setStatus(null);
-	    const fallback = localReply(msg);
-	    appendMessage('ai', mdToHtml(fallback));
-	    chatHistory.push({ role: 'assistant', content: fallback });
-	    saveChatHistory();
-	  }
+  if (window.speechSynthesis.speaking) {
+    window.speechSynthesis.cancel();
+  }
+
+  try {
+    const { text, usedWeb, thinkSecs } = await runAgent(chatHistory);
+    chatHistory.push({ role: 'assistant', content: text });
+    saveChatHistory();
+    if (isVoiceQuery) {
+      speakText(text);
+    }
+  } catch (err) {
+    console.error(err);
+    setStatus(null);
+    const fallback = localReply(msg);
+    appendMessage('ai', mdToHtml(fallback));
+    chatHistory.push({ role: 'assistant', content: fallback });
+    saveChatHistory();
+    if (isVoiceQuery) {
+      speakText(fallback);
+    }
+  }
 
   setStatus(null);
   isStreaming  = false;
   document.getElementById('send-btn').disabled = false;
   input.focus();
+}
+
+/* ═══════════════════════════════
+   SPEECH SYNTHESIS & RECOGNITION
+   ═══════════════════════════════ */
+function speakText(text) {
+  window.speechSynthesis.cancel();
+  const cleanText = text
+    .replace(/<[^>]*>/g, '') // remove HTML tags
+    .replace(/[\*\_`#\-]/g, '') // remove markdown syntax
+    .replace(/Thought for \d+s/g, '')
+    .replace(/Live web data/g, '')
+    .trim();
+
+  const utterance = new SpeechSynthesisUtterance(cleanText);
+  const voices = window.speechSynthesis.getVoices();
+  const preferredVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google')) 
+                      || voices.find(v => v.lang.startsWith('en'))
+                      || voices[0];
+  if (preferredVoice) utterance.voice = preferredVoice;
+  window.speechSynthesis.speak(utterance);
+}
+
+function speakMessageBubble(btn) {
+  const msgContentEl = btn.parentElement.querySelector('.msg-content');
+  if (!msgContentEl) return;
+
+  if (btn.classList.contains('speaking')) {
+    window.speechSynthesis.cancel();
+    btn.classList.remove('speaking');
+    btn.innerHTML = '<i class="fas fa-volume-up"></i>';
+    return;
+  }
+
+  window.speechSynthesis.cancel();
+  document.querySelectorAll('.msg-speak-btn.speaking').forEach(b => {
+    b.classList.remove('speaking');
+    b.innerHTML = '<i class="fas fa-volume-up"></i>';
+  });
+
+  const text = msgContentEl.innerText;
+  const cleanText = text
+    .replace(/Thought for \d+s/g, '')
+    .replace(/Live web data/g, '')
+    .trim();
+
+  btn.classList.add('speaking');
+  btn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+
+  const utterance = new SpeechSynthesisUtterance(cleanText);
+  const voices = window.speechSynthesis.getVoices();
+  const preferredVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google')) 
+                      || voices.find(v => v.lang.startsWith('en'))
+                      || voices[0];
+  if (preferredVoice) utterance.voice = preferredVoice;
+
+  utterance.onend = () => {
+    btn.classList.remove('speaking');
+    btn.innerHTML = '<i class="fas fa-volume-up"></i>';
+  };
+  utterance.onerror = () => {
+    btn.classList.remove('speaking');
+    btn.innerHTML = '<i class="fas fa-volume-up"></i>';
+  };
+
+  window.speechSynthesis.speak(utterance);
+}
+
+function initSpeechRecognition() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    console.warn('Speech Recognition not supported in this browser.');
+    return null;
+  }
+
+  const rec = new SpeechRecognition();
+  rec.continuous = true;
+  rec.interimResults = true;
+  rec.lang = 'en-US';
+
+  let silenceTimer = null;
+
+  const resetSilenceTimer = () => {
+    if (silenceTimer) clearTimeout(silenceTimer);
+    silenceTimer = setTimeout(() => {
+      console.log('[Klyro Voice] Silence detected. Stopping and sending...');
+      rec.stop();
+    }, 2000);
+  };
+
+  rec.onstart = () => {
+    isVoiceActive = true;
+    updateVoiceButtonState(true);
+    const input = document.getElementById('chat-input');
+    input.placeholder = "Listening...";
+    resetSilenceTimer();
+  };
+
+  rec.onresult = (e) => {
+    let interimTranscript = '';
+    let finalTranscript = '';
+    for (let i = e.resultIndex; i < e.results.length; ++i) {
+      if (e.results[i].isFinal) {
+        finalTranscript += e.results[i][0].transcript;
+      } else {
+        interimTranscript += e.results[i][0].transcript;
+      }
+    }
+    const input = document.getElementById('chat-input');
+    if (finalTranscript) {
+      input.value = finalTranscript;
+    } else {
+      input.value = interimTranscript;
+    }
+    resetSilenceTimer();
+  };
+
+  rec.onerror = (e) => {
+    console.error('Speech recognition error:', e.error);
+    if (silenceTimer) clearTimeout(silenceTimer);
+    stopVoiceRecognition();
+  };
+
+  rec.onend = () => {
+    if (silenceTimer) clearTimeout(silenceTimer);
+    const input = document.getElementById('chat-input');
+    input.placeholder = "Ask anything about your finances...";
+    if (isVoiceActive && input.value.trim()) {
+      sendMessage(true);
+    }
+    stopVoiceRecognition();
+  };
+
+  return rec;
+}
+
+function toggleVoiceInput() {
+  if (window.speechSynthesis.speaking) {
+    window.speechSynthesis.cancel();
+  }
+  if (isVoiceActive) {
+    const input = document.getElementById('chat-input');
+    if (input.value.trim()) {
+      if (recognition) recognition.stop();
+    } else {
+      stopVoiceRecognition();
+    }
+  } else {
+    startVoiceRecognition();
+  }
+}
+
+function startVoiceRecognition() {
+  if (!recognition) {
+    recognition = initSpeechRecognition();
+  }
+  if (!recognition) {
+    showToast('Speech recognition not supported in this browser.', 'error');
+    return;
+  }
+  try {
+    recognition.start();
+  } catch (err) {
+    console.error('Failed to start recognition:', err);
+  }
+}
+
+function stopVoiceRecognition() {
+  isVoiceActive = false;
+  updateVoiceButtonState(false);
+  if (recognition) {
+    try {
+      recognition.stop();
+    } catch (err) {}
+  }
+}
+
+function updateVoiceButtonState(listening) {
+  const btn = document.getElementById('voice-btn');
+  if (!btn) return;
+  if (listening) {
+    btn.classList.add('listening');
+    btn.innerHTML = '<i class="fas fa-microphone-slash"></i>';
+    btn.style.color = '#ef4444';
+    btn.style.animation = 'pulseVoice 1.5s infinite';
+  } else {
+    btn.classList.remove('listening');
+    btn.innerHTML = '<i class="fas fa-microphone"></i>';
+    btn.style.color = '';
+    btn.style.animation = '';
+  }
 }
 
 /* ═══════════════════════════════

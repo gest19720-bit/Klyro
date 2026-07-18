@@ -8,7 +8,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=DM+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
@@ -50,8 +50,8 @@
   --shadow-lg:     0 30px 80px rgba(0,0,0,0.5);
   --ease:          cubic-bezier(0.16,1,0.3,1);
 
-  --font-display:  'Cormorant Garamond', Georgia, serif;
-  --font-body:     'DM Sans', -apple-system, sans-serif;
+  --font-display:  'Fraunces', Georgia, serif;
+  --font-body:     'Inter Display', 'Inter', -apple-system, sans-serif;
   --font-mono:     'JetBrains Mono', ui-monospace, monospace;
 }
 
@@ -362,7 +362,7 @@ a{ color:inherit; }
           <input type="email" id="wl-email" class="form-input" placeholder="kwame@example.com">
         </div>
 
-        <button class="btn-submit" onclick="handleEmailWaitlist()">
+        <button class="btn-submit" id="waitlist-submit" type="button" onclick="handleEmailWaitlist()">
           <i class="fas fa-rocket"></i>
           Reserve my spot
         </button>
@@ -390,14 +390,47 @@ a{ color:inherit; }
 
 <script>
 
-//Email Waitlist
-  function handleEmailWaitlist() {
-    const name  = document.getElementById('wl-name').value.trim();
-    const email = document.getElementById('wl-email').value.trim();
-    if (!name) { alert('Please enter your name.'); return; }
-    if (!email || !email.includes('@')) { alert('Please enter a valid email.'); return; }
-    showSuccess(email);
-  }
+// Supabase project settings. This is the public browser key, which is safe to
+// use here when the table's Row Level Security policy permits inserts.
+const SUPABASE_URL = 'https://ecxjttbbesbjpisealrp.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable__qiqb1L9zW6Q4guscaGvbA_4r0daTME';
+
+// Email Waitlist
+async function handleEmailWaitlist() {
+     const name  = document.getElementById('wl-name').value.trim();
+     const email = document.getElementById('wl-email').value.trim();
+     if (!name) { alert('Please enter your name.'); return; }
+     if (!email || !email.includes('@')) { alert('Please enter a valid email.'); return; }
+
+     const button = document.getElementById('waitlist-submit');
+     const originalButton = button.innerHTML;
+     button.disabled = true;
+     button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Reserving your spot…';
+
+     try {
+       const response = await fetch(`${SUPABASE_URL}/rest/v1/waitlist_signups`, {
+         method: 'POST',
+         headers: {
+           'apikey': SUPABASE_ANON_KEY,
+           'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+           'Content-Type': 'application/json',
+           'Prefer': 'return=minimal'
+         },
+         body: JSON.stringify({ email })
+       });
+
+       if (!response.ok) {
+         throw new Error(`Waitlist insert failed (${response.status})`);
+       }
+
+       showSuccess(email);
+     } catch (error) {
+       console.error('Unable to save waitlist signup:', error);
+       alert('We could not reserve your spot right now. Please check your connection and try again.');
+       button.disabled = false;
+       button.innerHTML = originalButton;
+     }
+   }
 
 //Success - Shows accepted
   function showSuccess(email) {
